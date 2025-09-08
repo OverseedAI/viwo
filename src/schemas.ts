@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const WorkspaceSchema = z.object({
+export const WorktreeSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
@@ -8,9 +8,13 @@ export const WorkspaceSchema = z.object({
   tags: z.array(z.string()).default([]),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
+  worktreePath: z.string().optional(),
+  worktreeBranch: z.string().optional(),
+  containerIds: z.array(z.string()).default([]),
+  status: z.enum(['active', 'inactive']).default('inactive'),
 });
 
-export const WorkspaceListSchema = z.array(WorkspaceSchema);
+export const WorktreeListSchema = z.array(WorktreeSchema);
 
-export type Workspace = z.infer<typeof WorkspaceSchema>;
-export type WorkspaceList = z.infer<typeof WorkspaceListSchema>;
+export type Worktree = z.infer<typeof WorktreeSchema>;
+export type WorktreeList = z.infer<typeof WorktreeListSchema>;

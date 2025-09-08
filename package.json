@@ -1,12 +1,12 @@
 {
-  "name": "virtual-workspaces",
+  "name": "viwo",
   "version": "1.0.0",
   "description": "A library and CLI for managing virtual workspaces",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "virtual-workspaces": "dist/cli.js"
+    "viwo": "dist/cli.js"
   },
   "type": "module",
   "scripts": {
