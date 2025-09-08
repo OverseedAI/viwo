@@ -64,3 +64,6 @@ Thumbs.db
 # Temporary folders
 tmp/
 temp/
+
+# Envs
+.env
