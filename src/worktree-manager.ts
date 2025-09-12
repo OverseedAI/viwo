@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { $ } from 'bun';
 import { join } from 'path';
 
 export interface WorktreeInfo {
@@ -21,12 +21,9 @@ export function parseWorktreeName(name: string): { worktreeId: string; branch: s
     return { worktreeId, branch };
 }
 
-export function listExistingWorktrees(worktreeId?: string): WorktreeInfo[] {
+export async function listExistingWorktrees(worktreeId?: string): Promise<WorktreeInfo[]> {
     try {
-        const output = execSync('git worktree list --porcelain', {
-            encoding: 'utf-8',
-            stdio: 'pipe',
-        });
+        const output = await $`git worktree list --porcelain`.text();
 
         const worktrees: WorktreeInfo[] = [];
         const lines = output.split('\n').filter(line => line.trim());
@@ -61,21 +58,17 @@ export function listExistingWorktrees(worktreeId?: string): WorktreeInfo[] {
     }
 }
 
-export function createWorktree(
+export async function createWorktree(
     worktreeId: string,
     sourcePath: string,
     branch: string,
     targetDir?: string
-): string {
+): Promise<string> {
     const worktreeName = generateWorktreeName(worktreeId, branch);
     const worktreePath = targetDir ? join(targetDir, worktreeName) : join('..', worktreeName);
 
     try {
-        execSync(`git worktree add "${worktreePath}" "${branch}"`, {
-            cwd: sourcePath,
-            stdio: 'pipe',
-        });
-
+        await $`git worktree add ${worktreePath} ${branch}`.cwd(sourcePath);
         return worktreePath;
     } catch (error) {
         throw new Error(
@@ -84,17 +77,15 @@ export function createWorktree(
     }
 }
 
-export function removeWorktree(worktreePath: string): void {
+export async function removeWorktree(worktreePath: string): Promise<void> {
     try {
-        execSync(`git worktree remove "${worktreePath}"`, { stdio: 'pipe' });
+        await $`git worktree remove ${worktreePath}`;
     } catch (error) {
-        execSync(`git worktree remove --force "${worktreePath}"`, {
-            stdio: 'pipe',
-        });
+        await $`git worktree remove --force ${worktreePath}`;
     }
 }
 
-export function getWorktreeForWorktree(worktreeId: string): WorktreeInfo | null {
-    const worktrees = listExistingWorktrees(worktreeId);
+export async function getWorktreeForWorktree(worktreeId: string): Promise<WorktreeInfo | null> {
+    const worktrees = await listExistingWorktrees(worktreeId);
     return worktrees.length > 0 ? worktrees[0] : null;
 }

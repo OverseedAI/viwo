@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { $ } from 'bun';
 
 export interface ContainerInfo {
     id: string;
@@ -38,13 +38,11 @@ export function parseContainerName(
     return { worktreeId, serviceType };
 }
 
-export function listWorktreeContainers(worktreeId?: string): ContainerInfo[] {
+export async function listWorktreeContainers(worktreeId?: string): Promise<ContainerInfo[]> {
     try {
         const filterPattern = worktreeId ? `viwo-${worktreeId}-` : 'viwo-';
-        const output = execSync(
-            `docker ps -a --filter "name=${filterPattern}" --format "{{.ID}}|{{.Names}}|{{.Status}}"`,
-            { encoding: 'utf-8', stdio: 'pipe' }
-        );
+        const output =
+            await $`docker ps -a --filter name=${filterPattern} --format {{.ID}}|{{.Names}}|{{.Status}}`.text();
 
         const containers: ContainerInfo[] = [];
         const lines = output.split('\n').filter(line => line.trim());
@@ -70,50 +68,46 @@ export function listWorktreeContainers(worktreeId?: string): ContainerInfo[] {
     }
 }
 
-export function createContainer(
+export async function createContainer(
     worktreeId: string,
     serviceType: string,
     config: ContainerConfig
-): string {
+): Promise<string> {
     const containerName = generateContainerName(worktreeId, serviceType);
 
-    let dockerCommand = `docker run -d --name "${containerName}"`;
+    const args = ['docker', 'run', '-d', '--name', containerName];
 
     if (config.workingDir) {
-        dockerCommand += ` -w "${config.workingDir}"`;
+        args.push('-w', config.workingDir);
     }
 
     if (config.ports) {
         for (const port of config.ports) {
-            dockerCommand += ` -p ${port}`;
+            args.push('-p', port);
         }
     }
 
     if (config.volumes) {
         for (const volume of config.volumes) {
-            dockerCommand += ` -v "${volume}"`;
+            args.push('-v', volume);
         }
     }
 
     if (config.environment) {
         for (const [key, value] of Object.entries(config.environment)) {
-            dockerCommand += ` -e ${key}="${value}"`;
+            args.push('-e', `${key}=${value}`);
         }
     }
 
-    dockerCommand += ` ${config.image}`;
+    args.push(config.image);
 
     if (config.command) {
-        dockerCommand += ` ${config.command.join(' ')}`;
+        args.push(...config.command);
     }
 
     try {
-        const containerId = execSync(dockerCommand, {
-            encoding: 'utf-8',
-            stdio: 'pipe',
-        }).trim();
-
-        return containerId;
+        const result = await $`${args}`.text();
+        return result.trim();
     } catch (error) {
         throw new Error(
             `Failed to create container: ${error instanceof Error ? error.message : error}`
@@ -121,13 +115,13 @@ export function createContainer(
     }
 }
 
-export function stopWorktreeContainers(worktreeId: string): void {
-    const containers = listWorktreeContainers(worktreeId);
+export async function stopWorktreeContainers(worktreeId: string): Promise<void> {
+    const containers = await listWorktreeContainers(worktreeId);
 
     for (const container of containers) {
         if (container.status.includes('Up')) {
             try {
-                execSync(`docker stop ${container.id}`, { stdio: 'pipe' });
+                await $`docker stop ${container.id}`;
             } catch (error) {
                 // Continue stopping other containers even if one fails
             }
@@ -135,21 +129,21 @@ export function stopWorktreeContainers(worktreeId: string): void {
     }
 }
 
-export function removeWorktreeContainers(worktreeId: string): void {
-    const containers = listWorktreeContainers(worktreeId);
+export async function removeWorktreeContainers(worktreeId: string): Promise<void> {
+    const containers = await listWorktreeContainers(worktreeId);
 
     for (const container of containers) {
         try {
             if (container.status.includes('Up')) {
-                execSync(`docker stop ${container.id}`, { stdio: 'pipe' });
+                await $`docker stop ${container.id}`;
             }
-            execSync(`docker rm ${container.id}`, { stdio: 'pipe' });
+            await $`docker rm ${container.id}`;
         } catch (error) {
             // Continue removing other containers even if one fails
         }
     }
 }
 
-export function getContainersForWorktree(worktreeId: string): ContainerInfo[] {
-    return listWorktreeContainers(worktreeId);
+export async function getContainersForWorktree(worktreeId: string): Promise<ContainerInfo[]> {
+    return await listWorktreeContainers(worktreeId);
 }

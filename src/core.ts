@@ -97,8 +97,8 @@ export async function getWorktreeStatus(id: string): Promise<{
     containerIds: string[];
     status: 'active' | 'inactive';
 }> {
-    const worktree = getWorktreeForWorktree(id);
-    const containers = getContainersForWorktree(id);
+    const worktree = await getWorktreeForWorktree(id);
+    const containers = await getContainersForWorktree(id);
     const activeContainerIds = containers.filter(c => c.status.includes('Up')).map(c => c.id);
 
     return {

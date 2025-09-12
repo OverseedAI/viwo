@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { listWorktrees, getWorktree, type Worktree } from './index.js';
 import { runPreflightChecks } from './preflight-checks.js';
-import { createWorktree, removeWorktree } from './worktree-manager.js';
+import { createWorktree, removeWorktree, getWorktreeForWorktree } from './worktree-manager.js';
 import {
     createContainer,
     stopWorktreeContainers,
@@ -91,6 +91,59 @@ program
     });
 
 program
+    .command('add <name> [branch]')
+    .description('Add a new git worktree')
+    .option('-d, --dir <directory>', 'directory to create worktree in', '..')
+    .action(async (name, branch = 'main', options) => {
+        await withPreflightChecks(async () => {
+            try {
+                console.log(`📁 Creating git worktree '${name}' from branch '${branch}'...`);
+
+                const sourcePath = process.cwd();
+                const worktreePath = await createWorktree(name, sourcePath, branch, options.dir);
+
+                console.log(`✅ Git worktree created at: ${worktreePath}`);
+                console.log(`🎉 Worktree '${name}' is ready!`);
+                console.log(`💡 Use 'cd ${worktreePath}' to navigate to your new worktree`);
+            } catch (error) {
+                console.error('❌ Error creating worktree:', error);
+                process.exit(1);
+            }
+        });
+    });
+
+program
+    .command('remove <name>')
+    .description('Remove a git worktree')
+    .option('-f, --force', 'force removal without confirmation')
+    .action(async (name, options) => {
+        await withPreflightChecks(async () => {
+            try {
+                const worktreeInfo = await getWorktreeForWorktree(name);
+                if (!worktreeInfo) {
+                    console.error(`❌ Worktree '${name}' not found`);
+                    process.exit(1);
+                }
+
+                if (!options.force) {
+                    console.log(`⚠️  This will remove the git worktree '${name}'`);
+                    console.log(`   Path: ${worktreeInfo.path}`);
+                    console.log(`   Branch: ${worktreeInfo.branch}`);
+                    console.log('\n   Use --force to skip this confirmation');
+                    process.exit(0);
+                }
+
+                console.log(`🗑️  Removing git worktree '${name}'...`);
+                await removeWorktree(worktreeInfo.path);
+                console.log(`✅ Git worktree '${name}' removed`);
+            } catch (error) {
+                console.error('❌ Error removing worktree:', error);
+                process.exit(1);
+            }
+        });
+    });
+
+program
     .command('create <worktree-id> [branch]')
     .description('Create a new worktree for the worktree')
     .option('-c, --container', 'also create a development container')
@@ -106,12 +159,17 @@ program
 
                 console.log(`📁 Creating worktree for '${worktree.name}'...`);
 
-                const worktreePath = createWorktree(worktreeId, worktree.path, branch, options.dir);
+                const worktreePath = await createWorktree(
+                    worktreeId,
+                    worktree.path,
+                    branch,
+                    options.dir
+                );
                 console.log(`✅ Worktree created at: ${worktreePath}`);
 
                 if (options.container) {
                     console.log(`🐳 Creating development container...`);
-                    const containerId = createContainer(worktreeId, 'dev', {
+                    const containerId = await createContainer(worktreeId, 'dev', {
                         image: 'node:18-alpine',
                         workingDir: '/workspace',
                         volumes: [`${worktreePath}:/workspace`],
@@ -152,7 +210,7 @@ program
                 }
 
                 console.log(`🐳 Starting development container for '${worktree.name}'...`);
-                const containerId = createContainer(worktreeId, 'dev', {
+                const containerId = await createContainer(worktreeId, 'dev', {
                     image: 'node:18-alpine',
                     workingDir: '/workspace',
                     volumes: [`${worktree.worktreePath}:/workspace`],
@@ -178,7 +236,7 @@ program
         await withPreflightChecks(async () => {
             try {
                 console.log(`🛑 Stopping containers for worktree '${worktreeId}'...`);
-                stopWorktreeContainers(worktreeId);
+                await stopWorktreeContainers(worktreeId);
                 console.log(`✅ Containers stopped`);
             } catch (error) {
                 console.error('❌ Error stopping containers:', error);
@@ -213,11 +271,11 @@ program
                 console.log(`🧹 Cleaning up worktree '${worktree.name}'...`);
 
                 if (worktree.worktreePath) {
-                    removeWorktree(worktree.worktreePath);
+                    await removeWorktree(worktree.worktreePath);
                     console.log(`✅ Worktree removed`);
                 }
 
-                removeWorktreeContainers(worktreeId);
+                await removeWorktreeContainers(worktreeId);
                 console.log(`✅ Containers removed`);
 
                 console.log(`🎉 Worktree '${worktree.name}' cleaned up`);
