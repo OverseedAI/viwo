@@ -13,7 +13,7 @@
         "build": "tsc",
         "build:watch": "tsc --watch",
         "dev": "bun src/cli.ts",
-        "test": "echo \"Error: no test specified\" && exit 1",
+        "test": "bun test",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "prepare": "husky"

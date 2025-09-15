@@ -101,3 +101,11 @@ bun install
 bun run dev list
 bun run dev list --json
 ```
+
+### Testing
+
+See [TESTING.md](./TESTING.md) for details on running and contributing to tests. The short version:
+
+```bash
+bun test
+```
