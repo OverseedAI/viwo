@@ -1,8 +1,8 @@
 node_modules
 dist
 build
+.turbo
 coverage
-*.min.js
-*.min.css
-CHANGELOG.md
-LICENSE
+*.log
+.DS_Store
+package.json
