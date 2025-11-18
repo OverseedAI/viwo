@@ -1,38 +1,38 @@
-import { AgentConfig, AgentType } from './schemas.js'
-import { spawn, ChildProcess } from 'child_process'
-import path from 'path'
-import fs from 'fs'
+import { AgentConfig, AgentType } from './schemas';
+import { spawn, ChildProcess } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 
 export class AgentManager {
     async initializeAgent(worktreePath: string, config: AgentConfig): Promise<void> {
         switch (config.type) {
             case 'claude-code':
-                await this.initializeClaudeCode(worktreePath, config)
-                break
+                await this.initializeClaudeCode(worktreePath, config);
+                break;
             case 'cline':
-                await this.initializeCline(worktreePath, config)
-                break
+                await this.initializeCline(worktreePath, config);
+                break;
             case 'cursor':
-                await this.initializeCursor(worktreePath, config)
-                break
+                await this.initializeCursor(worktreePath, config);
+                break;
             default:
-                throw new Error(`Unsupported agent type: ${config.type}`)
+                throw new Error(`Unsupported agent type: ${config.type}`);
         }
     }
 
     private async initializeClaudeCode(worktreePath: string, config: AgentConfig): Promise<void> {
         // Create a .claude directory with initial prompt
-        const claudeDir = path.join(worktreePath, '.claude')
+        const claudeDir = path.join(worktreePath, '.claude');
         if (!fs.existsSync(claudeDir)) {
-            fs.mkdirSync(claudeDir, { recursive: true })
+            fs.mkdirSync(claudeDir, { recursive: true });
         }
 
         // Create initial prompt file
-        const promptPath = path.join(claudeDir, 'initial-prompt.md')
-        fs.writeFileSync(promptPath, config.initialPrompt)
+        const promptPath = path.join(claudeDir, 'initial-prompt.md');
+        fs.writeFileSync(promptPath, config.initialPrompt);
 
         // Create a simple README in the worktree with instructions
-        const readmePath = path.join(worktreePath, 'VIWO-README.md')
+        const readmePath = path.join(worktreePath, 'VIWO-README.md');
         const readmeContent = `# VIWO Session
 
 This worktree was created by VIWO for the following task:
@@ -50,33 +50,33 @@ ${config.initialPrompt}
 - Agent: ${config.type}
 ${config.model ? `- Model: ${config.model}` : ''}
 - Created: ${new Date().toISOString()}
-`
+`;
 
-        fs.writeFileSync(readmePath, readmeContent)
+        fs.writeFileSync(readmePath, readmeContent);
     }
 
     private async initializeCline(worktreePath: string, config: AgentConfig): Promise<void> {
         // Placeholder for Cline initialization
         // This would set up Cline-specific configuration
-        throw new Error('Cline support not yet implemented')
+        throw new Error('Cline support not yet implemented');
     }
 
     private async initializeCursor(worktreePath: string, config: AgentConfig): Promise<void> {
         // Placeholder for Cursor initialization
         // This would set up Cursor-specific configuration
-        throw new Error('Cursor support not yet implemented')
+        throw new Error('Cursor support not yet implemented');
     }
 
     async launchAgent(worktreePath: string, agentType: AgentType): Promise<ChildProcess | null> {
         switch (agentType) {
             case 'claude-code':
-                return this.launchClaudeCode(worktreePath)
+                return this.launchClaudeCode(worktreePath);
             case 'cline':
-                return this.launchCline(worktreePath)
+                return this.launchCline(worktreePath);
             case 'cursor':
-                return this.launchCursor(worktreePath)
+                return this.launchCursor(worktreePath);
             default:
-                throw new Error(`Unsupported agent type: ${agentType}`)
+                throw new Error(`Unsupported agent type: ${agentType}`);
         }
     }
 
@@ -84,14 +84,14 @@ ${config.model ? `- Model: ${config.model}` : ''}
         // For now, we'll just prepare the environment
         // The user will need to manually run claude-code
         // In the future, we could spawn a process here
-        return null
+        return null;
     }
 
     private launchCline(worktreePath: string): ChildProcess | null {
-        throw new Error('Cline support not yet implemented')
+        throw new Error('Cline support not yet implemented');
     }
 
     private launchCursor(worktreePath: string): ChildProcess | null {
-        throw new Error('Cursor support not yet implemented')
+        throw new Error('Cursor support not yet implemented');
     }
 }

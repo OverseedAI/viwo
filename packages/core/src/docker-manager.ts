@@ -1,21 +1,20 @@
-import Docker from 'dockerode'
-import path from 'path'
-import fs from 'fs'
-import { ContainerInfo, PortMapping } from './schemas.js'
+import Docker from 'dockerode';
+import fs from 'fs';
+import { ContainerInfo, PortMapping } from './schemas';
 
 export class DockerManager {
-    private docker: Docker
+    private docker: Docker;
 
     constructor() {
-        this.docker = new Docker()
+        this.docker = new Docker();
     }
 
     async isDockerRunning(): Promise<boolean> {
         try {
-            await this.docker.ping()
-            return true
+            await this.docker.ping();
+            return true;
         } catch (error) {
-            return false
+            return false;
         }
     }
 
@@ -29,17 +28,17 @@ export class DockerManager {
         // and creating containers accordingly
 
         // This is a simplified implementation
-        const containers: ContainerInfo[] = []
+        const containers: ContainerInfo[] = [];
 
         // Check if docker-compose file exists
         if (!fs.existsSync(composePath)) {
-            throw new Error(`Docker compose file not found: ${composePath}`)
+            throw new Error(`Docker compose file not found: ${composePath}`);
         }
 
         // TODO: Parse docker-compose.yml and create containers
         // For MVP, we'll create a simple Node.js container as an example
 
-        return containers
+        return containers;
     }
 
     async createContainer(
@@ -50,16 +49,16 @@ export class DockerManager {
         env?: Record<string, string>
     ): Promise<ContainerInfo> {
         // Pull image if not exists
-        await this.pullImage(image)
+        await this.pullImage(image);
 
         // Create port bindings
-        const portBindings: any = {}
-        const exposedPorts: any = {}
+        const portBindings: any = {};
+        const exposedPorts: any = {};
 
         for (const port of ports) {
-            const containerPort = `${port.container}/${port.protocol}`
-            exposedPorts[containerPort] = {}
-            portBindings[containerPort] = [{ HostPort: port.host.toString() }]
+            const containerPort = `${port.container}/${port.protocol}`;
+            exposedPorts[containerPort] = {};
+            portBindings[containerPort] = [{ HostPort: port.host.toString() }];
         }
 
         // Create container
@@ -74,9 +73,9 @@ export class DockerManager {
             },
             Env: env ? Object.entries(env).map(([k, v]) => `${k}=${v}`) : undefined,
             WorkingDir: '/app',
-        })
+        });
 
-        const info = await container.inspect()
+        const info = await container.inspect();
 
         return {
             id: info.Id,
@@ -85,66 +84,66 @@ export class DockerManager {
             status: this.mapContainerStatus(info.State.Status),
             ports,
             createdAt: new Date(info.Created),
-        }
+        };
     }
 
     async startContainer(containerId: string): Promise<void> {
-        const container = this.docker.getContainer(containerId)
-        await container.start()
+        const container = this.docker.getContainer(containerId);
+        await container.start();
     }
 
     async stopContainer(containerId: string): Promise<void> {
-        const container = this.docker.getContainer(containerId)
-        await container.stop()
+        const container = this.docker.getContainer(containerId);
+        await container.stop();
     }
 
     async removeContainer(containerId: string): Promise<void> {
-        const container = this.docker.getContainer(containerId)
-        await container.remove({ force: true })
+        const container = this.docker.getContainer(containerId);
+        await container.remove({ force: true });
     }
 
     async getContainerStatus(containerId: string): Promise<ContainerInfo['status']> {
-        const container = this.docker.getContainer(containerId)
-        const info = await container.inspect()
-        return this.mapContainerStatus(info.State.Status)
+        const container = this.docker.getContainer(containerId);
+        const info = await container.inspect();
+        return this.mapContainerStatus(info.State.Status);
     }
 
     private async pullImage(image: string): Promise<void> {
         return new Promise((resolve, reject) => {
             this.docker.pull(image, (err: any, stream: any) => {
                 if (err) {
-                    reject(err)
-                    return
+                    reject(err);
+                    return;
                 }
 
                 this.docker.modem.followProgress(
                     stream,
                     (err: any) => {
-                        if (err) reject(err)
-                        else resolve()
+                        if (err) reject(err);
+                        else resolve();
                     },
                     () => {} // Progress callback
-                )
-            })
-        })
+                );
+            });
+        });
     }
 
     private mapContainerStatus(dockerStatus: string): ContainerInfo['status'] {
         switch (dockerStatus.toLowerCase()) {
             case 'created':
-                return 'created'
+                return 'created';
             case 'running':
-                return 'running'
+                return 'running';
             case 'paused':
             case 'restarting':
-                return 'running'
+                return 'running';
             case 'removing':
             case 'exited':
-                return 'exited'
+                return 'exited';
             case 'dead':
-                return 'error'
+                return 'error';
             default:
-                return 'stopped'
+                return 'stopped';
         }
     }
 }

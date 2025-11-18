@@ -17,5 +17,15 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "zod": "^3.22.4",
+    "simple-git": "^3.21.0",
+    "dockerode": "^4.0.2",
+    "get-port": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.23",
+    "typescript": "^5.7.2"
+  }
 }

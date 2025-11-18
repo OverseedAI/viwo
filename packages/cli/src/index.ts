@@ -5,4 +5,4 @@
  */
 
 // Re-export everything from core for SDK usage
-export * from '@viwo/core'
+export * from '@viwo/core';
