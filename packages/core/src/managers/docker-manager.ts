@@ -1,5 +1,5 @@
 import Docker from 'dockerode';
-import fs from 'fs';
+import { exists } from 'node:fs/promises';
 import { ContainerInfo, PortMapping } from '../schemas';
 
 const docker = new Docker();
@@ -26,7 +26,7 @@ export async function createContainersFromCompose(
     const containers: ContainerInfo[] = [];
 
     // Check if docker-compose file exists
-    if (!fs.existsSync(composePath)) {
+    if (!(await exists(composePath))) {
         throw new Error(`Docker compose file not found: ${composePath}`);
     }
 

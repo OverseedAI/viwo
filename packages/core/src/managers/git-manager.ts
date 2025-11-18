@@ -1,6 +1,6 @@
 import { simpleGit } from 'simple-git';
 import path from 'path';
-import fs from 'fs';
+import { mkdir, exists, rm } from 'node:fs/promises';
 import { nanoid } from 'nanoid';
 
 export async function isValidRepository(repoPath: string): Promise<boolean> {
@@ -46,8 +46,8 @@ export async function createWorktree(
 
     // Ensure worktrees directory exists
     const worktreesDir = path.dirname(worktreePath);
-    if (!fs.existsSync(worktreesDir)) {
-        fs.mkdirSync(worktreesDir, { recursive: true });
+    if (!(await exists(worktreesDir))) {
+        await mkdir(worktreesDir, { recursive: true });
     }
 
     // Create new branch and worktree
@@ -62,8 +62,8 @@ export async function removeWorktree(repoPath: string, worktreePath: string): Pr
         await git.raw(['worktree', 'remove', worktreePath, '--force']);
     } catch (error) {
         // If the worktree doesn't exist in git, just remove the directory
-        if (fs.existsSync(worktreePath)) {
-            fs.rmSync(worktreePath, { recursive: true, force: true });
+        if (await exists(worktreePath)) {
+            await rm(worktreePath, { recursive: true, force: true });
         }
     }
 }
@@ -101,8 +101,9 @@ export async function hasUncommittedChanges(worktreePath: string): Promise<boole
 }
 
 export async function copyEnvFile(sourceEnvPath: string, targetPath: string): Promise<void> {
-    if (fs.existsSync(sourceEnvPath)) {
+    if (await exists(sourceEnvPath)) {
         const targetEnvPath = path.join(targetPath, path.basename(sourceEnvPath));
-        fs.copyFileSync(sourceEnvPath, targetEnvPath);
+        const sourceFile = Bun.file(sourceEnvPath);
+        await Bun.write(targetEnvPath, sourceFile);
     }
 }

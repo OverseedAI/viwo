@@ -1,7 +1,7 @@
 import { AgentConfig, AgentType } from '../schemas';
-import { ChildProcess } from 'child_process';
+import type { Subprocess } from 'bun';
 import path from 'path';
-import fs from 'fs';
+import { mkdir, exists } from 'node:fs/promises';
 
 export async function initializeAgent(worktreePath: string, config: AgentConfig): Promise<void> {
     switch (config.type) {
@@ -22,13 +22,13 @@ export async function initializeAgent(worktreePath: string, config: AgentConfig)
 async function initializeClaudeCode(worktreePath: string, config: AgentConfig): Promise<void> {
     // Create a .claude directory with initial prompt
     const claudeDir = path.join(worktreePath, '.claude');
-    if (!fs.existsSync(claudeDir)) {
-        fs.mkdirSync(claudeDir, { recursive: true });
+    if (!(await exists(claudeDir))) {
+        await mkdir(claudeDir, { recursive: true });
     }
 
     // Create initial prompt file
     const promptPath = path.join(claudeDir, 'initial-prompt.md');
-    fs.writeFileSync(promptPath, config.initialPrompt);
+    await Bun.write(promptPath, config.initialPrompt);
 
     // Create a simple README in the worktree with instructions
     const readmePath = path.join(worktreePath, 'VIWO-README.md');
@@ -51,7 +51,7 @@ ${config.model ? `- Model: ${config.model}` : ''}
 - Created: ${new Date().toISOString()}
 `;
 
-    fs.writeFileSync(readmePath, readmeContent);
+    await Bun.write(readmePath, readmeContent);
 }
 
 async function initializeCline(worktreePath: string, config: AgentConfig): Promise<void> {
@@ -69,7 +69,7 @@ async function initializeCursor(worktreePath: string, config: AgentConfig): Prom
 export async function launchAgent(
     worktreePath: string,
     agentType: AgentType
-): Promise<ChildProcess | null> {
+): Promise<Subprocess | null> {
     switch (agentType) {
         case 'claude-code':
             return launchClaudeCode(worktreePath);
@@ -82,17 +82,17 @@ export async function launchAgent(
     }
 }
 
-function launchClaudeCode(worktreePath: string): ChildProcess | null {
+function launchClaudeCode(worktreePath: string): Subprocess | null {
     // For now, we'll just prepare the environment
     // The user will need to manually run claude-code
-    // In the future, we could spawn a process here
+    // In the future, we could spawn a process here using Bun.spawn()
     return null;
 }
 
-function launchCline(worktreePath: string): ChildProcess | null {
+function launchCline(worktreePath: string): Subprocess | null {
     throw new Error('Cline support not yet implemented');
 }
 
-function launchCursor(worktreePath: string): ChildProcess | null {
+function launchCursor(worktreePath: string): Subprocess | null {
     throw new Error('Cursor support not yet implemented');
 }

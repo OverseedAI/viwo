@@ -1,6 +1,6 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import path from 'path';
-import fs from 'fs';
+import { mkdirSync, existsSync } from 'node:fs';
 import { WorktreeSession, SessionStatus } from '../schemas';
 
 export interface StateManager {
@@ -14,15 +14,15 @@ export interface StateManager {
 
 export function createStateManager(stateDir: string): StateManager {
     // Ensure state directory exists
-    if (!fs.existsSync(stateDir)) {
-        fs.mkdirSync(stateDir, { recursive: true });
+    if (!existsSync(stateDir)) {
+        mkdirSync(stateDir, { recursive: true });
     }
 
     const dbPath = path.join(stateDir, 'viwo.db');
     const db = new Database(dbPath);
 
     // Initialize database
-    db.exec(`
+    db.run(`
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
         repo_path TEXT NOT NULL,
@@ -36,10 +36,10 @@ export function createStateManager(stateDir: string): StateManager {
         last_activity INTEGER NOT NULL,
         error TEXT
       );
-
-      CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
-      CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at);
     `);
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at);`);
 
     function rowToSession(row: any): WorktreeSession {
         return {
@@ -59,14 +59,14 @@ export function createStateManager(stateDir: string): StateManager {
 
     return {
         createSession(session: WorktreeSession): void {
-            const stmt = db.prepare(`
-        INSERT INTO sessions (
-          id, repo_path, branch_name, worktree_path, containers, ports, agent,
-          status, created_at, last_activity, error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+            const query = db.query(`
+                INSERT INTO sessions (
+                  id, repo_path, branch_name, worktree_path, containers, ports, agent,
+                  status, created_at, last_activity, error
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `);
 
-            stmt.run(
+            query.run(
                 session.id,
                 session.repoPath,
                 session.branchName,
@@ -82,8 +82,8 @@ export function createStateManager(stateDir: string): StateManager {
         },
 
         getSession(id: string): WorktreeSession | null {
-            const stmt = db.prepare('SELECT * FROM sessions WHERE id = ?');
-            const row = stmt.get(id) as any;
+            const query = db.query('SELECT * FROM sessions WHERE id = ?');
+            const row = query.get(id) as any;
 
             if (!row) return null;
 
@@ -91,23 +91,23 @@ export function createStateManager(stateDir: string): StateManager {
         },
 
         listSessions(status?: SessionStatus, limit?: number): WorktreeSession[] {
-            let query = 'SELECT * FROM sessions';
+            let queryStr = 'SELECT * FROM sessions';
             const params: any[] = [];
 
             if (status) {
-                query += ' WHERE status = ?';
+                queryStr += ' WHERE status = ?';
                 params.push(status);
             }
 
-            query += ' ORDER BY created_at DESC';
+            queryStr += ' ORDER BY created_at DESC';
 
             if (limit) {
-                query += ' LIMIT ?';
+                queryStr += ' LIMIT ?';
                 params.push(limit);
             }
 
-            const stmt = db.prepare(query);
-            const rows = stmt.all(...params) as any[];
+            const query = db.query(queryStr);
+            const rows = query.all(...params) as any[];
 
             return rows.map((row) => rowToSession(row));
         },
@@ -151,14 +151,14 @@ export function createStateManager(stateDir: string): StateManager {
 
             values.push(id);
 
-            const query = `UPDATE sessions SET ${fields.join(', ')} WHERE id = ?`;
-            const stmt = db.prepare(query);
-            stmt.run(...values);
+            const queryStr = `UPDATE sessions SET ${fields.join(', ')} WHERE id = ?`;
+            const query = db.query(queryStr);
+            query.run(...values);
         },
 
         deleteSession(id: string): void {
-            const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
-            stmt.run(id);
+            const query = db.query('DELETE FROM sessions WHERE id = ?');
+            query.run(id);
         },
 
         close(): void {

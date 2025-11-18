@@ -5,6 +5,7 @@ node_modules
 dist
 build
 .turbo
+*.tsbuildinfo
 
 # Logs
 *.log
