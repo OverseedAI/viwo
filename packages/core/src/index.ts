@@ -6,14 +6,16 @@
  */
 
 // Export main SDK
-export { Viwo, viwo } from './viwo';
+export type { Viwo } from './viwo';
+export { createViwo, viwo } from './viwo';
 
 // Export all schemas and types
 export * from './schemas';
 
 // Export managers for advanced usage
-export { StateManager } from './state-manager';
-export { RepositoryManager } from './repository-manager';
-export { DockerManager } from './docker-manager';
-export { AgentManager } from './agent-manager';
-export { PortManager } from './port-manager';
+export type { StateManager } from './state-manager';
+export { createStateManager } from './state-manager';
+export * as RepositoryManager from './repository-manager';
+export * as DockerManager from './docker-manager';
+export * as AgentManager from './agent-manager';
+export * as PortManager from './port-manager';

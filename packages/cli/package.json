@@ -9,10 +9,10 @@
     "viwo": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bun build src/index.ts src/cli.ts --outdir dist --target node --format esm && tsc --emitDeclarationOnly",
+    "dev": "bun build src/index.ts src/cli.ts --outdir dist --target node --format esm --watch",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"No tests yet\""
   },
   "dependencies": {

@@ -19,10 +19,12 @@
     "dist"
   ],
   "dependencies": {
-    "zod": "^3.22.4",
-    "simple-git": "^3.21.0",
     "dockerode": "^4.0.2",
-    "get-port": "^7.0.0"
+    "drizzle-orm": "^0.44.7",
+    "get-port": "^7.0.0",
+    "nanoid": "^5.1.6",
+    "simple-git": "^3.21.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/dockerode": "^3.3.23",

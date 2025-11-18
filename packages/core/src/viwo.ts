@@ -11,205 +11,201 @@ import {
     WorktreeSession,
     ViwoConfig,
     ViwoConfigSchema,
-    PortMapping,
 } from './schemas';
-import { StateManager } from './state-manager';
-import { RepositoryManager } from './repository-manager';
-import { DockerManager } from './docker-manager';
-import { AgentManager } from './agent-manager';
-import { PortManager } from './port-manager';
+import { StateManager, createStateManager } from './managers/state-manager';
+import * as repo from './managers/repository-manager';
+import * as docker from './managers/docker-manager';
+import * as agent from './managers/agent-manager';
+import * as ports from './managers/port-manager';
 
-export class Viwo {
-    private stateManager: StateManager;
-    private dockerManager: DockerManager;
-    private agentManager: AgentManager;
-    private portManager: PortManager;
-    private config: ViwoConfig;
+export interface Viwo {
+    init: (options: InitOptions) => Promise<WorktreeSession>;
+    list: (options?: ListOptions) => Promise<WorktreeSession[]>;
+    get: (sessionId: string) => Promise<WorktreeSession | null>;
+    cleanup: (options: CleanupOptions) => Promise<void>;
+    close: () => void;
+}
 
-    constructor(config?: Partial<ViwoConfig>) {
-        // Merge with defaults
-        this.config = ViwoConfigSchema.parse(config || {});
+export function createViwo(config?: Partial<ViwoConfig>): Viwo {
+    // Merge with defaults
+    const viwoConfig = ViwoConfigSchema.parse(config || {});
 
-        // Resolve state directory to absolute path
-        const stateDir = path.isAbsolute(this.config.stateDir)
-            ? this.config.stateDir
-            : path.join(os.homedir(), this.config.stateDir);
+    // Resolve state directory to absolute path
+    const stateDir = path.isAbsolute(viwoConfig.stateDir)
+        ? viwoConfig.stateDir
+        : path.join(os.homedir(), viwoConfig.stateDir);
 
-        this.stateManager = new StateManager(stateDir);
-        this.dockerManager = new DockerManager();
-        this.agentManager = new AgentManager();
-        this.portManager = new PortManager(this.stateManager, this.config.portRange);
-    }
+    const stateManager = createStateManager(stateDir);
 
-    /**
-     * Initialize a new worktree session
-     */
-    async init(options: InitOptions): Promise<WorktreeSession> {
-        // Validate options
-        const validatedOptions = InitOptionsSchema.parse(options);
+    return {
+        /**
+         * Initialize a new worktree session
+         */
+        async init(options: InitOptions): Promise<WorktreeSession> {
+            // Validate options
+            const validatedOptions = InitOptionsSchema.parse(options);
 
-        // Validate repository
-        const repoManager = new RepositoryManager(validatedOptions.repoPath);
-        const isValid = await repoManager.isValidRepository();
+            // Validate repository
+            const isValid = await repo.isValidRepository(validatedOptions.repoPath);
 
-        if (!isValid) {
-            throw new Error(`Invalid git repository: ${validatedOptions.repoPath}`);
-        }
-
-        // Check Docker is running
-        const dockerRunning = await this.dockerManager.isDockerRunning();
-        if (!dockerRunning) {
-            throw new Error('Docker is not running. Please start Docker and try again.');
-        }
-
-        // Generate branch name
-        const branchName =
-            validatedOptions.branchName ||
-            (await repoManager.generateBranchName(validatedOptions.prompt));
-
-        // Create worktree path
-        const worktreesDir = path.isAbsolute(this.config.worktreesDir)
-            ? this.config.worktreesDir
-            : path.join(validatedOptions.repoPath, this.config.worktreesDir);
-
-        const worktreePath = path.join(worktreesDir, branchName);
-
-        // Create session
-        const sessionId = nanoid();
-        const now = new Date();
-
-        const session: WorktreeSession = {
-            id: sessionId,
-            repoPath: validatedOptions.repoPath,
-            branchName,
-            worktreePath,
-            containers: [],
-            ports: [],
-            agent: {
-                type: validatedOptions.agent,
-                initialPrompt: validatedOptions.prompt,
-            },
-            status: 'initializing',
-            createdAt: now,
-            lastActivity: now,
-        };
-
-        // Save session to state
-        this.stateManager.createSession(session);
-
-        try {
-            // Create worktree
-            await repoManager.createWorktree(branchName, worktreePath);
-
-            // Copy environment file if specified
-            if (validatedOptions.envFile) {
-                await repoManager.copyEnvFile(validatedOptions.envFile, worktreePath);
+            if (!isValid) {
+                throw new Error(`Invalid git repository: ${validatedOptions.repoPath}`);
             }
 
-            // Initialize agent
-            await this.agentManager.initializeAgent(worktreePath, session.agent);
-
-            // Run setup commands if specified
-            if (validatedOptions.setupCommands) {
-                // TODO: Execute setup commands
-                // For now, we'll just log them
-                console.log('Setup commands:', validatedOptions.setupCommands.join(', '));
+            // Check Docker is running
+            const dockerRunning = await docker.isDockerRunning();
+            if (!dockerRunning) {
+                throw new Error('Docker is not running. Please start Docker and try again.');
             }
 
-            // Update session status
-            this.stateManager.updateSession(sessionId, {
-                status: 'running',
-                lastActivity: new Date(),
-            });
+            // Generate branch name
+            const branchName =
+                validatedOptions.branchName ||
+                (await repo.generateBranchName(validatedOptions.prompt));
 
-            session.status = 'running';
-            return session;
-        } catch (error) {
-            // Update session with error
-            this.stateManager.updateSession(sessionId, {
-                status: 'error',
-                error: error instanceof Error ? error.message : String(error),
-                lastActivity: new Date(),
-            });
+            // Create worktree path
+            const worktreesDir = path.isAbsolute(viwoConfig.worktreesDir)
+                ? viwoConfig.worktreesDir
+                : path.join(validatedOptions.repoPath, viwoConfig.worktreesDir);
 
-            throw error;
-        }
-    }
+            const worktreePath = path.join(worktreesDir, branchName);
 
-    /**
-     * List all sessions
-     */
-    async list(options?: ListOptions): Promise<WorktreeSession[]> {
-        const validatedOptions = options ? ListOptionsSchema.parse(options) : undefined;
+            // Create session
+            const sessionId = nanoid();
+            const now = new Date();
 
-        return this.stateManager.listSessions(validatedOptions?.status, validatedOptions?.limit);
-    }
+            const session: WorktreeSession = {
+                id: sessionId,
+                repoPath: validatedOptions.repoPath,
+                branchName,
+                worktreePath,
+                containers: [],
+                ports: [],
+                agent: {
+                    type: validatedOptions.agent,
+                    initialPrompt: validatedOptions.prompt,
+                },
+                status: 'initializing',
+                createdAt: now,
+                lastActivity: now,
+            };
 
-    /**
-     * Get a specific session
-     */
-    async get(sessionId: string): Promise<WorktreeSession | null> {
-        return this.stateManager.getSession(sessionId);
-    }
+            // Save session to state
+            stateManager.createSession(session);
 
-    /**
-     * Cleanup a session
-     */
-    async cleanup(options: CleanupOptions): Promise<void> {
-        const validatedOptions = CleanupOptionsSchema.parse(options);
+            try {
+                // Create worktree
+                await repo.createWorktree(validatedOptions.repoPath, branchName, worktreePath);
 
-        const session = this.stateManager.getSession(validatedOptions.sessionId);
-        if (!session) {
-            throw new Error(`Session not found: ${validatedOptions.sessionId}`);
-        }
+                // Copy environment file if specified
+                if (validatedOptions.envFile) {
+                    await repo.copyEnvFile(validatedOptions.envFile, worktreePath);
+                }
 
-        try {
-            // Stop and remove containers
-            if (validatedOptions.stopContainers || validatedOptions.removeContainers) {
-                for (const container of session.containers) {
-                    try {
-                        if (validatedOptions.stopContainers) {
-                            await this.dockerManager.stopContainer(container.id);
+                // Initialize agent
+                await agent.initializeAgent(worktreePath, session.agent);
+
+                // Run setup commands if specified
+                if (validatedOptions.setupCommands) {
+                    // TODO: Execute setup commands
+                    // For now, we'll just log them
+                    console.log('Setup commands:', validatedOptions.setupCommands.join(', '));
+                }
+
+                // Update session status
+                stateManager.updateSession(sessionId, {
+                    status: 'running',
+                    lastActivity: new Date(),
+                });
+
+                session.status = 'running';
+                return session;
+            } catch (error) {
+                // Update session with error
+                stateManager.updateSession(sessionId, {
+                    status: 'error',
+                    error: error instanceof Error ? error.message : String(error),
+                    lastActivity: new Date(),
+                });
+
+                throw error;
+            }
+        },
+
+        /**
+         * List all sessions
+         */
+        async list(options?: ListOptions): Promise<WorktreeSession[]> {
+            const validatedOptions = options ? ListOptionsSchema.parse(options) : undefined;
+
+            return stateManager.listSessions(validatedOptions?.status, validatedOptions?.limit);
+        },
+
+        /**
+         * Get a specific session
+         */
+        async get(sessionId: string): Promise<WorktreeSession | null> {
+            return stateManager.getSession(sessionId);
+        },
+
+        /**
+         * Cleanup a session
+         */
+        async cleanup(options: CleanupOptions): Promise<void> {
+            const validatedOptions = CleanupOptionsSchema.parse(options);
+
+            const session = stateManager.getSession(validatedOptions.sessionId);
+            if (!session) {
+                throw new Error(`Session not found: ${validatedOptions.sessionId}`);
+            }
+
+            try {
+                // Stop and remove containers
+                if (validatedOptions.stopContainers || validatedOptions.removeContainers) {
+                    for (const container of session.containers) {
+                        try {
+                            if (validatedOptions.stopContainers) {
+                                await docker.stopContainer(container.id);
+                            }
+                            if (validatedOptions.removeContainers) {
+                                await docker.removeContainer(container.id);
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to cleanup container ${container.id}:`, error);
                         }
-                        if (validatedOptions.removeContainers) {
-                            await this.dockerManager.removeContainer(container.id);
-                        }
-                    } catch (error) {
-                        console.warn(`Failed to cleanup container ${container.id}:`, error);
                     }
                 }
+
+                // Remove worktree
+                if (validatedOptions.removeWorktree) {
+                    await repo.removeWorktree(session.repoPath, session.worktreePath);
+                }
+
+                // Update session status
+                stateManager.updateSession(validatedOptions.sessionId, {
+                    status: 'cleaned',
+                    lastActivity: new Date(),
+                });
+            } catch (error) {
+                // Update session with error
+                stateManager.updateSession(validatedOptions.sessionId, {
+                    status: 'error',
+                    error: error instanceof Error ? error.message : String(error),
+                    lastActivity: new Date(),
+                });
+
+                throw error;
             }
+        },
 
-            // Remove worktree
-            if (validatedOptions.removeWorktree) {
-                const repoManager = new RepositoryManager(session.repoPath);
-                await repoManager.removeWorktree(session.worktreePath);
-            }
-
-            // Update session status
-            this.stateManager.updateSession(validatedOptions.sessionId, {
-                status: 'cleaned',
-                lastActivity: new Date(),
-            });
-        } catch (error) {
-            // Update session with error
-            this.stateManager.updateSession(validatedOptions.sessionId, {
-                status: 'error',
-                error: error instanceof Error ? error.message : String(error),
-                lastActivity: new Date(),
-            });
-
-            throw error;
-        }
-    }
-
-    /**
-     * Close the Viwo instance and cleanup resources
-     */
-    close(): void {
-        this.stateManager.close();
-    }
+        /**
+         * Close the Viwo instance and cleanup resources
+         */
+        close(): void {
+            stateManager.close();
+        },
+    };
 }
 
 // Export singleton instance
-export const viwo = new Viwo();
+export const viwo = createViwo();
