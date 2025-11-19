@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { createStateManager } from './state-manager';
-import { WorktreeSession } from '../schemas';
+import { createStateManager } from '../state-manager';
+import { WorktreeSession } from '../../schemas';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';

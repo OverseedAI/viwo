@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { initializeAgent } from './agent-manager';
-import { AgentConfig } from '../schemas';
+import { initializeAgent } from '../agent-manager';
+import { AgentConfig } from '../../schemas';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';

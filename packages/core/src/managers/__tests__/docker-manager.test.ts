@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { isDockerRunning } from './docker-manager';
+import { isDockerRunning } from '../docker-manager';
 
 describe('docker-manager', () => {
     describe('isDockerRunning', () => {

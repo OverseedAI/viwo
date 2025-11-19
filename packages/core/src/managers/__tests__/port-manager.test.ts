@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { allocatePort, allocatePorts } from './port-manager';
-import { createStateManager } from './state-manager';
-import { WorktreeSession } from '../schemas';
+import { allocatePort, allocatePorts } from '../port-manager';
+import { createStateManager } from '../state-manager';
+import { WorktreeSession } from '../../schemas';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
