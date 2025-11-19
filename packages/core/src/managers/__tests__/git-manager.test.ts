@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { generateBranchName, isValidRepository } from './git-manager';
+import { generateBranchName, isValidRepository } from '../git-manager';
 
 describe('git-manager', () => {
     describe('initializing the repository', () => {

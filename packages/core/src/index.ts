@@ -13,9 +13,16 @@ export { createViwo, viwo } from './viwo';
 export * from './schemas';
 
 // Export managers for advanced usage
-export type { StateManager } from './managers/state-manager';
-export { createStateManager } from './managers/state-manager';
-export * as RepositoryManager from './managers/git-manager';
+export * as SessionManager from './managers/session-manager';
+export * as GitManager from './managers/git-manager';
 export * as DockerManager from './managers/docker-manager';
 export * as AgentManager from './managers/agent-manager';
 export * as PortManager from './managers/port-manager';
+
+// Export repository management
+export {
+    listRepositories,
+    createRepository,
+    deleteRepository,
+    type ListRepositoryOptions,
+} from './managers/repository-manager';

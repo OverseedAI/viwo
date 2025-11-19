@@ -1,5 +1,4 @@
 import path from 'path';
-import os from 'os';
 import { nanoid } from 'nanoid';
 import {
     CleanupOptions,
@@ -7,36 +6,32 @@ import {
     InitOptions,
     InitOptionsSchema,
     ListOptions,
-    ListOptionsSchema,
     ViwoConfig,
     ViwoConfigSchema,
     WorktreeSession,
 } from './schemas';
-import { createStateManager } from './managers/state-manager';
-import * as repo from './managers/git-manager';
+import * as git from './managers/git-manager';
 import * as docker from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
+import { repo } from './managers/repository-manager';
 
 export interface Viwo {
+    repo: typeof repo;
     init: (options: InitOptions) => Promise<WorktreeSession>;
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
     get: (sessionId: string) => Promise<WorktreeSession | null>;
     cleanup: (options: CleanupOptions) => Promise<void>;
-    close: () => void;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
     // Merge with defaults
     const viwoConfig = ViwoConfigSchema.parse(config || {});
 
-    // Resolve state directory to absolute path
-    const stateDir = path.isAbsolute(viwoConfig.stateDir)
-        ? viwoConfig.stateDir
-        : path.join(os.homedir(), viwoConfig.stateDir);
-
-    const stateManager = createStateManager(stateDir);
+    // In-memory session storage (TODO: migrate to db-based sessions)
+    const sessions = new Map<string, WorktreeSession>();
 
     return {
+        repo,
         /**
          * Initialize a new worktree session
          */
@@ -45,7 +40,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             const validatedOptions = InitOptionsSchema.parse(options);
 
             // Validate repository
-            const isValid = await repo.isValidRepository(validatedOptions.repoPath);
+            const isValid = await git.isValidRepository(validatedOptions.repoPath);
 
             if (!isValid) {
                 throw new Error(`Invalid git repository: ${validatedOptions.repoPath}`);
@@ -60,7 +55,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             // Generate branch name
             const branchName =
                 validatedOptions.branchName ||
-                (await repo.generateBranchName(validatedOptions.prompt));
+                (await git.generateBranchName(validatedOptions.prompt));
 
             // Create worktree path
             const worktreesDir = path.isAbsolute(viwoConfig.worktreesDir)
@@ -90,15 +85,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             };
 
             // Save session to state
-            stateManager.createSession(session);
+            sessions.set(sessionId, session);
 
             try {
                 // Create worktree
-                await repo.createWorktree(validatedOptions.repoPath, branchName, worktreePath);
+                await git.createWorktree(validatedOptions.repoPath, branchName, worktreePath);
 
                 // Copy environment file if specified
                 if (validatedOptions.envFile) {
-                    await repo.copyEnvFile(validatedOptions.envFile, worktreePath);
+                    await git.copyEnvFile(validatedOptions.envFile, worktreePath);
                 }
 
                 // Initialize agent
@@ -112,20 +107,17 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 }
 
                 // Update session status
-                stateManager.updateSession(sessionId, {
-                    status: 'running',
-                    lastActivity: new Date(),
-                });
-
                 session.status = 'running';
+                session.lastActivity = new Date();
+                sessions.set(sessionId, session);
+
                 return session;
             } catch (error) {
                 // Update session with error
-                stateManager.updateSession(sessionId, {
-                    status: 'error',
-                    error: error instanceof Error ? error.message : String(error),
-                    lastActivity: new Date(),
-                });
+                session.status = 'error';
+                session.error = error instanceof Error ? error.message : String(error);
+                session.lastActivity = new Date();
+                sessions.set(sessionId, session);
 
                 throw error;
             }
@@ -134,17 +126,16 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         /**
          * List all sessions
          */
-        async list(options?: ListOptions): Promise<WorktreeSession[]> {
-            const validatedOptions = options ? ListOptionsSchema.parse(options) : undefined;
-
-            return stateManager.listSessions(validatedOptions?.status, validatedOptions?.limit);
+        async list(_options?: ListOptions): Promise<WorktreeSession[]> {
+            // TODO: implement filtering by status and limit
+            return Array.from(sessions.values());
         },
 
         /**
          * Get a specific session
          */
         async get(sessionId: string): Promise<WorktreeSession | null> {
-            return stateManager.getSession(sessionId);
+            return sessions.get(sessionId) || null;
         },
 
         /**
@@ -153,7 +144,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         async cleanup(options: CleanupOptions): Promise<void> {
             const validatedOptions = CleanupOptionsSchema.parse(options);
 
-            const session = stateManager.getSession(validatedOptions.sessionId);
+            const session = sessions.get(validatedOptions.sessionId);
             if (!session) {
                 throw new Error(`Session not found: ${validatedOptions.sessionId}`);
             }
@@ -177,31 +168,22 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 // Remove worktree
                 if (validatedOptions.removeWorktree) {
-                    await repo.removeWorktree(session.repoPath, session.worktreePath);
+                    await git.removeWorktree(session.repoPath, session.worktreePath);
                 }
 
                 // Update session status
-                stateManager.updateSession(validatedOptions.sessionId, {
-                    status: 'cleaned',
-                    lastActivity: new Date(),
-                });
+                session.status = 'cleaned';
+                session.lastActivity = new Date();
+                sessions.set(validatedOptions.sessionId, session);
             } catch (error) {
                 // Update session with error
-                stateManager.updateSession(validatedOptions.sessionId, {
-                    status: 'error',
-                    error: error instanceof Error ? error.message : String(error),
-                    lastActivity: new Date(),
-                });
+                session.status = 'error';
+                session.error = error instanceof Error ? error.message : String(error);
+                session.lastActivity = new Date();
+                sessions.set(validatedOptions.sessionId, session);
 
                 throw error;
             }
-        },
-
-        /**
-         * Close the Viwo instance and cleanup resources
-         */
-        close(): void {
-            stateManager.close();
         },
     };
 }
