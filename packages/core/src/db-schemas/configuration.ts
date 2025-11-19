@@ -15,3 +15,6 @@ export const sessions = sqliteTable('sessions', {
     createdAt: text('createdAt'),
     lastActivity: text('lastActivity'),
 });
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;

@@ -7,3 +7,6 @@ export const repositories = sqliteTable('repositories', {
     url: text('url'),
     createdAt: text('createdAt'),
 });
+
+export type Repository = typeof repositories.$inferSelect;
+export type NewRepository = typeof repositories.$inferInsert;

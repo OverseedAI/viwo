@@ -7,3 +7,6 @@ export const chats = sqliteTable('chats', {
     content: text('content'),
     createdAt: text('createdAt'),
 });
+
+export type Chat = typeof chats.$inferSelect;
+export type NewChat = typeof chats.$inferInsert;
