@@ -2,21 +2,20 @@ import path from 'path';
 import os from 'os';
 import { nanoid } from 'nanoid';
 import {
+    CleanupOptions,
+    CleanupOptionsSchema,
     InitOptions,
     InitOptionsSchema,
     ListOptions,
     ListOptionsSchema,
-    CleanupOptions,
-    CleanupOptionsSchema,
-    WorktreeSession,
     ViwoConfig,
     ViwoConfigSchema,
+    WorktreeSession,
 } from './schemas';
-import { StateManager, createStateManager } from './managers/state-manager';
+import { createStateManager } from './managers/state-manager';
 import * as repo from './managers/git-manager';
 import * as docker from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
-import * as ports from './managers/port-manager';
 
 export interface Viwo {
     init: (options: InitOptions) => Promise<WorktreeSession>;

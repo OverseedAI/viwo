@@ -33,3 +33,6 @@ coverage
 # Temporary
 tmp
 temp
+
+# Db
+sqlite.db
