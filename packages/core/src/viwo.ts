@@ -11,19 +11,25 @@ import {
     WorktreeSession,
 } from './schemas';
 import { git } from './managers/git-manager';
-import * as docker from './managers/docker-manager';
+import { docker } from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
-import { session } from './managers/session-manager';
-import { repo } from './managers/repository-manager';
+import { createSession, session } from './managers/session-manager';
+import { getRepositoryById, repo } from './managers/repository-manager';
+import { joinWorktreesPath } from './utils/paths';
+import { db } from './db';
+import { initializeDatabase } from './db-init';
+import { Database } from 'bun:sqlite';
 
 export interface Viwo {
     repo: typeof repo;
     session: typeof session;
     git: typeof git;
-    init: (options: InitOptions) => Promise<WorktreeSession>;
+    docker: typeof docker;
+    start: (options: InitOptions) => Promise<WorktreeSession>;
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
     get: (sessionId: string) => Promise<WorktreeSession | null>;
     cleanup: (options: CleanupOptions) => Promise<void>;
+    migrate: () => Promise<void>;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
@@ -37,45 +43,42 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         repo,
         session,
         git,
+        docker,
         /**
          * Initialize a new worktree session
          */
-        async init(options: InitOptions): Promise<WorktreeSession> {
+        async start(options: InitOptions): Promise<WorktreeSession> {
             // Validate options
             const validatedOptions = InitOptionsSchema.parse(options);
 
             // Validate repository
-            const isValid = await git.isValidRepository({ repoPath: validatedOptions.repoPath });
+            const foundRepo = getRepositoryById({ id: validatedOptions.repoId });
 
-            if (!isValid) {
-                throw new Error(`Invalid git repository: ${validatedOptions.repoPath}`);
+            if (!foundRepo) {
+                throw Error('This repository is not yet registered.');
             }
 
-            // Check Docker is running
-            const dockerRunning = await docker.isDockerRunning();
-            if (!dockerRunning) {
-                throw new Error('Docker is not running. Please start Docker and try again.');
-            }
+            const repoPath = foundRepo.path;
+            await git.checkValidRepositoryOrThrow({ repoPath });
+            await docker.checkDockerRunningOrThrow();
 
-            // Generate branch name
-            const branchName =
-                validatedOptions.branchName ||
-                (await git.generateBranchName({ baseName: validatedOptions.prompt }));
+            const branchName = validatedOptions.branchName || (await git.generateBranchName());
+            const worktreePath = joinWorktreesPath(branchName);
 
-            // Create worktree path
-            const worktreesDir = path.isAbsolute(viwoConfig.worktreesDir)
-                ? viwoConfig.worktreesDir
-                : path.join(validatedOptions.repoPath, viwoConfig.worktreesDir);
+            // Create database session
+            const createdSession = await createSession({
+                repoId: foundRepo.id,
+                name: branchName,
+                path: worktreePath,
+                branchName,
+                agent: 'claudecode',
+            });
 
-            const worktreePath = path.join(worktreesDir, branchName);
-
-            // Create session
-            const sessionId = nanoid();
-            const now = new Date();
-
-            const session: WorktreeSession = {
+            // Create WorktreeSession for in-memory tracking
+            const sessionId = String(createdSession.id);
+            const worktreeSession: WorktreeSession = {
                 id: sessionId,
-                repoPath: validatedOptions.repoPath,
+                repoPath,
                 branchName,
                 worktreePath,
                 containers: [],
@@ -85,24 +88,36 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     initialPrompt: validatedOptions.prompt,
                 },
                 status: 'initializing',
-                createdAt: now,
-                lastActivity: now,
+                createdAt: new Date(),
+                lastActivity: new Date(),
             };
-
-            // Save session to state
-            sessions.set(sessionId, session);
 
             try {
                 // Create worktree
-                await git.createWorktree({ repoPath: validatedOptions.repoPath, branchName, worktreePath });
+                await git.createWorktree({
+                    branchName,
+                    repoPath,
+                    worktreePath,
+                });
 
                 // Copy environment file if specified
                 if (validatedOptions.envFile) {
-                    await git.copyEnvFile({ sourceEnvPath: validatedOptions.envFile, targetPath: worktreePath });
+                    await git.copyEnvFile({
+                        sourceEnvPath: validatedOptions.envFile,
+                        targetPath: worktreePath,
+                    });
                 }
 
                 // Initialize agent
-                await agent.initializeAgent({ worktreePath, config: session.agent });
+                await agent.initializeAgent({
+                    sessionId: createdSession.id,
+                    worktreePath,
+                    config: {
+                        initialPrompt: validatedOptions.prompt,
+                        type: 'claude-code',
+                        model: 'sonnet-4.5',
+                    },
+                });
 
                 // Run setup commands if specified
                 if (validatedOptions.setupCommands) {
@@ -112,17 +127,17 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 }
 
                 // Update session status
-                session.status = 'running';
-                session.lastActivity = new Date();
-                sessions.set(sessionId, session);
+                worktreeSession.status = 'running';
+                worktreeSession.lastActivity = new Date();
+                sessions.set(sessionId, worktreeSession);
 
-                return session;
+                return worktreeSession;
             } catch (error) {
                 // Update session with error
-                session.status = 'error';
-                session.error = error instanceof Error ? error.message : String(error);
-                session.lastActivity = new Date();
-                sessions.set(sessionId, session);
+                worktreeSession.status = 'error';
+                worktreeSession.error = error instanceof Error ? error.message : String(error);
+                worktreeSession.lastActivity = new Date();
+                sessions.set(sessionId, worktreeSession);
 
                 throw error;
             }
@@ -173,7 +188,10 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 // Remove worktree
                 if (validatedOptions.removeWorktree) {
-                    await git.removeWorktree({ repoPath: session.repoPath, worktreePath: session.worktreePath });
+                    await git.removeWorktree({
+                        repoPath: session.repoPath,
+                        worktreePath: session.worktreePath,
+                    });
                 }
 
                 // Update session status
@@ -189,6 +207,12 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 throw error;
             }
+        },
+        async migrate() {
+            console.log('Running database migrations...');
+            const sqlite = new Database('sqlite.db');
+            initializeDatabase(sqlite);
+            console.log('Migrations complete!');
         },
     };
 }

@@ -12,6 +12,10 @@ export const listRepositories = (_options: ListRepositoryOptions): Repository[] 
     return db.select().from(repositories).all();
 };
 
+export const getRepositoryById = ({ id }: { id: number }) => {
+    return db.select().from(repositories).where(eq(repositories.id, id)).get();
+};
+
 const formatPath = (path: string): string => {
     const trimmed = path.trim();
 

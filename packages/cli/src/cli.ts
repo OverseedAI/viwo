@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
 
 import { Command } from 'commander';
-import { startCommand, listCommand, getCommand, cleanupCommand, repoCommand } from './commands';
+import {
+    startCommand,
+    listCommand,
+    getCommand,
+    cleanupCommand,
+    repoCommand,
+    migrateCommand,
+} from './commands';
 
 const program = new Command();
 
@@ -16,6 +23,7 @@ program.addCommand(listCommand);
 program.addCommand(getCommand);
 program.addCommand(cleanupCommand);
 program.addCommand(repoCommand);
+program.addCommand(migrateCommand);
 
 // Parse command line arguments
 program.parse();

@@ -27,3 +27,6 @@ export {
     type ListRepositoryOptions,
     type DeleteRepositoryOptions,
 } from './managers/repository-manager';
+
+// Export path utilities
+export * from './utils/paths';

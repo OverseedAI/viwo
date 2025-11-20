@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { sessions, NewSession, Session, repositories } from '../db-schemas';
 import { git } from './git-manager';
+import { docker } from './docker-manager';
+import * as agent from './agent-manager';
 
 export interface ListSessionsOptions {
     status?: string;
@@ -33,15 +35,14 @@ export const getSession = (options: GetSessionOptions): Session | undefined => {
 };
 
 export const createSession = async (newSession: NewSession): Promise<Session> => {
-    const repo = db.select().from(repositories).where(eq(repositories.id, newSession.repoId)).get();
-
-    if (!repo) {
-        throw new Error('No repository found.');
-    }
-
-    await git.checkValidRepository({ repoPath: repo.path });
-
-    return db.insert(sessions).values(newSession).returning().get();
+    return db
+        .insert(sessions)
+        .values({
+            ...newSession,
+            status: 'initializing',
+        })
+        .returning()
+        .get();
 };
 
 export interface UpdateSessionOptions {
@@ -50,7 +51,12 @@ export interface UpdateSessionOptions {
 }
 
 export const updateSession = (options: UpdateSessionOptions): Session | undefined => {
-    return db.update(sessions).set(options.updates).where(eq(sessions.id, options.id)).returning().get();
+    return db
+        .update(sessions)
+        .set(options.updates)
+        .where(eq(sessions.id, options.id))
+        .returning()
+        .get();
 };
 
 export interface DeleteSessionOptions {

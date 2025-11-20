@@ -17,7 +17,7 @@ export const isValidRepository = async (options: RepoPathOptions): Promise<boole
     }
 };
 
-export const checkValidRepository = async (options: RepoPathOptions): Promise<void> => {
+export const checkValidRepositoryOrThrow = async (options: RepoPathOptions): Promise<void> => {
     /* Throws if path is not valid. */
     const isValid = await isValidRepository(options);
 
@@ -36,7 +36,9 @@ export interface GenerateBranchNameOptions {
     baseName?: string;
 }
 
-export const generateBranchName = async (options: GenerateBranchNameOptions = {}): Promise<string> => {
+export const generateBranchName = async (
+    options: GenerateBranchNameOptions = {}
+): Promise<string> => {
     const timestamp = new Date().toISOString().split('T')[0];
     const shortId = nanoid(6);
 
@@ -143,7 +145,7 @@ export const copyEnvFile = async (options: CopyEnvFileOptions): Promise<void> =>
 
 export const git = {
     isValidRepository,
-    checkValidRepository,
+    checkValidRepositoryOrThrow,
     getCurrentBranch,
     generateBranchName,
     createWorktree,
