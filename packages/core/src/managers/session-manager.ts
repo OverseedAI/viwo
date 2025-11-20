@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
-import { sessions, NewSession, Session } from '../db-schemas';
+import { sessions, NewSession, Session, repositories } from '../db-schemas';
+import { git } from './git-manager';
 
 export interface ListSessionsOptions {
     status?: string;
@@ -27,7 +28,15 @@ export const getSession = (id: number): Session | undefined => {
     return db.select().from(sessions).where(eq(sessions.id, id)).get();
 };
 
-export const createSession = (newSession: NewSession): Session => {
+export const createSession = async (newSession: NewSession): Promise<Session> => {
+    const repo = db.select().from(repositories).where(eq(repositories.id, newSession.repoId)).get();
+
+    if (!repo) {
+        throw new Error('No repository found.');
+    }
+
+    await git.checkValidRepository(repo.path);
+
     return db.insert(sessions).values(newSession).returning().get();
 };
 

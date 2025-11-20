@@ -13,6 +13,15 @@ export async function isValidRepository(repoPath: string): Promise<boolean> {
     }
 }
 
+const checkValidRepository = async (repoPath: string): Promise<void> => {
+    /* Throws if path is not valid. */
+    const isValid = isValidRepository(repoPath);
+
+    if (!isValid) {
+        throw Error(repoPath + ' is not a valid git repository.');
+    }
+};
+
 export async function getCurrentBranch(repoPath: string): Promise<string> {
     const git = simpleGit(repoPath);
     const status = await git.status();
@@ -107,3 +116,15 @@ export async function copyEnvFile(sourceEnvPath: string, targetPath: string): Pr
         await Bun.write(targetEnvPath, sourceFile);
     }
 }
+
+export const git = {
+    isValidRepository,
+    checkValidRepository,
+    getCurrentBranch,
+    generateBranchName,
+    createWorktree,
+    removeWorktree,
+    listWorktrees,
+    hasUncommittedChanges,
+    copyEnvFile,
+};
