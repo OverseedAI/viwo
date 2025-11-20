@@ -4,20 +4,24 @@ import { ContainerInfo, PortMapping } from '../schemas';
 
 const docker = new Docker();
 
-export async function isDockerRunning(): Promise<boolean> {
+export const isDockerRunning = async (): Promise<boolean> => {
     try {
         await docker.ping();
         return true;
     } catch (error) {
         return false;
     }
+};
+
+export interface CreateContainersFromComposeOptions {
+    composePath: string;
+    worktreePath: string;
+    portMappings: PortMapping[];
 }
 
-export async function createContainersFromCompose(
-    composePath: string,
-    worktreePath: string,
-    portMappings: PortMapping[]
-): Promise<ContainerInfo[]> {
+export const createContainersFromCompose = async (
+    options: CreateContainersFromComposeOptions
+): Promise<ContainerInfo[]> => {
     // For now, we'll implement a basic container creation
     // Full docker-compose support would require parsing the YAML
     // and creating containers accordingly
@@ -26,31 +30,33 @@ export async function createContainersFromCompose(
     const containers: ContainerInfo[] = [];
 
     // Check if docker-compose file exists
-    if (!(await exists(composePath))) {
-        throw new Error(`Docker compose file not found: ${composePath}`);
+    if (!(await exists(options.composePath))) {
+        throw new Error(`Docker compose file not found: ${options.composePath}`);
     }
 
     // TODO: Parse docker-compose.yml and create containers
     // For MVP, we'll create a simple Node.js container as an example
 
     return containers;
+};
+
+export interface CreateContainerOptions {
+    name: string;
+    image: string;
+    worktreePath: string;
+    ports: PortMapping[];
+    env?: Record<string, string>;
 }
 
-export async function createContainer(
-    name: string,
-    image: string,
-    worktreePath: string,
-    ports: PortMapping[],
-    env?: Record<string, string>
-): Promise<ContainerInfo> {
+export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
     // Pull image if not exists
-    await pullImage(image);
+    await pullImage({ image: options.image });
 
     // Create port bindings
     const portBindings: any = {};
     const exposedPorts: any = {};
 
-    for (const port of ports) {
+    for (const port of options.ports) {
         const containerPort = `${port.container}/${port.protocol}`;
         exposedPorts[containerPort] = {};
         portBindings[containerPort] = [{ HostPort: port.host.toString() }];
@@ -58,15 +64,15 @@ export async function createContainer(
 
     // Create container
     const container = await docker.createContainer({
-        name,
-        Image: image,
+        name: options.name,
+        Image: options.image,
         ExposedPorts: exposedPorts,
         HostConfig: {
             PortBindings: portBindings,
-            Binds: [`${worktreePath}:/app`],
+            Binds: [`${options.worktreePath}:/app`],
             AutoRemove: false,
         },
-        Env: env ? Object.entries(env).map(([k, v]) => `${k}=${v}`) : undefined,
+        Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
         WorkingDir: '/app',
     });
 
@@ -75,37 +81,45 @@ export async function createContainer(
     return {
         id: info.Id,
         name: info.Name.replace(/^\//, ''),
-        image,
+        image: options.image,
         status: mapContainerStatus(info.State.Status),
-        ports,
+        ports: options.ports,
         createdAt: new Date(info.Created),
     };
+};
+
+export interface ContainerIdOptions {
+    containerId: string;
 }
 
-export async function startContainer(containerId: string): Promise<void> {
-    const container = docker.getContainer(containerId);
+export const startContainer = async (options: ContainerIdOptions): Promise<void> => {
+    const container = docker.getContainer(options.containerId);
     await container.start();
-}
+};
 
-export async function stopContainer(containerId: string): Promise<void> {
-    const container = docker.getContainer(containerId);
+export const stopContainer = async (options: ContainerIdOptions): Promise<void> => {
+    const container = docker.getContainer(options.containerId);
     await container.stop();
-}
+};
 
-export async function removeContainer(containerId: string): Promise<void> {
-    const container = docker.getContainer(containerId);
+export const removeContainer = async (options: ContainerIdOptions): Promise<void> => {
+    const container = docker.getContainer(options.containerId);
     await container.remove({ force: true });
-}
+};
 
-export async function getContainerStatus(containerId: string): Promise<ContainerInfo['status']> {
-    const container = docker.getContainer(containerId);
+export const getContainerStatus = async (options: ContainerIdOptions): Promise<ContainerInfo['status']> => {
+    const container = docker.getContainer(options.containerId);
     const info = await container.inspect();
     return mapContainerStatus(info.State.Status);
+};
+
+interface PullImageOptions {
+    image: string;
 }
 
-async function pullImage(image: string): Promise<void> {
+const pullImage = async (options: PullImageOptions): Promise<void> => {
     return new Promise((resolve, reject) => {
-        docker.pull(image, (err: any, stream: any) => {
+        docker.pull(options.image, (err: any, stream: any) => {
             if (err) {
                 reject(err);
                 return;
@@ -121,9 +135,9 @@ async function pullImage(image: string): Promise<void> {
             );
         });
     });
-}
+};
 
-function mapContainerStatus(dockerStatus: string): ContainerInfo['status'] {
+const mapContainerStatus = (dockerStatus: string): ContainerInfo['status'] => {
     switch (dockerStatus.toLowerCase()) {
         case 'created':
             return 'created';
@@ -140,4 +154,4 @@ function mapContainerStatus(dockerStatus: string): ContainerInfo['status'] {
         default:
             return 'stopped';
     }
-}
+};

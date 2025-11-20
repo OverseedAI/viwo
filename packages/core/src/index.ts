@@ -25,4 +25,5 @@ export {
     createRepository,
     deleteRepository,
     type ListRepositoryOptions,
+    type DeleteRepositoryOptions,
 } from './managers/repository-manager';

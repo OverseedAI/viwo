@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { repositories, NewRepository, Repository } from '../db-schemas';
-import * as git from './git-manager';
+import { isValidRepository } from './git-manager';
 
 export interface ListRepositoryOptions {
     archived?: boolean;
@@ -12,7 +12,7 @@ export const listRepositories = (_options: ListRepositoryOptions): Repository[] 
     return db.select().from(repositories).all();
 };
 
-const formatPath = (path: string) => {
+const formatPath = (path: string): string => {
     const trimmed = path.trim();
 
     if (trimmed.endsWith('/')) {
@@ -26,17 +26,18 @@ const formatPath = (path: string) => {
 
 export const createRepository = async (newRepo: NewRepository): Promise<Repository> => {
     const formattedPath = formatPath(newRepo.path);
-    const isValid = await git.isValidRepository(newRepo.path);
+    const isValid = await isValidRepository({ repoPath: newRepo.path });
 
     if (!isValid) {
         throw new Error(`Invalid git repository: ${newRepo.path}`);
     }
 
     // Check if repo is already added
-    const foundRepo = await db
+    const foundRepo = db
         .select()
         .from(repositories)
-        .where(eq(repositories.path, formattedPath));
+        .where(eq(repositories.path, formattedPath))
+        .get();
 
     if (foundRepo) {
         throw new Error('Repository already exists');
@@ -49,8 +50,12 @@ export const createRepository = async (newRepo: NewRepository): Promise<Reposito
         .get();
 };
 
-export const deleteRepository = (id: number): void => {
-    db.delete(repositories).where(eq(repositories.id, id)).run();
+export interface DeleteRepositoryOptions {
+    id: number;
+}
+
+export const deleteRepository = (options: DeleteRepositoryOptions): void => {
+    db.delete(repositories).where(eq(repositories.id, options.id)).run();
 };
 
 export const repo = {

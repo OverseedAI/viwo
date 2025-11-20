@@ -3,40 +3,45 @@ import type { Subprocess } from 'bun';
 import path from 'path';
 import { mkdir, exists } from 'node:fs/promises';
 
-export async function initializeAgent(worktreePath: string, config: AgentConfig): Promise<void> {
-    switch (config.type) {
-        case 'claude-code':
-            await initializeClaudeCode(worktreePath, config);
-            break;
-        case 'cline':
-            await initializeCline(worktreePath, config);
-            break;
-        case 'cursor':
-            await initializeCursor(worktreePath, config);
-            break;
-        default:
-            throw new Error(`Unsupported agent type: ${config.type}`);
-    }
+export interface InitializeAgentOptions {
+    worktreePath: string;
+    config: AgentConfig;
 }
 
-async function initializeClaudeCode(worktreePath: string, config: AgentConfig): Promise<void> {
+export const initializeAgent = async (options: InitializeAgentOptions): Promise<void> => {
+    switch (options.config.type) {
+        case 'claude-code':
+            await initializeClaudeCode(options);
+            break;
+        case 'cline':
+            await initializeCline(options);
+            break;
+        case 'cursor':
+            await initializeCursor(options);
+            break;
+        default:
+            throw new Error(`Unsupported agent type: ${options.config.type}`);
+    }
+};
+
+const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
     // Create a .claude directory with initial prompt
-    const claudeDir = path.join(worktreePath, '.claude');
+    const claudeDir = path.join(options.worktreePath, '.claude');
     if (!(await exists(claudeDir))) {
         await mkdir(claudeDir, { recursive: true });
     }
 
     // Create initial prompt file
     const promptPath = path.join(claudeDir, 'initial-prompt.md');
-    await Bun.write(promptPath, config.initialPrompt);
+    await Bun.write(promptPath, options.config.initialPrompt);
 
     // Create a simple README in the worktree with instructions
-    const readmePath = path.join(worktreePath, 'VIWO-README.md');
+    const readmePath = path.join(options.worktreePath, 'VIWO-README.md');
     const readmeContent = `# VIWO Session
 
 This worktree was created by VIWO for the following task:
 
-${config.initialPrompt}
+${options.config.initialPrompt}
 
 ## Getting Started
 
@@ -46,53 +51,55 @@ ${config.initialPrompt}
 
 ## Session Info
 
-- Agent: ${config.type}
-${config.model ? `- Model: ${config.model}` : ''}
+- Agent: ${options.config.type}
+${options.config.model ? `- Model: ${options.config.model}` : ''}
 - Created: ${new Date().toISOString()}
 `;
 
     await Bun.write(readmePath, readmeContent);
-}
+};
 
-async function initializeCline(worktreePath: string, config: AgentConfig): Promise<void> {
+const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
     // Placeholder for Cline initialization
     // This would set up Cline-specific configuration
     throw new Error('Cline support not yet implemented');
-}
+};
 
-async function initializeCursor(worktreePath: string, config: AgentConfig): Promise<void> {
+const initializeCursor = async (_options: InitializeAgentOptions): Promise<void> => {
     // Placeholder for Cursor initialization
     // This would set up Cursor-specific configuration
     throw new Error('Cursor support not yet implemented');
+};
+
+export interface LaunchAgentOptions {
+    worktreePath: string;
+    agentType: AgentType;
 }
 
-export async function launchAgent(
-    worktreePath: string,
-    agentType: AgentType
-): Promise<Subprocess | null> {
-    switch (agentType) {
+export const launchAgent = async (options: LaunchAgentOptions): Promise<Subprocess | null> => {
+    switch (options.agentType) {
         case 'claude-code':
-            return launchClaudeCode(worktreePath);
+            return launchClaudeCode(options.worktreePath);
         case 'cline':
-            return launchCline(worktreePath);
+            return launchCline(options.worktreePath);
         case 'cursor':
-            return launchCursor(worktreePath);
+            return launchCursor(options.worktreePath);
         default:
-            throw new Error(`Unsupported agent type: ${agentType}`);
+            throw new Error(`Unsupported agent type: ${options.agentType}`);
     }
-}
+};
 
-function launchClaudeCode(worktreePath: string): Subprocess | null {
+const launchClaudeCode = (_worktreePath: string): Subprocess | null => {
     // For now, we'll just prepare the environment
     // The user will need to manually run claude-code
     // In the future, we could spawn a process here using Bun.spawn()
     return null;
-}
+};
 
-function launchCline(worktreePath: string): Subprocess | null {
+const launchCline = (_worktreePath: string): Subprocess | null => {
     throw new Error('Cline support not yet implemented');
-}
+};
 
-function launchCursor(worktreePath: string): Subprocess | null {
+const launchCursor = (_worktreePath: string): Subprocess | null => {
     throw new Error('Cursor support not yet implemented');
-}
+};

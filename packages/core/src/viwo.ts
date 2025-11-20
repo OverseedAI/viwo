@@ -45,7 +45,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             const validatedOptions = InitOptionsSchema.parse(options);
 
             // Validate repository
-            const isValid = await git.isValidRepository(validatedOptions.repoPath);
+            const isValid = await git.isValidRepository({ repoPath: validatedOptions.repoPath });
 
             if (!isValid) {
                 throw new Error(`Invalid git repository: ${validatedOptions.repoPath}`);
@@ -60,7 +60,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             // Generate branch name
             const branchName =
                 validatedOptions.branchName ||
-                (await git.generateBranchName(validatedOptions.prompt));
+                (await git.generateBranchName({ baseName: validatedOptions.prompt }));
 
             // Create worktree path
             const worktreesDir = path.isAbsolute(viwoConfig.worktreesDir)
@@ -94,15 +94,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
             try {
                 // Create worktree
-                await git.createWorktree(validatedOptions.repoPath, branchName, worktreePath);
+                await git.createWorktree({ repoPath: validatedOptions.repoPath, branchName, worktreePath });
 
                 // Copy environment file if specified
                 if (validatedOptions.envFile) {
-                    await git.copyEnvFile(validatedOptions.envFile, worktreePath);
+                    await git.copyEnvFile({ sourceEnvPath: validatedOptions.envFile, targetPath: worktreePath });
                 }
 
                 // Initialize agent
-                await agent.initializeAgent(worktreePath, session.agent);
+                await agent.initializeAgent({ worktreePath, config: session.agent });
 
                 // Run setup commands if specified
                 if (validatedOptions.setupCommands) {
@@ -160,10 +160,10 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     for (const container of session.containers) {
                         try {
                             if (validatedOptions.stopContainers) {
-                                await docker.stopContainer(container.id);
+                                await docker.stopContainer({ containerId: container.id });
                             }
                             if (validatedOptions.removeContainers) {
-                                await docker.removeContainer(container.id);
+                                await docker.removeContainer({ containerId: container.id });
                             }
                         } catch (error) {
                             console.warn(`Failed to cleanup container ${container.id}:`, error);
@@ -173,7 +173,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 // Remove worktree
                 if (validatedOptions.removeWorktree) {
-                    await git.removeWorktree(session.repoPath, session.worktreePath);
+                    await git.removeWorktree({ repoPath: session.repoPath, worktreePath: session.worktreePath });
                 }
 
                 // Update session status

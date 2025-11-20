@@ -24,8 +24,12 @@ export const listSessions = (options: ListSessionsOptions = {}): Session[] => {
     return results;
 };
 
-export const getSession = (id: number): Session | undefined => {
-    return db.select().from(sessions).where(eq(sessions.id, id)).get();
+export interface GetSessionOptions {
+    id: number;
+}
+
+export const getSession = (options: GetSessionOptions): Session | undefined => {
+    return db.select().from(sessions).where(eq(sessions.id, options.id)).get();
 };
 
 export const createSession = async (newSession: NewSession): Promise<Session> => {
@@ -35,17 +39,26 @@ export const createSession = async (newSession: NewSession): Promise<Session> =>
         throw new Error('No repository found.');
     }
 
-    await git.checkValidRepository(repo.path);
+    await git.checkValidRepository({ repoPath: repo.path });
 
     return db.insert(sessions).values(newSession).returning().get();
 };
 
-export const updateSession = (id: number, updates: Partial<NewSession>): Session | undefined => {
-    return db.update(sessions).set(updates).where(eq(sessions.id, id)).returning().get();
+export interface UpdateSessionOptions {
+    id: number;
+    updates: Partial<NewSession>;
+}
+
+export const updateSession = (options: UpdateSessionOptions): Session | undefined => {
+    return db.update(sessions).set(options.updates).where(eq(sessions.id, options.id)).returning().get();
 };
 
-export const deleteSession = (id: number): void => {
-    db.delete(sessions).where(eq(sessions.id, id)).run();
+export interface DeleteSessionOptions {
+    id: number;
+}
+
+export const deleteSession = (options: DeleteSessionOptions): void => {
+    db.delete(sessions).where(eq(sessions.id, options.id)).run();
 };
 
 export const session = {
