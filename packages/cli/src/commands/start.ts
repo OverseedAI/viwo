@@ -14,6 +14,7 @@ export const startCommand = new Command('start')
     .option('-s, --setup <commands...>', 'Setup commands to run')
     .action(async (options) => {
         try {
+            await viwo.docker.checkDockerRunningOrThrow();
             clack.intro(chalk.bgCyan(' viwo start '));
 
             // Step 1: Select repository
@@ -124,9 +125,7 @@ export const startCommand = new Command('start')
                 'Session Details'
             );
 
-            clack.outro(
-                `Next: ${chalk.cyan(`cd ${session.worktreePath}`)} then start coding!`
-            );
+            clack.outro(`Next: ${chalk.cyan(`cd ${session.worktreePath}`)} then start coding!`);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));
             process.exit(1);

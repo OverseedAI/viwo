@@ -1,9 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
-import { sessions, NewSession, Session, repositories } from '../db-schemas';
-import { git } from './git-manager';
-import { docker } from './docker-manager';
-import * as agent from './agent-manager';
+import { NewSession, Session, sessions } from '../db-schemas';
 
 export interface ListSessionsOptions {
     status?: string;
