@@ -7,15 +7,15 @@ import globals from 'globals';
 export default [
     js.configs.recommended,
     {
-        globals: {
-            ...globals.node,
-        },
         files: ['**/*.ts', '**/*.tsx'],
         languageOptions: {
             parser: tsparser,
             parserOptions: {
                 ecmaVersion: 'latest',
                 sourceType: 'module',
+            },
+            globals: {
+                ...globals.node,
             },
         },
         plugins: {
