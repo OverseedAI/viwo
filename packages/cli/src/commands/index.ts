@@ -1,4 +1,4 @@
-export { initCommand } from './init';
+export { startCommand } from './start';
 export { listCommand } from './list';
 export { getCommand } from './get';
 export { cleanupCommand } from './cleanup';

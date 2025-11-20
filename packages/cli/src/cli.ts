@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from 'commander';
-import { initCommand, listCommand, getCommand, cleanupCommand, repoCommand } from './commands';
+import { startCommand, listCommand, getCommand, cleanupCommand, repoCommand } from './commands';
 
 const program = new Command();
 
@@ -11,7 +11,7 @@ program
     .version('0.1.0');
 
 // Register commands
-program.addCommand(initCommand);
+program.addCommand(startCommand);
 program.addCommand(listCommand);
 program.addCommand(getCommand);
 program.addCommand(cleanupCommand);

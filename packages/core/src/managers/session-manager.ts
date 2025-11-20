@@ -38,3 +38,11 @@ export const updateSession = (id: number, updates: Partial<NewSession>): Session
 export const deleteSession = (id: number): void => {
     db.delete(sessions).where(eq(sessions.id, id)).run();
 };
+
+export const session = {
+    list: listSessions,
+    create: createSession,
+    update: updateSession,
+    delete: deleteSession,
+    get: getSession,
+};

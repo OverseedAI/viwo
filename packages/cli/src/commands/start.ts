@@ -5,7 +5,7 @@ import path from 'path';
 import { viwo } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 
-export const initCommand = new Command('init')
+export const startCommand = new Command('start')
     .description('Initialize a new worktree session with an AI agent')
     .argument('[repo-path]', 'Path to git repository', process.cwd())
     .requiredOption('-p, --prompt <prompt>', 'Initial prompt for the AI agent')

@@ -13,10 +13,12 @@ import {
 import * as git from './managers/git-manager';
 import * as docker from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
+import { session } from './managers/session-manager';
 import { repo } from './managers/repository-manager';
 
 export interface Viwo {
     repo: typeof repo;
+    session: typeof session;
     init: (options: InitOptions) => Promise<WorktreeSession>;
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
     get: (sessionId: string) => Promise<WorktreeSession | null>;
@@ -32,6 +34,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
     return {
         repo,
+        session,
         /**
          * Initialize a new worktree session
          */
