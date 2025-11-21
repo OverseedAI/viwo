@@ -125,7 +125,7 @@ export const startCommand = new Command('start')
                 'Session Details'
             );
 
-            clack.outro(`Next: ${chalk.cyan(`cd ${session.worktreePath}`)} then start coding!`);
+            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} then start coding!`);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));
             process.exit(1);

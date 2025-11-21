@@ -147,7 +147,7 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
             AutoRemove: false,
         },
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
-        WorkingDir: '/app',
+        WorkingDir: '/workspace',
         Tty: options.tty ?? false,
         OpenStdin: options.openStdin ?? false,
     });
