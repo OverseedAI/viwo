@@ -49,7 +49,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `git-manager.ts` - Worktree operations via simple-git
 - `docker-manager.ts` - Container orchestration via dockerode
 - `session-manager.ts` - Session CRUD via Drizzle ORM
-- `agent-manager.ts` - AI agent initialization (only Claude Code implemented)
+- `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
 
@@ -68,6 +68,17 @@ The main SDK in `packages/core/src/viwo.ts` exposes:
 - `createViwo()` - Factory function returning Viwo instance
 - `init()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → init agent
 - `cleanup()` - Removes session: stop containers → remove containers → remove worktree → update status
+
+### Container Lifecycle Management
+
+The `agent-manager.ts` implements automatic container cleanup:
+- When a Claude Code container is started, a background monitor is set up via `monitorContainerCompletion()`
+- The monitor uses Docker's `waitForContainer()` API to detect when the container exits
+- Upon container exit, the monitor automatically:
+  - Updates the session status to 'completed' (exit code 0) or 'error' (non-zero exit code)
+  - Removes the container using `removeContainer()`
+  - Logs the cleanup operation
+- This ensures containers don't linger after the Claude Code process completes
 
 ### CLI Commands
 
