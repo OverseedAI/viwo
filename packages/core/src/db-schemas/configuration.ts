@@ -1,8 +1,10 @@
-import { sqliteTable, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
 export const configurations = sqliteTable('configurations', {
     id: integer('id').primaryKey(),
-    claudeApiToken: integer('claudeApiToken'),
+    anthropicApiKey: text('anthropic_api_key'),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
 });
 
 export type Configuration = typeof configurations.$inferSelect;

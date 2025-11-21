@@ -11,6 +11,7 @@ import {
     startContainer,
     getContainerLogs,
 } from './docker-manager';
+import { getApiKey } from './config-manager';
 
 export interface InitializeAgentOptions {
     sessionId: number;
@@ -40,8 +41,19 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
     // Check if Docker is running
     await docker.checkDockerRunningOrThrow();
 
+    // Get API key from configuration
+    const apiKey = getApiKey({ provider: 'anthropic' });
+
+    if (!apiKey) {
+        throw new Error(
+            'Anthropic API key not configured. ' +
+                'Please run "viwo auth" to set up your API key.'
+        );
+    }
+
     // Check if Claude Code image exists
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
+
     if (!imageExists) {
         throw new Error(
             `Claude Code Docker image '${CLAUDE_CODE_IMAGE}' not found. ` +
@@ -67,8 +79,11 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         image: CLAUDE_CODE_IMAGE,
         worktreePath,
         command,
+        env: {
+            ANTHROPIC_API_KEY: apiKey,
+        },
         tty: true,
-        openStdin: false,
+        openStdin: true,
     });
 
     // Log initial prompt to chats table

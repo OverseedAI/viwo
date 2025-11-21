@@ -82,5 +82,23 @@ export const migrations: Migration[] = [
             ALTER TABLE \`__new_sessions\` RENAME TO \`sessions\`;
             PRAGMA foreign_keys=ON;
         `
+    },
+    {
+        version: 4,
+        name: 'high_doctor_strange',
+        up: `
+            PRAGMA foreign_keys=OFF;
+            CREATE TABLE \`__new_configurations\` (
+            	\`id\` integer PRIMARY KEY NOT NULL,
+            	\`anthropic_api_key\` text,
+            	\`created_at\` text,
+            	\`updated_at\` text
+            );
+            
+            INSERT INTO \`__new_configurations\`("id", "anthropic_api_key", "created_at", "updated_at") SELECT "id", "anthropic_api_key", "created_at", "updated_at" FROM \`configurations\`;
+            DROP TABLE \`configurations\`;
+            ALTER TABLE \`__new_configurations\` RENAME TO \`configurations\`;
+            PRAGMA foreign_keys=ON;
+        `
     }
 ];

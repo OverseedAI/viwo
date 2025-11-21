@@ -1,5 +1,3 @@
-import path from 'path';
-import { nanoid } from 'nanoid';
 import {
     CleanupOptions,
     CleanupOptionsSchema,
@@ -16,7 +14,6 @@ import * as agent from './managers/agent-manager';
 import { createSession, session } from './managers/session-manager';
 import { getRepositoryById, repo } from './managers/repository-manager';
 import { joinWorktreesPath } from './utils/paths';
-import { db } from './db';
 import { initializeDatabase } from './db-init';
 import { Database } from 'bun:sqlite';
 
@@ -115,7 +112,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     config: {
                         initialPrompt: validatedOptions.prompt,
                         type: 'claude-code',
-                        model: 'sonnet-4.5',
+                        model: 'sonnet',
                     },
                 });
 

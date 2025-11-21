@@ -10,7 +10,8 @@
     "format:check": "prettier --check .",
     "typecheck": "bun run --filter '*' typecheck",
     "clean": "rm -rf node_modules packages/*/node_modules apps/*/node_modules packages/*/*.tsbuildinfo apps/*/*.tsbuildinfo packages/*/dist apps/*/dist",
-    "db:generate": "bun run --filter '@viwo/core' db:generate"
+    "db:generate": "bun run --filter '@viwo/core' db:generate",
+    "docker:build": "docker build -t viwo-claude-code packages/agents/claude-code"
   },
   "type": "module",
   "workspaces": [

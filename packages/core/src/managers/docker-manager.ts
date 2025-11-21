@@ -12,7 +12,7 @@ export const isDockerRunning = async (): Promise<boolean> => {
     try {
         await dockerSdk.ping();
         return true;
-    } catch (error) {
+    } catch {
         return false;
     }
 };
@@ -143,7 +143,7 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
         HostConfig: {
             PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
-            Binds: [`${options.worktreePath}:/app`],
+            Binds: [`${options.worktreePath}:/workspace`],
             AutoRemove: false,
         },
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
@@ -235,7 +235,9 @@ export interface ContainerWaitResult {
     statusCode: number;
 }
 
-export const waitForContainer = async (options: WaitForContainerOptions): Promise<ContainerWaitResult> => {
+export const waitForContainer = async (
+    options: WaitForContainerOptions
+): Promise<ContainerWaitResult> => {
     const container = dockerSdk.getContainer(options.containerId);
     const result = await container.wait();
     return { statusCode: result.StatusCode };

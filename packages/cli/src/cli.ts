@@ -8,6 +8,7 @@ import {
     cleanupCommand,
     repoCommand,
     migrateCommand,
+    authCommand,
 } from './commands';
 
 const program = new Command();
@@ -24,6 +25,7 @@ program.addCommand(getCommand);
 program.addCommand(cleanupCommand);
 program.addCommand(repoCommand);
 program.addCommand(migrateCommand);
+program.addCommand(authCommand);
 
 // Parse command line arguments
 program.parse();
