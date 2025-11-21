@@ -12,6 +12,7 @@ export const startCommand = new Command('start')
     .option('-c, --compose <path>', 'Path to docker-compose.yml')
     .option('-e, --env <path>', 'Path to .env file to copy')
     .option('-s, --setup <commands...>', 'Setup commands to run')
+    .option('-d, --detach', 'Run in detached mode (do not attach to container)')
     .action(async (options) => {
         try {
             await viwo.docker.checkDockerRunningOrThrow();
@@ -125,8 +126,54 @@ export const startCommand = new Command('start')
                 'Session Details'
             );
 
-            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} then start coding!`);
+            // If detached mode, just show the outro and exit
+            if (options.detach) {
+                clack.outro(
+                    `Session running in background. Attach with: ${chalk.cyan(`viwo attach ${session.id}`)}`
+                );
+                return;
+            }
+
+            // Attach to the container for interactive use
+            if (!session.containerId) {
+                clack.outro(
+                    `Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} then start coding!`
+                );
+                return;
+            }
+
+            clack.outro('Attaching to Claude Code...');
+            console.log(chalk.gray('Press Ctrl+C to detach\n'));
+
+            // Set up TTY for raw mode
+            if (process.stdin.isTTY) {
+                process.stdin.setRawMode(true);
+            }
+
+            // Attach to the container
+            const result = await viwo.docker.attachContainer({
+                containerId: session.containerId,
+                stdin: process.stdin,
+                stdout: process.stdout,
+                stderr: process.stderr,
+            });
+
+            // Cleanup
+            if (process.stdin.isTTY) {
+                process.stdin.setRawMode(false);
+            }
+
+            console.log(chalk.gray(`\nClaude Code exited with code ${result.statusCode}`));
+            process.exit(result.statusCode);
         } catch (error) {
+            // Restore terminal on error
+            if (process.stdin.isTTY) {
+                try {
+                    process.stdin.setRawMode(false);
+                } catch {
+                    // Ignore if stdin is not a TTY
+                }
+            }
             clack.cancel(error instanceof Error ? error.message : String(error));
             process.exit(1);
         }
