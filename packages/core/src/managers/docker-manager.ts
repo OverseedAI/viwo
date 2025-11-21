@@ -243,6 +243,56 @@ export const waitForContainer = async (
     return { statusCode: result.StatusCode };
 };
 
+export interface AttachContainerOptions {
+    containerId: string;
+    stdin: typeof process.stdin;
+    stdout: typeof process.stdout;
+    stderr: typeof process.stderr;
+}
+
+export interface AttachContainerResult {
+    statusCode: number;
+}
+
+export const attachContainer = async (
+    options: AttachContainerOptions
+): Promise<AttachContainerResult> => {
+    const container = dockerSdk.getContainer(options.containerId);
+
+    // Verify container exists and is running
+    const info = await container.inspect();
+    if (!info.State.Running) {
+        throw new Error(`Container ${options.containerId} is not running`);
+    }
+
+    // Attach to the container with stdin/stdout/stderr streams
+    const stream = await container.attach({
+        stream: true,
+        stdin: true,
+        stdout: true,
+        stderr: true,
+        hijack: true,
+    });
+
+    // Set up bidirectional piping
+    // Pipe container output to our stdout/stderr
+    // For TTY containers, output is not multiplexed
+    if (info.Config.Tty) {
+        stream.pipe(options.stdout);
+    } else {
+        // For non-TTY, we need to demux the stream
+        container.modem.demuxStream(stream, options.stdout, options.stderr);
+    }
+
+    // Pipe our stdin to container
+    options.stdin.pipe(stream);
+
+    // Wait for the container to exit
+    const result = await container.wait();
+
+    return { statusCode: result.StatusCode };
+};
+
 export interface ContainerIdOptions {
     containerId: string;
 }
@@ -326,5 +376,6 @@ export const docker = {
     getContainerStatus,
     getContainerLogs,
     waitForContainer,
+    attachContainer,
     CLAUDE_CODE_IMAGE,
 };

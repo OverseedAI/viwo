@@ -5,3 +5,4 @@ export { cleanupCommand } from './cleanup';
 export { repoCommand } from './repo';
 export { migrateCommand } from './migrate';
 export { authCommand } from './auth';
+export { attachCommand } from './attach';

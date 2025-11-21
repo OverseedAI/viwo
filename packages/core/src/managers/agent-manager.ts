@@ -21,23 +21,25 @@ export interface InitializeAgentOptions {
     config: AgentConfig;
 }
 
-export const initializeAgent = async (options: InitializeAgentOptions): Promise<void> => {
+export interface InitializeAgentResult {
+    containerId?: string;
+    containerName?: string;
+}
+
+export const initializeAgent = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     switch (options.config.type) {
         case 'claude-code':
-            await initializeClaudeCode(options);
-            break;
+            return initializeClaudeCode(options);
         case 'cline':
-            await initializeCline(options);
-            break;
+            return initializeCline(options);
         case 'cursor':
-            await initializeCursor(options);
-            break;
+            return initializeCursor(options);
         default:
             throw new Error(`Unsupported agent type: ${options.config.type}`);
     }
 };
 
-const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     const { sessionId, worktreePath, config } = options;
 
     // Check if Docker is running
@@ -156,8 +158,11 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
     // This runs in the background and doesn't block the function return
     monitorContainerCompletion(sessionId, containerInfo.id);
 
-    // Return immediately without waiting for container to finish
-    // The container will run in the background
+    // Return container info for the caller to use
+    return {
+        containerId: containerInfo.id,
+        containerName: containerInfo.name,
+    };
 };
 
 /**
@@ -203,13 +208,13 @@ const monitorContainerCompletion = async (
     }
 };
 
-const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
+const initializeCline = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     // Placeholder for Cline initialization
     // This would set up Cline-specific configuration
     throw new Error('Cline support not yet implemented');
 };
 
-const initializeCursor = async (_options: InitializeAgentOptions): Promise<void> => {
+const initializeCursor = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     // Placeholder for Cursor initialization
     // This would set up Cursor-specific configuration
     throw new Error('Cursor support not yet implemented');

@@ -106,7 +106,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 }
 
                 // Initialize agent
-                await agent.initializeAgent({
+                const agentResult = await agent.initializeAgent({
                     sessionId: createdSession.id,
                     worktreePath,
                     config: {
@@ -115,6 +115,12 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                         model: 'sonnet',
                     },
                 });
+
+                // Store container info in the session
+                if (agentResult.containerId) {
+                    worktreeSession.containerId = agentResult.containerId;
+                    worktreeSession.containerName = agentResult.containerName;
+                }
 
                 // Run setup commands if specified
                 if (validatedOptions.setupCommands) {
