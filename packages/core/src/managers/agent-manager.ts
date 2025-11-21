@@ -48,8 +48,7 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
 
     if (!apiKey) {
         throw new Error(
-            'Anthropic API key not configured. ' +
-                'Please run "viwo auth" to set up your API key.'
+            'Anthropic API key not configured. ' + 'Please run "viwo auth" to set up your API key.'
         );
     }
 
@@ -68,12 +67,14 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
 
     // Build the claude command
     // The prompt will be passed as arguments to the claude CLI
-    const command = ['claude', config.initialPrompt, '--dangerously-skip-permissions'];
+    const command = ['claude', '--dangerously-skip-permissions', '-p'];
 
     // Add model flag if specified
     if (config.model) {
         command.push('--model', config.model);
     }
+
+    command.push(`"${config.initialPrompt}"`);
 
     // Create the container
     const containerInfo = await createContainer({

@@ -38,4 +38,4 @@ EOF
 #}
 #EOF
 
-exec claude --dangerously-skip-permissions -p "$@"
+exec "$@"
