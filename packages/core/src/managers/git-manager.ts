@@ -3,29 +3,48 @@ import path from 'path';
 import { mkdir, exists, rm } from 'node:fs/promises';
 import { nanoid } from 'nanoid';
 
-export async function isValidRepository(repoPath: string): Promise<boolean> {
+export interface RepoPathOptions {
+    repoPath: string;
+}
+
+export const isValidRepository = async (options: RepoPathOptions): Promise<boolean> => {
     try {
-        const git = simpleGit(repoPath);
-        await git.status();
+        const gitInstance = simpleGit(options.repoPath);
+        await gitInstance.status();
         return true;
     } catch (error) {
         return false;
     }
-}
+};
 
-export async function getCurrentBranch(repoPath: string): Promise<string> {
-    const git = simpleGit(repoPath);
-    const status = await git.status();
+export const checkValidRepositoryOrThrow = async (options: RepoPathOptions): Promise<void> => {
+    /* Throws if path is not valid. */
+    const isValid = await isValidRepository(options);
+
+    if (!isValid) {
+        throw Error(options.repoPath + ' is not a valid git repository.');
+    }
+};
+
+export const getCurrentBranch = async (options: RepoPathOptions): Promise<string> => {
+    const gitInstance = simpleGit(options.repoPath);
+    const status = await gitInstance.status();
     return status.current || 'main';
+};
+
+export interface GenerateBranchNameOptions {
+    baseName?: string;
 }
 
-export async function generateBranchName(baseName?: string): Promise<string> {
+export const generateBranchName = async (
+    options: GenerateBranchNameOptions = {}
+): Promise<string> => {
     const timestamp = new Date().toISOString().split('T')[0];
     const shortId = nanoid(6);
 
-    if (baseName) {
+    if (options.baseName) {
         // Sanitize branch name
-        const sanitized = baseName
+        const sanitized = options.baseName
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
@@ -35,44 +54,51 @@ export async function generateBranchName(baseName?: string): Promise<string> {
     }
 
     return `viwo-${timestamp}-${shortId}`;
+};
+
+export interface CreateWorktreeOptions {
+    repoPath: string;
+    branchName: string;
+    worktreePath: string;
 }
 
-export async function createWorktree(
-    repoPath: string,
-    branchName: string,
-    worktreePath: string
-): Promise<void> {
-    const git = simpleGit(repoPath);
+export const createWorktree = async (options: CreateWorktreeOptions): Promise<void> => {
+    const gitInstance = simpleGit(options.repoPath);
 
     // Ensure worktrees directory exists
-    const worktreesDir = path.dirname(worktreePath);
+    const worktreesDir = path.dirname(options.worktreePath);
     if (!(await exists(worktreesDir))) {
         await mkdir(worktreesDir, { recursive: true });
     }
 
     // Create new branch and worktree
-    await git.raw(['worktree', 'add', '-b', branchName, worktreePath]);
+    await gitInstance.raw(['worktree', 'add', '-b', options.branchName, options.worktreePath]);
+};
+
+export interface RemoveWorktreeOptions {
+    repoPath: string;
+    worktreePath: string;
 }
 
-export async function removeWorktree(repoPath: string, worktreePath: string): Promise<void> {
-    const git = simpleGit(repoPath);
+export const removeWorktree = async (options: RemoveWorktreeOptions): Promise<void> => {
+    const gitInstance = simpleGit(options.repoPath);
 
     try {
         // Remove the worktree
-        await git.raw(['worktree', 'remove', worktreePath, '--force']);
+        await gitInstance.raw(['worktree', 'remove', options.worktreePath, '--force']);
     } catch (error) {
         // If the worktree doesn't exist in git, just remove the directory
-        if (await exists(worktreePath)) {
-            await rm(worktreePath, { recursive: true, force: true });
+        if (await exists(options.worktreePath)) {
+            await rm(options.worktreePath, { recursive: true, force: true });
         }
     }
-}
+};
 
-export async function listWorktrees(
-    repoPath: string
-): Promise<Array<{ path: string; branch: string; commit: string }>> {
-    const git = simpleGit(repoPath);
-    const output = await git.raw(['worktree', 'list', '--porcelain']);
+export const listWorktrees = async (
+    options: RepoPathOptions
+): Promise<Array<{ path: string; branch: string; commit: string }>> => {
+    const gitInstance = simpleGit(options.repoPath);
+    const output = await gitInstance.raw(['worktree', 'list', '--porcelain']);
     const worktrees: Array<{ path: string; branch: string; commit: string }> = [];
 
     const lines = output.split('\n');
@@ -92,18 +118,39 @@ export async function listWorktrees(
     }
 
     return worktrees;
+};
+
+export interface WorktreePathOptions {
+    worktreePath: string;
 }
 
-export async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
-    const git = simpleGit(worktreePath);
-    const status = await git.status();
+export const hasUncommittedChanges = async (options: WorktreePathOptions): Promise<boolean> => {
+    const gitInstance = simpleGit(options.worktreePath);
+    const status = await gitInstance.status();
     return !status.isClean();
+};
+
+export interface CopyEnvFileOptions {
+    sourceEnvPath: string;
+    targetPath: string;
 }
 
-export async function copyEnvFile(sourceEnvPath: string, targetPath: string): Promise<void> {
-    if (await exists(sourceEnvPath)) {
-        const targetEnvPath = path.join(targetPath, path.basename(sourceEnvPath));
-        const sourceFile = Bun.file(sourceEnvPath);
+export const copyEnvFile = async (options: CopyEnvFileOptions): Promise<void> => {
+    if (await exists(options.sourceEnvPath)) {
+        const targetEnvPath = path.join(options.targetPath, path.basename(options.sourceEnvPath));
+        const sourceFile = Bun.file(options.sourceEnvPath);
         await Bun.write(targetEnvPath, sourceFile);
     }
-}
+};
+
+export const git = {
+    isValidRepository,
+    checkValidRepositoryOrThrow,
+    getCurrentBranch,
+    generateBranchName,
+    createWorktree,
+    removeWorktree,
+    listWorktrees,
+    hasUncommittedChanges,
+    copyEnvFile,
+};

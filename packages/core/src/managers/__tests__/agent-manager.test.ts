@@ -27,7 +27,7 @@ describe('agent-manager', () => {
                 initialPrompt: 'Test prompt for Claude Code',
             };
 
-            await initializeAgent(tempDir, config);
+            await initializeAgent({ sessionId: 1, worktreePath: tempDir, config });
 
             // Check .claude directory was created
             const claudeDir = path.join(tempDir, '.claude');
@@ -53,7 +53,7 @@ describe('agent-manager', () => {
                 initialPrompt: 'Test prompt',
             };
 
-            await expect(initializeAgent(tempDir, config)).rejects.toThrow(
+            await expect(initializeAgent({ sessionId: 1, worktreePath: tempDir, config })).rejects.toThrow(
                 'Cline support not yet implemented'
             );
         });
@@ -64,7 +64,7 @@ describe('agent-manager', () => {
                 initialPrompt: 'Test prompt',
             };
 
-            await expect(initializeAgent(tempDir, config)).rejects.toThrow(
+            await expect(initializeAgent({ sessionId: 1, worktreePath: tempDir, config })).rejects.toThrow(
                 'Cursor support not yet implemented'
             );
         });

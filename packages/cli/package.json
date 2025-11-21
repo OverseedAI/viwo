@@ -16,11 +16,13 @@
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@inquirer/prompts": "^8.0.1",
     "@viwo/core": "workspace:*",
-    "commander": "^11.1.0",
     "chalk": "^4.1.2",
-    "ora": "^5.4.1",
-    "cli-table3": "^0.6.3"
+    "cli-table3": "^0.6.3",
+    "commander": "^11.1.0",
+    "ora": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

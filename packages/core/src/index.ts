@@ -18,6 +18,7 @@ export * as GitManager from './managers/git-manager';
 export * as DockerManager from './managers/docker-manager';
 export * as AgentManager from './managers/agent-manager';
 export * as PortManager from './managers/port-manager';
+export * as ConfigManager from './managers/config-manager';
 
 // Export repository management
 export {
@@ -25,4 +26,8 @@ export {
     createRepository,
     deleteRepository,
     type ListRepositoryOptions,
+    type DeleteRepositoryOptions,
 } from './managers/repository-manager';
+
+// Export path utilities
+export * from './utils/paths';

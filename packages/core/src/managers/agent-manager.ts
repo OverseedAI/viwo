@@ -1,98 +1,199 @@
 import { AgentConfig, AgentType } from '../schemas';
 import type { Subprocess } from 'bun';
-import path from 'path';
-import { mkdir, exists } from 'node:fs/promises';
+import { db } from '../db';
+import { chats, NewChat } from '../db-schemas';
+import { session } from './session-manager';
+import {
+    docker,
+    CLAUDE_CODE_IMAGE,
+    checkImageExists,
+    createContainer,
+    startContainer,
+    getContainerLogs,
+} from './docker-manager';
+import { getApiKey } from './config-manager';
 
-export async function initializeAgent(worktreePath: string, config: AgentConfig): Promise<void> {
-    switch (config.type) {
+export interface InitializeAgentOptions {
+    sessionId: number;
+    worktreePath: string;
+    config: AgentConfig;
+}
+
+export const initializeAgent = async (options: InitializeAgentOptions): Promise<void> => {
+    switch (options.config.type) {
         case 'claude-code':
-            await initializeClaudeCode(worktreePath, config);
+            await initializeClaudeCode(options);
             break;
         case 'cline':
-            await initializeCline(worktreePath, config);
+            await initializeCline(options);
             break;
         case 'cursor':
-            await initializeCursor(worktreePath, config);
+            await initializeCursor(options);
             break;
         default:
-            throw new Error(`Unsupported agent type: ${config.type}`);
+            throw new Error(`Unsupported agent type: ${options.config.type}`);
     }
-}
+};
 
-async function initializeClaudeCode(worktreePath: string, config: AgentConfig): Promise<void> {
-    // Create a .claude directory with initial prompt
-    const claudeDir = path.join(worktreePath, '.claude');
-    if (!(await exists(claudeDir))) {
-        await mkdir(claudeDir, { recursive: true });
+const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
+    const { sessionId, worktreePath, config } = options;
+
+    // Check if Docker is running
+    await docker.checkDockerRunningOrThrow();
+
+    // Get API key from configuration
+    const apiKey = getApiKey({ provider: 'anthropic' });
+
+    if (!apiKey) {
+        throw new Error(
+            'Anthropic API key not configured. ' +
+                'Please run "viwo auth" to set up your API key.'
+        );
     }
 
-    // Create initial prompt file
-    const promptPath = path.join(claudeDir, 'initial-prompt.md');
-    await Bun.write(promptPath, config.initialPrompt);
+    // Check if Claude Code image exists
+    const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
 
-    // Create a simple README in the worktree with instructions
-    const readmePath = path.join(worktreePath, 'VIWO-README.md');
-    const readmeContent = `# VIWO Session
+    if (!imageExists) {
+        throw new Error(
+            `Claude Code Docker image '${CLAUDE_CODE_IMAGE}' not found. ` +
+                `Please build the image first or ensure it's available locally.`
+        );
+    }
 
-This worktree was created by VIWO for the following task:
+    // Generate container name
+    const containerName = `viwo-claude-${sessionId}-${Date.now()}`;
 
-${config.initialPrompt}
+    // Build the claude command
+    // The prompt will be passed as arguments to the claude CLI
+    const command = ['claude', config.initialPrompt, '--dangerously-skip-permissions'];
 
-## Getting Started
+    // Add model flag if specified
+    if (config.model) {
+        command.push('--model', config.model);
+    }
 
-1. Run \`claude-code\` in this directory
-2. The initial prompt is in \`.claude/initial-prompt.md\`
-3. Make your changes and commit when ready
+    // Create the container
+    const containerInfo = await createContainer({
+        name: containerName,
+        image: CLAUDE_CODE_IMAGE,
+        worktreePath,
+        command,
+        env: {
+            ANTHROPIC_API_KEY: apiKey,
+        },
+        tty: true,
+        openStdin: true,
+    });
 
-## Session Info
+    // Log initial prompt to chats table
+    const initialChat: NewChat = {
+        sessionId: sessionId.toString(),
+        type: 'user',
+        content: config.initialPrompt,
+        createdAt: new Date().toISOString(),
+    };
+    db.insert(chats).values(initialChat).run();
 
-- Agent: ${config.type}
-${config.model ? `- Model: ${config.model}` : ''}
-- Created: ${new Date().toISOString()}
-`;
+    // Start the container
+    await startContainer({ containerId: containerInfo.id });
 
-    await Bun.write(readmePath, readmeContent);
-}
+    // Update session with container info and running status
+    session.update({
+        id: sessionId,
+        updates: {
+            containerId: containerInfo.id,
+            containerName: containerInfo.name,
+            containerImage: CLAUDE_CODE_IMAGE,
+            status: 'running',
+            lastActivity: new Date().toISOString(),
+        },
+    });
 
-async function initializeCline(worktreePath: string, config: AgentConfig): Promise<void> {
+    // Set up background log streaming to chats table
+    // This runs in the background and doesn't block the function return
+    getContainerLogs(
+        {
+            containerId: containerInfo.id,
+            follow: true,
+            stdout: true,
+            stderr: true,
+        },
+        (logContent: string) => {
+            // Insert each log entry as an assistant message in the chats table
+            const chatEntry: NewChat = {
+                sessionId: sessionId.toString(),
+                type: 'assistant',
+                content: logContent,
+                createdAt: new Date().toISOString(),
+            };
+            db.insert(chats).values(chatEntry).run();
+
+            // Update last activity timestamp
+            session.update({
+                id: sessionId,
+                updates: {
+                    lastActivity: new Date().toISOString(),
+                },
+            });
+        }
+    ).catch((error) => {
+        // Log streaming error - update session with error status
+        console.error(`Log streaming error for session ${sessionId}:`, error);
+        session.update({
+            id: sessionId,
+            updates: {
+                status: 'error',
+                error: `Log streaming failed: ${error.message}`,
+            },
+        });
+    });
+
+    // Return immediately without waiting for container to finish
+    // The container will run in the background
+};
+
+const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
     // Placeholder for Cline initialization
     // This would set up Cline-specific configuration
     throw new Error('Cline support not yet implemented');
-}
+};
 
-async function initializeCursor(worktreePath: string, config: AgentConfig): Promise<void> {
+const initializeCursor = async (_options: InitializeAgentOptions): Promise<void> => {
     // Placeholder for Cursor initialization
     // This would set up Cursor-specific configuration
     throw new Error('Cursor support not yet implemented');
+};
+
+export interface LaunchAgentOptions {
+    worktreePath: string;
+    agentType: AgentType;
 }
 
-export async function launchAgent(
-    worktreePath: string,
-    agentType: AgentType
-): Promise<Subprocess | null> {
-    switch (agentType) {
+export const launchAgent = async (options: LaunchAgentOptions): Promise<Subprocess | null> => {
+    switch (options.agentType) {
         case 'claude-code':
-            return launchClaudeCode(worktreePath);
+            return launchClaudeCode(options.worktreePath);
         case 'cline':
-            return launchCline(worktreePath);
+            return launchCline(options.worktreePath);
         case 'cursor':
-            return launchCursor(worktreePath);
+            return launchCursor(options.worktreePath);
         default:
-            throw new Error(`Unsupported agent type: ${agentType}`);
+            throw new Error(`Unsupported agent type: ${options.agentType}`);
     }
-}
+};
 
-function launchClaudeCode(worktreePath: string): Subprocess | null {
+const launchClaudeCode = (_worktreePath: string): Subprocess | null => {
     // For now, we'll just prepare the environment
     // The user will need to manually run claude-code
     // In the future, we could spawn a process here using Bun.spawn()
     return null;
-}
+};
 
-function launchCline(worktreePath: string): Subprocess | null {
+const launchCline = (_worktreePath: string): Subprocess | null => {
     throw new Error('Cline support not yet implemented');
-}
+};
 
-function launchCursor(worktreePath: string): Subprocess | null {
+const launchCursor = (_worktreePath: string): Subprocess | null => {
     throw new Error('Cursor support not yet implemented');
-}
+};

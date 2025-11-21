@@ -70,7 +70,7 @@ export type WorktreeSession = z.infer<typeof WorktreeSessionSchema>;
  * Init command options
  */
 export const InitOptionsSchema = z.object({
-    repoPath: z.string().min(1),
+    repoId: z.number().min(0),
     prompt: z.string().min(1),
     agent: AgentTypeSchema.default('claude-code'),
     branchName: z.string().optional(),
