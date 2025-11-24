@@ -6,8 +6,14 @@ import { getStatusBadge } from '../utils/formatters';
 export const getCommand = new Command('get')
     .description('Get details of a specific session')
     .argument('<session-id>', 'Session ID')
-    .action(async (sessionId: string) => {
+    .option('--no-sync', 'Skip syncing Docker state before fetching')
+    .action(async (sessionId: string, options) => {
         try {
+            // Sync Docker state with database before fetching
+            if (options.sync !== false) {
+                await viwo.sync();
+            }
+
             const session = await viwo.get(sessionId);
 
             if (!session) {

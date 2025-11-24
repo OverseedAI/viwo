@@ -12,9 +12,16 @@ export const startCommand = new Command('start')
     .option('-c, --compose <path>', 'Path to docker-compose.yml')
     .option('-e, --env <path>', 'Path to .env file to copy')
     .option('-s, --setup <commands...>', 'Setup commands to run')
+    .option('--no-sync', 'Skip syncing Docker state before starting')
     .action(async (options) => {
         try {
             await viwo.docker.checkDockerRunningOrThrow();
+
+            // Sync Docker state with database before starting
+            if (options.sync !== false) {
+                await viwo.sync();
+            }
+
             clack.intro(chalk.bgCyan(' viwo start '));
 
             // Step 1: Select repository

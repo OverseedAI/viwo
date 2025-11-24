@@ -7,6 +7,8 @@ export function getStatusBadge(status: WorktreeSession['status']): string {
             return chalk.yellow('⏳ initializing');
         case 'running':
             return chalk.green('✓ running');
+        case 'completed':
+            return chalk.blue('✓ completed');
         case 'stopped':
             return chalk.gray('■ stopped');
         case 'error':

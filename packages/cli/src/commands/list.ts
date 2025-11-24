@@ -8,8 +8,14 @@ export const listCommand = new Command('list')
     .description('List all worktree sessions')
     .option('-s, --status <status>', 'Filter by status')
     .option('-l, --limit <number>', 'Limit number of results', parseInt)
+    .option('--no-sync', 'Skip syncing Docker state before listing')
     .action(async (options) => {
         try {
+            // Sync Docker state with database before listing
+            if (options.sync !== false) {
+                await viwo.sync();
+            }
+
             const sessions = await viwo.list({
                 status: options.status,
                 limit: options.limit,

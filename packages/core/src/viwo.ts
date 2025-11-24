@@ -4,18 +4,27 @@ import {
     InitOptions,
     InitOptionsSchema,
     ListOptions,
+    SessionStatus,
     ViwoConfig,
     ViwoConfigSchema,
     WorktreeSession,
 } from './schemas';
 import { git } from './managers/git-manager';
-import { docker } from './managers/docker-manager';
+import { docker, syncDockerState, SyncDockerStateResult } from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
-import { createSession, session } from './managers/session-manager';
+import {
+    createSession,
+    getSession,
+    listSessions,
+    session,
+    updateSession,
+} from './managers/session-manager';
 import { getRepositoryById, repo } from './managers/repository-manager';
 import { joinWorktreesPath } from './utils/paths';
 import { initializeDatabase } from './db-init';
 import { Database } from 'bun:sqlite';
+import { sessionToWorktreeSession } from './utils/types';
+import { db } from './db';
 
 export interface Viwo {
     repo: typeof repo;
@@ -26,15 +35,14 @@ export interface Viwo {
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
     get: (sessionId: string) => Promise<WorktreeSession | null>;
     cleanup: (options: CleanupOptions) => Promise<void>;
+    prune: () => Promise<void>;
+    sync: () => Promise<SyncDockerStateResult>;
     migrate: () => Promise<void>;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
     // Merge with defaults
     const viwoConfig = ViwoConfigSchema.parse(config || {});
-
-    // In-memory session storage (TODO: migrate to db-based sessions)
-    const sessions = new Map<string, WorktreeSession>();
 
     return {
         repo,
@@ -71,7 +79,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 agent: 'claudecode',
             });
 
-            // Create WorktreeSession for in-memory tracking
+            // Create WorktreeSession for return value
             const sessionId = String(createdSession.id);
             const worktreeSession: WorktreeSession = {
                 id: sessionId,
@@ -84,7 +92,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     type: validatedOptions.agent,
                     initialPrompt: validatedOptions.prompt,
                 },
-                status: 'initializing',
+                status: SessionStatus.INITIALIZING,
                 createdAt: new Date(),
                 lastActivity: new Date(),
             };
@@ -123,18 +131,33 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     console.log('Setup commands:', validatedOptions.setupCommands.join(', '));
                 }
 
-                // Update session status
-                worktreeSession.status = 'running';
+                // Update session status in database
+                updateSession({
+                    id: createdSession.id,
+                    updates: {
+                        status: SessionStatus.RUNNING,
+                        lastActivity: new Date().toISOString(),
+                    },
+                });
+
+                worktreeSession.status = SessionStatus.RUNNING;
                 worktreeSession.lastActivity = new Date();
-                sessions.set(sessionId, worktreeSession);
 
                 return worktreeSession;
             } catch (error) {
-                // Update session with error
-                worktreeSession.status = 'error';
+                // Update session with error in database
+                updateSession({
+                    id: createdSession.id,
+                    updates: {
+                        status: SessionStatus.ERROR,
+                        error: error instanceof Error ? error.message : String(error),
+                        lastActivity: new Date().toISOString(),
+                    },
+                });
+
+                worktreeSession.status = SessionStatus.ERROR;
                 worktreeSession.error = error instanceof Error ? error.message : String(error);
                 worktreeSession.lastActivity = new Date();
-                sessions.set(sessionId, worktreeSession);
 
                 throw error;
             }
@@ -143,16 +166,33 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         /**
          * List all sessions
          */
-        async list(_options?: ListOptions): Promise<WorktreeSession[]> {
-            // TODO: implement filtering by status and limit
-            return Array.from(sessions.values());
+        async list(options?: ListOptions): Promise<WorktreeSession[]> {
+            const dbSessions = listSessions({
+                status: options?.status,
+                limit: options?.limit,
+            });
+
+            return dbSessions
+                .map(sessionToWorktreeSession)
+                .filter((s): s is WorktreeSession => s !== null)
+                .filter((s): s is WorktreeSession => s.status !== SessionStatus.CLEANED);
         },
 
         /**
          * Get a specific session
          */
         async get(sessionId: string): Promise<WorktreeSession | null> {
-            return sessions.get(sessionId) || null;
+            const id = parseInt(sessionId, 10);
+            if (isNaN(id)) {
+                return null;
+            }
+
+            const dbSession = getSession({ id });
+            if (!dbSession) {
+                return null;
+            }
+
+            return sessionToWorktreeSession(dbSession);
         },
 
         /**
@@ -161,24 +201,51 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         async cleanup(options: CleanupOptions): Promise<void> {
             const validatedOptions = CleanupOptionsSchema.parse(options);
 
-            const session = sessions.get(validatedOptions.sessionId);
-            if (!session) {
+            const id = parseInt(validatedOptions.sessionId, 10);
+            if (isNaN(id)) {
+                throw new Error(`Invalid session ID: ${validatedOptions.sessionId}`);
+            }
+
+            const dbSession = getSession({ id });
+            if (!dbSession) {
                 throw new Error(`Session not found: ${validatedOptions.sessionId}`);
+            }
+
+            const worktreeSession = sessionToWorktreeSession(dbSession);
+            if (!worktreeSession) {
+                throw new Error(`Repository not found for session: ${validatedOptions.sessionId}`);
             }
 
             try {
                 // Stop and remove containers
                 if (validatedOptions.stopContainers || validatedOptions.removeContainers) {
-                    for (const container of session.containers) {
+                    if (dbSession.containerId) {
                         try {
-                            if (validatedOptions.stopContainers) {
-                                await docker.stopContainer({ containerId: container.id });
-                            }
-                            if (validatedOptions.removeContainers) {
-                                await docker.removeContainer({ containerId: container.id });
+                            const containerExists = await docker.containerExists({
+                                containerId: dbSession.containerId,
+                            });
+
+                            if (containerExists) {
+                                if (validatedOptions.stopContainers) {
+                                    try {
+                                        await docker.stopContainer({
+                                            containerId: dbSession.containerId,
+                                        });
+                                    } catch {
+                                        // Container might already be stopped
+                                    }
+                                }
+                                if (validatedOptions.removeContainers) {
+                                    await docker.removeContainer({
+                                        containerId: dbSession.containerId,
+                                    });
+                                }
                             }
                         } catch (error) {
-                            console.warn(`Failed to cleanup container ${container.id}:`, error);
+                            console.warn(
+                                `Failed to cleanup container ${dbSession.containerId}:`,
+                                error
+                            );
                         }
                     }
                 }
@@ -186,24 +253,43 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 // Remove worktree
                 if (validatedOptions.removeWorktree) {
                     await git.removeWorktree({
-                        repoPath: session.repoPath,
-                        worktreePath: session.worktreePath,
+                        repoPath: worktreeSession.repoPath,
+                        worktreePath: worktreeSession.worktreePath,
                     });
                 }
 
-                // Update session status
-                session.status = 'cleaned';
-                session.lastActivity = new Date();
-                sessions.set(validatedOptions.sessionId, session);
+                // Update session status in database
+                updateSession({
+                    id,
+                    updates: {
+                        status: SessionStatus.CLEANED,
+                        lastActivity: new Date().toISOString(),
+                    },
+                });
             } catch (error) {
-                // Update session with error
-                session.status = 'error';
-                session.error = error instanceof Error ? error.message : String(error);
-                session.lastActivity = new Date();
-                sessions.set(validatedOptions.sessionId, session);
+                // Update session with error in database
+                updateSession({
+                    id,
+                    updates: {
+                        status: SessionStatus.ERROR,
+                        error: error instanceof Error ? error.message : String(error),
+                        lastActivity: new Date().toISOString(),
+                    },
+                });
 
                 throw error;
             }
+        },
+
+        async prune() {
+            const erroredSessions = viwo.session.list({ status: SessionStatus.ERROR });
+        },
+
+        /**
+         * Sync Docker container state with database sessions
+         */
+        async sync(): Promise<SyncDockerStateResult> {
+            return syncDockerState();
         },
         async migrate() {
             console.log('Running database migrations...');
