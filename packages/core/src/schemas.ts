@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SessionStatus } from './types';
 
 /**
  * Agent configuration schemas
@@ -40,13 +41,16 @@ export type ContainerInfo = z.infer<typeof ContainerInfoSchema>;
  * Session status schemas
  */
 export const SessionStatusSchema = z.enum([
-    'initializing',
-    'running',
-    'stopped',
-    'error',
-    'cleaned',
+    SessionStatus.INITIALIZING,
+    SessionStatus.RUNNING,
+    SessionStatus.COMPLETED,
+    SessionStatus.STOPPED,
+    SessionStatus.ERROR,
+    SessionStatus.CLEANED,
 ]);
-export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+
+// Re-export SessionStatus for convenience
+export { SessionStatus };
 
 /**
  * Worktree session schemas

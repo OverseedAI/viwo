@@ -1,4 +1,4 @@
-import { AgentConfig, AgentType } from '../schemas';
+import { AgentConfig, AgentType, SessionStatus } from '../schemas';
 import type { Subprocess } from 'bun';
 import { db } from '../db';
 import { chats, NewChat } from '../db-schemas';
@@ -108,7 +108,7 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
             containerId: containerInfo.id,
             containerName: containerInfo.name,
             containerImage: CLAUDE_CODE_IMAGE,
-            status: 'running',
+            status: SessionStatus.RUNNING,
             lastActivity: new Date().toISOString(),
         },
     });
@@ -146,7 +146,7 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         session.update({
             id: sessionId,
             updates: {
-                status: 'error',
+                status: SessionStatus.ERROR,
                 error: `Log streaming failed: ${error.message}`,
             },
         });
@@ -172,7 +172,7 @@ const monitorContainerCompletion = async (
         const result = await waitForContainer({ containerId });
 
         // Determine final status based on exit code
-        const finalStatus = result.statusCode === 0 ? 'completed' : 'error';
+        const finalStatus = result.statusCode === 0 ? SessionStatus.COMPLETED : SessionStatus.ERROR;
         const errorMessage = result.statusCode !== 0 ? `Container exited with code ${result.statusCode}` : undefined;
 
         // Update session status
@@ -195,7 +195,7 @@ const monitorContainerCompletion = async (
         session.update({
             id: sessionId,
             updates: {
-                status: 'error',
+                status: SessionStatus.ERROR,
                 error: `Container monitoring failed: ${error instanceof Error ? error.message : String(error)}`,
                 lastActivity: new Date().toISOString(),
             },

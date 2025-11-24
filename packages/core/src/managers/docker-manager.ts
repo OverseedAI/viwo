@@ -1,7 +1,8 @@
 import Docker from 'dockerode';
 import { exists } from 'node:fs/promises';
 import path from 'path';
-import { ContainerInfo, PortMapping } from '../schemas';
+import { ContainerInfo, PortMapping, SessionStatus } from '../schemas';
+import { listSessions, updateSession } from './session-manager';
 
 const dockerSdk = new Docker();
 
@@ -313,6 +314,150 @@ const mapContainerStatus = (dockerStatus: string): ContainerInfo['status'] => {
     }
 };
 
+export const containerExists = async (options: ContainerIdOptions): Promise<boolean> => {
+    try {
+        const container = dockerSdk.getContainer(options.containerId);
+        await container.inspect();
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+export interface ContainerInspectResult {
+    status: ContainerInfo['status'];
+    exitCode: number | null;
+    running: boolean;
+}
+
+export const inspectContainer = async (
+    options: ContainerIdOptions
+): Promise<ContainerInspectResult> => {
+    const container = dockerSdk.getContainer(options.containerId);
+    const info = await container.inspect();
+    return {
+        status: mapContainerStatus(info.State.Status),
+        exitCode: info.State.ExitCode ?? null,
+        running: info.State.Running,
+    };
+};
+
+export interface SyncResult {
+    sessionId: number;
+    previousStatus: string;
+    newStatus: SessionStatus;
+    reason: string;
+}
+
+export interface SyncDockerStateResult {
+    synced: SyncResult[];
+    errors: { sessionId: number; error: string }[];
+}
+
+export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
+    const result: SyncDockerStateResult = {
+        synced: [],
+        errors: [],
+    };
+
+    // Query all sessions with status 'running' or 'initializing'
+    const activeSessions = listSessions().filter(
+        (s) => s.status === SessionStatus.RUNNING || s.status === SessionStatus.INITIALIZING
+    );
+
+    for (const session of activeSessions) {
+        if (!session.containerId) {
+            continue;
+        }
+
+        try {
+            const exists = await containerExists({ containerId: session.containerId });
+
+            if (!exists) {
+                // Container not found - mark session as error
+                updateSession({
+                    id: session.id,
+                    updates: {
+                        status: SessionStatus.ERROR,
+                        error: 'Container not found',
+                        lastActivity: new Date().toISOString(),
+                    },
+                });
+
+                result.synced.push({
+                    sessionId: session.id,
+                    previousStatus: session.status || 'unknown',
+                    newStatus: SessionStatus.ERROR,
+                    reason: 'Container not found',
+                });
+                continue;
+            }
+
+            const containerInfo = await inspectContainer({ containerId: session.containerId });
+
+            // Determine new session status based on container state
+            let newStatus: SessionStatus | null = null;
+            let reason = '';
+
+            if (containerInfo.running) {
+                // Container is running - session should be running
+                if (session.status !== SessionStatus.RUNNING) {
+                    newStatus = SessionStatus.RUNNING;
+                    reason = 'Container is running';
+                }
+            } else {
+                // Container is not running (exited, dead, etc.)
+                if (containerInfo.status === 'exited') {
+                    if (containerInfo.exitCode === 0) {
+                        newStatus = SessionStatus.COMPLETED;
+                        reason = `Container exited with code 0`;
+                    } else {
+                        newStatus = SessionStatus.ERROR;
+                        reason = `Container exited with code ${containerInfo.exitCode}`;
+                    }
+                } else if (containerInfo.status === 'error') {
+                    newStatus = SessionStatus.ERROR;
+                    reason = 'Container is in error state';
+                } else {
+                    newStatus = SessionStatus.STOPPED;
+                    reason = `Container status: ${containerInfo.status}`;
+                }
+            }
+
+            // Update session if status changed
+            if (newStatus && newStatus !== session.status) {
+                const updates: { status: string; error?: string; lastActivity: string } = {
+                    status: newStatus,
+                    lastActivity: new Date().toISOString(),
+                };
+
+                if (newStatus === SessionStatus.ERROR) {
+                    updates.error = reason;
+                }
+
+                updateSession({
+                    id: session.id,
+                    updates,
+                });
+
+                result.synced.push({
+                    sessionId: session.id,
+                    previousStatus: session.status || 'unknown',
+                    newStatus,
+                    reason,
+                });
+            }
+        } catch (error) {
+            result.errors.push({
+                sessionId: session.id,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+    }
+
+    return result;
+};
+
 export const docker = {
     isDockerRunning,
     checkDockerRunningOrThrow,
@@ -326,5 +471,8 @@ export const docker = {
     getContainerStatus,
     getContainerLogs,
     waitForContainer,
+    containerExists,
+    inspectContainer,
+    syncDockerState,
     CLAUDE_CODE_IMAGE,
 };
