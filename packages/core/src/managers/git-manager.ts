@@ -143,6 +143,11 @@ export const copyEnvFile = async (options: CopyEnvFileOptions): Promise<void> =>
     }
 };
 
+export const pruneWorktrees = async (options: RepoPathOptions): Promise<void> => {
+    const gitInstance = simpleGit(options.repoPath);
+    await gitInstance.raw(['worktree', 'prune']);
+};
+
 export const git = {
     isValidRepository,
     checkValidRepositoryOrThrow,
@@ -153,4 +158,5 @@ export const git = {
     listWorktrees,
     hasUncommittedChanges,
     copyEnvFile,
+    pruneWorktrees,
 };

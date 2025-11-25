@@ -77,7 +77,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 **No build required during development** - Core exports TypeScript source directly (`main: "./src/index.ts"`), Bun's native TS support handles it.
 
 **Functional manager pattern** - Each manager (`packages/core/src/managers/`) exports functions and a namespace object:
-- `git-manager.ts` - Worktree operations via simple-git
+- `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references)
 - `docker-manager.ts` - Container orchestration via dockerode
 - `session-manager.ts` - Session CRUD via Drizzle ORM
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
@@ -126,7 +126,7 @@ Commands in `packages/cli/src/commands/`:
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `get` - Get session details
 - `cleanup` - Remove a specific session and its resources
-- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned' and removes worktrees)
+- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, and runs `git worktree prune` for affected repositories)
 - `repo` - Repository management (list, add, delete)
 
 ## Testing
@@ -134,7 +134,7 @@ Commands in `packages/cli/src/commands/`:
 Tests use Bun's native test runner (`bun:test`). Test files are in `__tests__` directories with `.test.ts` suffix.
 
 Current test coverage focuses on:
-- `git-manager.test.ts` - Branch name generation, repo validation
+- `git-manager.test.ts` - Branch name generation, repo validation, worktree pruning
 - `docker-manager.test.ts` - Docker daemon status
 - `agent-manager.test.ts` - Claude Code agent initialization
 
