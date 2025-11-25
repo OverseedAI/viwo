@@ -84,6 +84,9 @@ The `agent-manager.ts` implements automatic container cleanup:
 
 Commands in `packages/cli/src/commands/`:
 - `start` - Initialize new session with prompt and agent
+  - Interactive multiline prompt that supports pasting multiple lines
+  - Press Enter on an empty line or Ctrl+D to finish entering prompt
+  - Allows users to paste large blocks of text without triggering execution
 - `list` - List all sessions
 - `get` - Get session details
 - `cleanup` - Remove a specific session and its resources
