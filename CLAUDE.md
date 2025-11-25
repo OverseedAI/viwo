@@ -124,8 +124,6 @@ Commands in `packages/cli/src/commands/`:
   - Allows users to paste large blocks of text without triggering execution
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
-- `get` - Get session details
-- `cleanup` - Remove a specific session and its resources
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, and runs `git worktree prune` for affected repositories)
 - `repo` - Repository management (list, add, delete)
 

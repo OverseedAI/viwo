@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --format esm && tsc --emitDeclarationOnly",
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm && tsc --emitDeclarationOnly",
     "db:generate": "bunx drizzle-kit generate --dialect sqlite --schema ./src/db-schemas/index.ts",
     "db:migrate": "bun scripts/generate-migrations.ts",
     "typecheck": "tsc --noEmit"
