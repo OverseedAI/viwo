@@ -4,8 +4,6 @@ import { Command } from 'commander';
 import {
     startCommand,
     listCommand,
-    getCommand,
-    cleanupCommand,
     cleanCommand,
     repoCommand,
     migrateCommand,
@@ -24,8 +22,6 @@ program
 // Register commands
 program.addCommand(startCommand);
 program.addCommand(listCommand);
-program.addCommand(getCommand);
-program.addCommand(cleanupCommand);
 program.addCommand(cleanCommand);
 program.addCommand(repoCommand);
 program.addCommand(migrateCommand);

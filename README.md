@@ -113,18 +113,6 @@ viwo init --prompt "Add user authentication feature" \
 viwo list
 ```
 
-### Get session details
-
-```bash
-viwo get <session-id>
-```
-
-### Cleanup a session
-
-```bash
-viwo cleanup <session-id>
-```
-
 ## 🏗️ Building for Production
 
 While development doesn't require a build step, you can build for production/publishing:
