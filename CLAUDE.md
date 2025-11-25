@@ -86,7 +86,8 @@ Commands in `packages/cli/src/commands/`:
 - `start` - Initialize new session with prompt and agent
 - `list` - List all sessions
 - `get` - Get session details
-- `cleanup` - Remove session and resources
+- `cleanup` - Remove a specific session and its resources
+- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned' and removes worktrees)
 - `repo` - Repository management (list, add, delete)
 
 ## Testing
