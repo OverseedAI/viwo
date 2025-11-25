@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { viwo } from '@viwo/core';
+import { checkPrerequisitesOrExit } from '../utils/prerequisites';
 
 export const cleanCommand = new Command('clean')
     .description(
@@ -16,9 +17,12 @@ export const cleanCommand = new Command('clean')
         'completed,error,stopped'
     )
     .action(async (options) => {
-        const spinner = ora('Finding sessions to clean...').start();
-
         try {
+            // Check prerequisites before proceeding
+            await checkPrerequisitesOrExit();
+
+            const spinner = ora('Finding sessions to clean...').start();
+
             // Sync Docker state with database before cleanup
             if (options.sync !== false) {
                 await viwo.sync();
@@ -70,7 +74,6 @@ export const cleanCommand = new Command('clean')
                 spinner.warn(`Cleaned ${successCount} session(s), ${errorCount} failed`);
             }
         } catch (error) {
-            spinner.fail('Failed to clean sessions');
             console.error(chalk.red(error instanceof Error ? error.message : String(error)));
             process.exit(1);
         }

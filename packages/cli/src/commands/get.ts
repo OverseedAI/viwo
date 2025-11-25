@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { viwo } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
+import { checkPrerequisitesOrExit } from '../utils/prerequisites';
 
 export const getCommand = new Command('get')
     .description('Get details of a specific session')
@@ -9,8 +10,9 @@ export const getCommand = new Command('get')
     .option('--no-sync', 'Skip syncing Docker state before fetching')
     .action(async (sessionId: string, options) => {
         try {
-            // Sync Docker state with database before fetching
+            // Check prerequisites before syncing
             if (options.sync !== false) {
+                await checkPrerequisitesOrExit({ requireGit: false });
                 await viwo.sync();
             }
 
