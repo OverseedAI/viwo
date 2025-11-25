@@ -20,9 +20,11 @@ import {
     updateSession,
 } from './managers/session-manager';
 import { getRepositoryById, repo } from './managers/repository-manager';
-import { joinWorktreesPath } from './utils/paths';
+import { joinDataPath, joinWorktreesPath } from './utils/paths';
 import { initializeDatabase } from './db-init';
 import { Database } from 'bun:sqlite';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
 import { db } from './db';
 
@@ -293,7 +295,9 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         },
         async migrate() {
             console.log('Running database migrations...');
-            const sqlite = new Database('sqlite.db');
+            const dbPath = joinDataPath('sqlite.db');
+            mkdirSync(dirname(dbPath), { recursive: true });
+            const sqlite = new Database(dbPath);
             initializeDatabase(sqlite);
             console.log('Migrations complete!');
         },
