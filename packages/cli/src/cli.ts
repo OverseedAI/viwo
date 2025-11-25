@@ -12,13 +12,14 @@ import {
     authCommand,
     registerCommand,
 } from './commands';
+import packageJson from '../package.json';
 
 const program = new Command();
 
 program
     .name('viwo')
     .description('AI-powered development environment orchestrator')
-    .version('0.1.0');
+    .version(packageJson.version);
 
 // Register commands
 program.addCommand(startCommand);
