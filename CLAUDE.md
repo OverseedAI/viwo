@@ -57,7 +57,10 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 
 ### Database
 
-- **SQLite database** at repo root: `sqlite.db`
+- **SQLite database** stored in app data directory: `{app-data-path}/sqlite.db`
+  - macOS: `~/Library/Application Support/viwo/sqlite.db`
+  - Windows: `%APPDATA%/viwo/sqlite.db`
+  - Linux: `~/.local/share/viwo/sqlite.db`
 - **Drizzle ORM** with schemas in `packages/core/src/db-schemas/`
 - **Tables**: repositories, sessions, chats, configurations
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
