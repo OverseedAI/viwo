@@ -3,14 +3,26 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import { viwo } from '@viwo/core';
 import { getStatusBadge, formatDate } from '../utils/formatters';
+import { runInteractiveList } from './list-interactive';
 
 export const listCommand = new Command('list')
-    .description('List all worktree sessions')
+    .description('List all worktree sessions (interactive mode by default)')
     .option('-s, --status <status>', 'Filter by status')
     .option('-l, --limit <number>', 'Limit number of results', parseInt)
     .option('--no-sync', 'Skip syncing Docker state before listing')
+    .option('--table', 'Use table view instead of interactive mode')
     .action(async (options) => {
         try {
+            // Use interactive mode by default unless --table flag is provided
+            if (!options.table && process.stdin.isTTY) {
+                await runInteractiveList({
+                    status: options.status,
+                    limit: options.limit,
+                });
+                return;
+            }
+
+            // Table view (original behavior)
             // Sync Docker state with database before listing
             if (options.sync !== false) {
                 await viwo.sync();
@@ -25,7 +37,7 @@ export const listCommand = new Command('list')
                 console.log(chalk.yellow('No sessions found.'));
                 console.log(
                     chalk.gray('Create a new session with: ') +
-                        chalk.cyan('viwo init --prompt "your task"')
+                        chalk.cyan('viwo start --prompt "your task"')
                 );
                 return;
             }
