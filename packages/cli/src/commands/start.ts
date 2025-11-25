@@ -126,9 +126,7 @@ export const startCommand = new Command('start')
             }
 
             // Step 3: Get prompt
-            const prompt = await getMultilineInput(
-                'Enter your prompt for the AI agent (supports multiline paste):'
-            );
+            const prompt = await getMultilineInput('Enter your prompt for the AI agent:');
 
             // Create session
             const spinner = clack.spinner();
