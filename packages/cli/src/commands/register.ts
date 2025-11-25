@@ -9,7 +9,7 @@ import { basename } from 'node:path';
  */
 export const registerCommand = new Command('register')
     .description('Add a new repository (alias for "repo add")')
-    .argument('<path>', 'Path to the git repository')
+    .argument('[path]', 'Path to the git repository (defaults to current directory)', process.cwd())
     .option('-n, --name <name>', 'Custom name for the repository')
     .action(async (repoPath: string, options) => {
         const spinner = ora('Adding repository...').start();

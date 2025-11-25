@@ -67,7 +67,7 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
 
     // Build the claude command
     // The prompt will be passed as arguments to the claude CLI
-    const command = ['claude', '--dangerously-skip-permissions', '-p'];
+    const command = ['claude', '--dangerously-skip-permissions', '--print', '--verbose'];
 
     // Add model flag if specified
     if (config.model) {
@@ -152,55 +152,8 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         });
     });
 
-    // Monitor container completion and clean up automatically
-    // This runs in the background and doesn't block the function return
-    monitorContainerCompletion(sessionId, containerInfo.id);
-
     // Return immediately without waiting for container to finish
     // The container will run in the background
-};
-
-/**
- * Monitor container completion and automatically clean up when it exits
- */
-const monitorContainerCompletion = async (
-    sessionId: number,
-    containerId: string
-): Promise<void> => {
-    try {
-        // Wait for container to complete
-        const result = await waitForContainer({ containerId });
-
-        // Determine final status based on exit code
-        const finalStatus = result.statusCode === 0 ? SessionStatus.COMPLETED : SessionStatus.ERROR;
-        const errorMessage = result.statusCode !== 0 ? `Container exited with code ${result.statusCode}` : undefined;
-
-        // Update session status
-        session.update({
-            id: sessionId,
-            updates: {
-                status: finalStatus,
-                error: errorMessage,
-                lastActivity: new Date().toISOString(),
-            },
-        });
-
-        // Remove the container
-        await removeContainer({ containerId });
-
-        console.log(`Container ${containerId} for session ${sessionId} has been cleaned up`);
-    } catch (error) {
-        console.error(`Failed to monitor/cleanup container ${containerId}:`, error);
-        // Update session with error but don't throw - this is a background operation
-        session.update({
-            id: sessionId,
-            updates: {
-                status: SessionStatus.ERROR,
-                error: `Container monitoring failed: ${error instanceof Error ? error.message : String(error)}`,
-                lastActivity: new Date().toISOString(),
-            },
-        });
-    }
 };
 
 const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
