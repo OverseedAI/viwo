@@ -7,7 +7,7 @@ import { getStatusBadge } from '../utils/formatters';
 
 /**
  * Prompts for multiline text input that supports pasting multiple lines.
- * Press Enter on an empty line or Ctrl+D to finish.
+ * Press Ctrl+D to finish (empty lines are preserved as part of the input).
  */
 const getMultilineInput = async (message: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -15,7 +15,7 @@ const getMultilineInput = async (message: string): Promise<string> => {
 
         console.log();
         console.log(chalk.cyan('?') + ' ' + message);
-        console.log(chalk.gray('  Press Enter on an empty line or Ctrl+D when done'));
+        console.log(chalk.gray('  Press Ctrl+D when done (Ctrl+C to cancel)'));
         console.log();
 
         const rl = readline.createInterface({
@@ -25,13 +25,8 @@ const getMultilineInput = async (message: string): Promise<string> => {
         });
 
         rl.on('line', (line) => {
-            // If user enters an empty line, finish input
-            if (line.trim() === '' && lines.length > 0) {
-                rl.close();
-                return;
-            }
-
-            // Add the line to our collection
+            // Always add the line to our collection
+            // Don't close on empty lines - they might be part of pasted content
             lines.push(line);
         });
 
