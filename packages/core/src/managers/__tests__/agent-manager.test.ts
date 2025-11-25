@@ -1,19 +1,27 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { initializeAgent } from '../agent-manager';
 import { AgentConfig } from '../../schemas';
+import { createTestDatabase } from '../../test-helpers/db';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
 
 describe('agent-manager', () => {
     let tempDir: string;
+    let testDb: ReturnType<typeof createTestDatabase>;
 
     beforeEach(() => {
+        // Create isolated test database
+        testDb = createTestDatabase();
+
         // Create a temporary directory for each test
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'viwo-test-'));
     });
 
     afterEach(() => {
+        // Clean up test database
+        testDb.close();
+
         // Clean up temporary directory
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
