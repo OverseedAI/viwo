@@ -95,6 +95,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - **Drizzle ORM** with schemas in `packages/core/src/db-schemas/`
 - **Tables**: repositories, sessions, chats, configurations
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
+- **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 
 ### Core SDK Flow
 

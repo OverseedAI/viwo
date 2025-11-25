@@ -3,6 +3,21 @@ import { Session } from '../db-schemas';
 import { SessionStatus, WorktreeSession } from '../schemas';
 import { getRepositoryById } from '../managers/repository-manager';
 
+// Helper to parse SQLite CURRENT_TIMESTAMP format (YYYY-MM-DD HH:MM:SS) to Date
+const parseSqliteTimestamp = (timestamp: string | null | undefined): Date => {
+    if (!timestamp) {
+        return new Date();
+    }
+
+    // SQLite CURRENT_TIMESTAMP returns "YYYY-MM-DD HH:MM:SS" which needs to be converted to ISO 8601
+    // Replace space with 'T' and add 'Z' for UTC timezone
+    const isoString = timestamp.replace(' ', 'T') + 'Z';
+    const date = new Date(isoString);
+
+    // Fallback to current time if parsing fails
+    return isNaN(date.getTime()) ? new Date() : date;
+};
+
 export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | null => {
     const repository = getRepositoryById({ id: dbSession.repoId });
     if (!repository) {
@@ -22,7 +37,7 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
                       image: dbSession.containerImage || '',
                       status: 'running',
                       ports: [],
-                      createdAt: new Date(dbSession.createdAt || Date.now()),
+                      createdAt: parseSqliteTimestamp(dbSession.createdAt),
                   },
               ]
             : [],
@@ -32,8 +47,8 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
             initialPrompt: '', // Not stored in db
         },
         status: (dbSession.status as SessionStatus) || 'initializing',
-        createdAt: new Date(dbSession.createdAt || Date.now()),
-        lastActivity: new Date(dbSession.lastActivity || Date.now()),
+        createdAt: parseSqliteTimestamp(dbSession.createdAt),
+        lastActivity: parseSqliteTimestamp(dbSession.lastActivity),
         error: dbSession.error || undefined,
     };
 };
