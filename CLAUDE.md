@@ -96,6 +96,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - **Tables**: repositories, sessions, chats, configurations
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
+- **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
 
 ### Core SDK Flow
 
@@ -133,10 +134,12 @@ Commands in `packages/cli/src/commands/`:
 
 Tests use Bun's native test runner (`bun:test`). Test files are in `__tests__` directories with `.test.ts` suffix.
 
+**Database isolation**: Tests automatically use in-memory databases to avoid overwriting production data. When running `bun run test` (or `bun test` directly in the core package), the `NODE_ENV=test` environment variable is set, which triggers the use of an in-memory SQLite database. Tests can also explicitly create isolated databases using `createTestDatabase()` from `packages/core/src/test-helpers/db.ts`.
+
 Current test coverage focuses on:
 - `git-manager.test.ts` - Branch name generation, repo validation
 - `docker-manager.test.ts` - Docker daemon status
-- `agent-manager.test.ts` - Claude Code agent initialization
+- `agent-manager.test.ts` - Claude Code agent initialization (demonstrates test database usage)
 
 ## Key Dependencies
 
