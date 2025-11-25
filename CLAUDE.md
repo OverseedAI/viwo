@@ -87,12 +87,11 @@ The `agent-manager.ts` implements automatic container cleanup:
 
 Commands in `packages/cli/src/commands/`:
 - `start` - Initialize new session with prompt and agent
-- `list` - List all sessions in interactive mode (default) or table view (--table flag)
-  - Interactive mode (`list-interactive.ts`): Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
-  - Table view: Traditional CLI table output with --table flag
   - Interactive multiline prompt that supports pasting multiple lines
   - Press Enter on an empty line or Ctrl+D to finish entering prompt
   - Allows users to paste large blocks of text without triggering execution
+- `list` - List all sessions in interactive mode
+  - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `get` - Get session details
 - `cleanup` - Remove a specific session and its resources
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned' and removes worktrees)
@@ -115,7 +114,7 @@ Current test coverage focuses on:
 - **zod** - Runtime validation
 - **commander** - CLI framework
 - **@inquirer/prompts** - Interactive CLI prompts with keyboard navigation
-- **chalk/ora/cli-table3** - CLI UI
+- **chalk/ora** - CLI UI
 
 ## Known Limitations
 

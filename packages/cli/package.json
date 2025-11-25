@@ -20,7 +20,6 @@
     "@inquirer/prompts": "^8.0.1",
     "@viwo/core": "workspace:*",
     "chalk": "^4.1.2",
-    "cli-table3": "^0.6.3",
     "commander": "^11.1.0",
     "ora": "^5.4.1"
   },
