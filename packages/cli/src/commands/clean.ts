@@ -46,11 +46,21 @@ export const cleanCommand = new Command('clean')
 
             let successCount = 0;
             let errorCount = 0;
+            const affectedRepoIds = new Set<number>();
 
             for (const session of sessionsToClean) {
                 spinner.text = `Cleaning session ${session.id} (${session.branchName})...`;
 
                 try {
+                    // Track which repositories are affected
+                    const sessionDetails = await viwo.get(session.id);
+                    if (sessionDetails) {
+                        const dbSession = await viwo.session.get({ id: parseInt(session.id, 10) });
+                        if (dbSession?.repoId) {
+                            affectedRepoIds.add(dbSession.repoId);
+                        }
+                    }
+
                     await viwo.cleanup({
                         sessionId: session.id,
                         removeWorktree: !options.keepWorktree,
@@ -65,6 +75,25 @@ export const cleanCommand = new Command('clean')
                             `\nWarning: Failed to clean session ${session.id}: ${error instanceof Error ? error.message : String(error)}`
                         )
                     );
+                }
+            }
+
+            // Prune worktrees for all affected repositories
+            if (!options.keepWorktree && affectedRepoIds.size > 0) {
+                spinner.text = 'Pruning git worktrees...';
+                for (const repoId of affectedRepoIds) {
+                    try {
+                        const repository = await viwo.repo.list().find((r) => r.id === repoId);
+                        if (repository) {
+                            await viwo.git.pruneWorktrees({ repoPath: repository.path });
+                        }
+                    } catch (error) {
+                        console.error(
+                            chalk.yellow(
+                                `\nWarning: Failed to prune worktrees for repository ${repoId}: ${error instanceof Error ? error.message : String(error)}`
+                            )
+                        );
+                    }
                 }
             }
 
