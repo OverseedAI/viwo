@@ -39,7 +39,7 @@ jobs:
           sha256sum viwo-windows-x64.exe > viwo-windows-x64.exe.sha256
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             packages/cli/binaries/viwo-linux-x64
@@ -55,5 +55,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          token: '${{ github.token }}'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
