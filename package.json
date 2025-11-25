@@ -11,7 +11,8 @@
     "typecheck": "bun run --filter '*' typecheck",
     "clean": "rm -rf node_modules packages/*/node_modules apps/*/node_modules packages/*/*.tsbuildinfo apps/*/*.tsbuildinfo packages/*/dist apps/*/dist",
     "db:generate": "bun run --filter '@viwo/core' db:generate",
-    "docker:build": "docker build -t viwo-claude-code packages/agents/claude-code"
+    "docker:build": "docker build -t viwo-claude-code packages/agents/claude-code",
+    "release": "bun scripts/release.ts"
   },
   "type": "module",
   "workspaces": [

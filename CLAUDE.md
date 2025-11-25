@@ -30,7 +30,38 @@ bun run db:generate            # Generate Drizzle migrations
 # Run CLI during development
 bun packages/cli/src/cli.ts --help  # Direct source execution
 viwo --help                         # If globally linked
+
+# Release
+bun run release 0.1.2          # Bump version, commit, and tag
 ```
+
+## Release Process
+
+To release a new version:
+
+1. **Bump version and create tag**:
+   ```bash
+   bun run release <version>
+   # Example: bun run release 0.1.2
+   ```
+   This will:
+   - Update version in `packages/core/package.json` and `packages/cli/package.json`
+   - Create a git commit: "chore: bump version to X.Y.Z"
+   - Create a git tag: vX.Y.Z
+
+2. **Push to trigger release workflow**:
+   ```bash
+   git push origin main
+   git push origin vX.Y.Z
+   ```
+
+3. **GitHub Actions workflow** (`.github/workflows/release.yml`):
+   - Triggered on tag push matching `v*`
+   - Builds binaries for all platforms (Linux, macOS, Windows)
+   - Creates checksums
+   - Creates GitHub release with binaries attached
+
+**Important**: Always bump package.json versions before creating git tags to keep them in sync.
 
 ## Architecture Overview
 
