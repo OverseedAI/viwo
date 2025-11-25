@@ -6,6 +6,7 @@ import {
     listCommand,
     getCommand,
     cleanupCommand,
+    cleanCommand,
     repoCommand,
     migrateCommand,
     authCommand,
@@ -24,6 +25,7 @@ program.addCommand(startCommand);
 program.addCommand(listCommand);
 program.addCommand(getCommand);
 program.addCommand(cleanupCommand);
+program.addCommand(cleanCommand);
 program.addCommand(repoCommand);
 program.addCommand(migrateCommand);
 program.addCommand(authCommand);
