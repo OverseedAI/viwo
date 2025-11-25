@@ -1,6 +1,6 @@
 import { select } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { viwo, type WorktreeSession } from '@viwo/core';
+import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
 import { getStatusBadge, formatDate } from '../utils/formatters';
 
 const displaySessionDetails = async (session: WorktreeSession) => {
@@ -32,7 +32,9 @@ const displaySessionDetails = async (session: WorktreeSession) => {
             console.log(chalk.gray('    Status:        '), container.status);
             console.log(
                 chalk.gray('    Ports:         '),
-                container.ports.map((p: { host: number; container: number }) => `${p.host}:${p.container}`).join(', ')
+                container.ports
+                    .map((p: { host: number; container: number }) => `${p.host}:${p.container}`)
+                    .join(', ')
             );
         }
         console.log();
@@ -53,19 +55,19 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
         {
             name: `📂 Open worktree in terminal (${session.worktreePath})`,
             value: 'cd',
-            disabled: !session.worktreePath
+            disabled: !session.worktreePath,
         },
         {
             name: '🗑️  Delete session',
-            value: 'delete'
+            value: 'delete',
         },
         {
             name: '🔙 Go back to list',
-            value: 'back'
+            value: 'back',
         },
         {
             name: '❌ Exit',
-            value: 'exit'
+            value: 'exit',
         },
     ];
 
@@ -81,15 +83,17 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             console.log(chalk.yellow(`  cd ${session.worktreePath}`));
             console.log();
             console.log(chalk.gray('Press Enter to continue...'));
-            await new Promise(resolve => {
+            await new Promise((resolve) => {
                 process.stdin.once('data', resolve);
             });
             return 'back';
 
-        case 'delete':
+        case 'delete': {
             console.log();
             const confirmDelete = await select({
-                message: chalk.red(`Are you sure you want to delete session ${session.id.substring(0, 12)}?`),
+                message: chalk.red(
+                    `Are you sure you want to delete session ${session.id.substring(0, 12)}?`
+                ),
                 choices: [
                     { name: 'No, cancel', value: false },
                     { name: 'Yes, delete', value: true },
@@ -107,19 +111,23 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
                     console.log(chalk.green('✓ Session deleted successfully'));
                     console.log();
                     console.log(chalk.gray('Press Enter to continue...'));
-                    await new Promise(resolve => {
+                    await new Promise((resolve) => {
                         process.stdin.once('data', resolve);
                     });
                 } catch (error) {
-                    console.error(chalk.red('Failed to delete session:'), error instanceof Error ? error.message : String(error));
+                    console.error(
+                        chalk.red('Failed to delete session:'),
+                        error instanceof Error ? error.message : String(error)
+                    );
                     console.log();
                     console.log(chalk.gray('Press Enter to continue...'));
-                    await new Promise(resolve => {
+                    await new Promise((resolve) => {
                         process.stdin.once('data', resolve);
                     });
                 }
             }
             return 'back';
+        }
 
         case 'back':
             return 'back';
@@ -132,7 +140,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
     }
 };
 
-export const runInteractiveList = async (options: { status?: string; limit?: number }) => {
+export const runInteractiveList = async (options: { status?: SessionStatus; limit?: number }) => {
     try {
         // Enable raw mode for better input handling
         if (process.stdin.isTTY) {
@@ -168,7 +176,7 @@ export const runInteractiveList = async (options: { status?: string; limit?: num
             console.log(chalk.gray('Use arrow keys to navigate, Enter to select'));
             console.log();
 
-            const choices = sessions.map(session => ({
+            const choices = sessions.map((session) => ({
                 name: `${getStatusBadge(session.status)} ${session.branchName.padEnd(40)} ${chalk.gray(formatDate(session.createdAt))}`,
                 value: session.id,
                 description: `${session.agent.type} | ${session.id.substring(0, 12)}`,

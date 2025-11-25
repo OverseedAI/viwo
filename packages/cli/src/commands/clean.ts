@@ -2,7 +2,6 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { viwo } from '@viwo/core';
-import { SessionStatus } from '@viwo/core/schemas';
 
 export const cleanCommand = new Command('clean')
     .description(

@@ -1,12 +1,17 @@
 {
   "name": "@viwo/cli",
   "version": "0.1.0",
+  "private": false,
   "type": "module",
   "description": "CLI for VIWO - AI-powered development environment orchestrator",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": ["dist", "package.json", "README.md"],
   "bin": {
     "viwo": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "bun build src/index.ts src/cli.ts --outdir dist --target node --format esm && tsc --emitDeclarationOnly",
