@@ -57,7 +57,10 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 
 ### Database
 
-- **SQLite database** at repo root: `sqlite.db`
+- **SQLite database** stored in app data directory: `{app-data-path}/sqlite.db`
+  - macOS: `~/Library/Application Support/viwo/sqlite.db`
+  - Windows: `%APPDATA%/viwo/sqlite.db`
+  - Linux: `~/.local/share/viwo/sqlite.db`
 - **Drizzle ORM** with schemas in `packages/core/src/db-schemas/`
 - **Tables**: repositories, sessions, chats, configurations
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
@@ -87,6 +90,9 @@ Commands in `packages/cli/src/commands/`:
 - `list` - List all sessions in interactive mode (default) or table view (--table flag)
   - Interactive mode (`list-interactive.ts`): Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
   - Table view: Traditional CLI table output with --table flag
+  - Interactive multiline prompt that supports pasting multiple lines
+  - Press Enter on an empty line or Ctrl+D to finish entering prompt
+  - Allows users to paste large blocks of text without triggering execution
 - `get` - Get session details
 - `cleanup` - Remove a specific session and its resources
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned' and removes worktrees)
