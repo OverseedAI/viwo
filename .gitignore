@@ -7,6 +7,10 @@ build
 .turbo
 *.tsbuildinfo
 
+# Compiled binaries
+viwo-cli*
+binaries/
+
 # Logs
 *.log
 logs

@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binaries
+        run: |
+          cd packages/cli
+          mkdir -p binaries
+          bun run build:binaries
+
+      - name: Create checksums
+        run: |
+          cd packages/cli/binaries
+          sha256sum viwo-linux-x64 > viwo-linux-x64.sha256
+          sha256sum viwo-linux-arm64 > viwo-linux-arm64.sha256
+          sha256sum viwo-macos-x64 > viwo-macos-x64.sha256
+          sha256sum viwo-macos-arm64 > viwo-macos-arm64.sha256
+          sha256sum viwo-windows-x64.exe > viwo-windows-x64.exe.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            packages/cli/binaries/viwo-linux-x64
+            packages/cli/binaries/viwo-linux-x64.sha256
+            packages/cli/binaries/viwo-linux-arm64
+            packages/cli/binaries/viwo-linux-arm64.sha256
+            packages/cli/binaries/viwo-macos-x64
+            packages/cli/binaries/viwo-macos-x64.sha256
+            packages/cli/binaries/viwo-macos-arm64
+            packages/cli/binaries/viwo-macos-arm64.sha256
+            packages/cli/binaries/viwo-windows-x64.exe
+            packages/cli/binaries/viwo-windows-x64.exe.sha256
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
