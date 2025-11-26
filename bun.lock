@@ -20,7 +20,7 @@
     },
     "packages/cli": {
       "name": "@viwo/cli",
-      "version": "0.1.0",
+      "version": "0.1.6",
       "bin": {
         "viwo": "./dist/cli.js",
       },
@@ -41,7 +41,7 @@
     },
     "packages/core": {
       "name": "@viwo/core",
-      "version": "0.1.0",
+      "version": "0.1.6",
       "dependencies": {
         "dockerode": "^4.0.2",
         "drizzle-orm": "^0.44.7",
