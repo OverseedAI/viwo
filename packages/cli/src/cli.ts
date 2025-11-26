@@ -10,6 +10,7 @@ import {
     authCommand,
     registerCommand,
     configCommand,
+    updateCommand,
 } from './commands';
 import packageJson from '../package.json';
 
@@ -29,6 +30,7 @@ program.addCommand(migrateCommand);
 program.addCommand(authCommand);
 program.addCommand(registerCommand);
 program.addCommand(configCommand);
+program.addCommand(updateCommand);
 
 // Parse command line arguments
 program.parse();

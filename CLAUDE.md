@@ -136,6 +136,17 @@ Commands in `packages/cli/src/commands/`:
   - Displays current default IDE setting
   - Allows changing to a different IDE or removing the default (prompts each time)
 
+### Prerequisites & Version Checking
+
+The CLI performs automatic prerequisite checks before running commands via `packages/cli/src/utils/prerequisites.ts`:
+- **Git installation** - Verifies git is available in PATH
+- **Docker daemon** - Checks if Docker is running
+- **Version check** - Compares current CLI version against latest GitHub release
+  - Fetches latest version from GitHub releases API (`/repos/OverseedAI/viwo/releases/latest`)
+  - Shows non-blocking warning when newer version is available
+  - Displays update instructions: re-run install script or download from GitHub releases
+  - Uses semantic version comparison (major.minor.patch)
+
 ## Testing
 
 Tests use Bun's native test runner (`bun:test`). Test files are in `__tests__` directories with `.test.ts` suffix.
@@ -146,6 +157,8 @@ Current test coverage focuses on:
 - `git-manager.test.ts` - Branch name generation, repo validation, worktree pruning
 - `docker-manager.test.ts` - Docker daemon status
 - `agent-manager.test.ts` - Claude Code agent initialization (demonstrates test database usage)
+- `prerequisites.test.ts` - Version comparison logic for update checking
+- `formatters.test.ts` - Date formatting utilities
 
 ## Key Dependencies
 
