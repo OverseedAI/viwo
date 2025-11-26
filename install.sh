@@ -170,7 +170,21 @@ main() {
     install_binary
 
     echo ""
-    info "Get started with: ${BINARY_NAME} --help"
+    info "Installation complete! Here are your next steps:"
+    echo ""
+    echo "  1. Register your Anthropic API key:"
+    echo "     ${BINARY_NAME} auth"
+    echo ""
+    echo "     Get your API key from: https://console.anthropic.com/settings/keys"
+    echo ""
+    echo "  2. Register a repository:"
+    echo "     cd /path/to/your/repo"
+    echo "     ${BINARY_NAME} register"
+    echo ""
+    echo "  3. Start a new session:"
+    echo "     ${BINARY_NAME} start"
+    echo ""
+    echo "  For more information, run: ${BINARY_NAME} --help"
     echo ""
 }
 
