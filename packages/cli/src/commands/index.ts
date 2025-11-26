@@ -6,3 +6,4 @@ export { migrateCommand } from './migrate';
 export { authCommand } from './auth';
 export { registerCommand } from './register';
 export { configCommand } from './config';
+export { updateCommand } from './update';
