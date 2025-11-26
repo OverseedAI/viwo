@@ -39,8 +39,6 @@ export const CLAUDE_CODE_IMAGE = 'viwo-claude-code:latest';
 
 export const isDockerRunning = async (): Promise<boolean> => {
     try {
-        console.log('getDockerConfig:', getDockerConfig());
-        console.log('DOCKER HOST:', process.env.DOCKER_HOST);
         await dockerSdk.ping();
         return true;
     } catch (err) {
