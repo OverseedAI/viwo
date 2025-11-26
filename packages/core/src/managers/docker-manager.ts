@@ -13,7 +13,8 @@ export const isDockerRunning = async (): Promise<boolean> => {
     try {
         await dockerSdk.ping();
         return true;
-    } catch {
+    } catch (err) {
+        console.error('Docker ping failed:', err);
         return false;
     }
 };
