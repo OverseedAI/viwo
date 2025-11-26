@@ -8,22 +8,22 @@ const getUpdateInstructions = (): string => {
         case 'darwin':
             return `To update VIWO on macOS, run:
 
-${chalk.cyan('curl -fsSL https://raw.githubusercontent.com/yourusername/viwo/main/install.sh | bash')}`;
+${chalk.cyan('curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash')}`;
 
         case 'win32':
             return `To update VIWO on Windows, run in PowerShell:
 
-${chalk.cyan('irm https://raw.githubusercontent.com/yourusername/viwo/main/install.ps1 | iex')}`;
+${chalk.cyan('irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex')}`;
 
         case 'linux':
             return `To update VIWO on Linux, run:
 
-${chalk.cyan('curl -fsSL https://raw.githubusercontent.com/yourusername/viwo/main/install.sh | bash')}`;
+${chalk.cyan('curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash')}`;
 
         default:
             return `To update VIWO on your system, download the latest release from:
 
-${chalk.cyan('https://github.com/yourusername/viwo/releases/latest')}`;
+${chalk.cyan('https://github.com/OverseedAI/viwo/releases/latest')}`;
     }
 };
 
@@ -34,7 +34,7 @@ export const updateCommand = new Command('update')
         console.log(getUpdateInstructions());
         console.log(
             chalk.dim(
-                '\nFor more information, visit: https://github.com/yourusername/viwo#installation'
+                '\nFor more information, visit: https://github.com/OverseedAI/viwo#installation'
             )
         );
     });
