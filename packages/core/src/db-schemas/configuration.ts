@@ -3,6 +3,7 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 export const configurations = sqliteTable('configurations', {
     id: integer('id').primaryKey(),
     anthropicApiKey: text('anthropic_api_key'),
+    preferredIde: text('preferred_ide'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });

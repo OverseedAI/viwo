@@ -54,6 +54,22 @@ const decrypt = (encryptedData: string): string => {
 
 export type ApiKeyProvider = 'anthropic';
 
+export type IDEType =
+	| 'vscode'
+	| 'vscode-insiders'
+	| 'cursor'
+	| 'webstorm'
+	| 'intellij-idea'
+	| 'intellij-idea-ce'
+	| 'pycharm'
+	| 'pycharm-ce'
+	| 'goland'
+	| 'phpstorm'
+	| 'rubymine'
+	| 'clion'
+	| 'datagrip'
+	| 'rider';
+
 export interface SetApiKeyOptions {
     provider: ApiKeyProvider;
     key: string;
@@ -150,10 +166,64 @@ export const deleteApiKey = (options: DeleteApiKeyOptions): void => {
     db.update(configurations).set(updates).where(eq(configurations.id, config.id)).run();
 };
 
+export const setPreferredIDE = (type: IDEType): void => {
+	const now = new Date().toISOString();
+	const existing = db.select().from(configurations).limit(1).all();
+
+	if (existing.length > 0) {
+		// Update existing
+		db.update(configurations)
+			.set({
+				preferredIde: type,
+				updatedAt: now,
+			})
+			.where(eq(configurations.id, existing[0]!.id))
+			.run();
+	} else {
+		// Insert new
+		db.insert(configurations)
+			.values({
+				preferredIde: type,
+				createdAt: now,
+				updatedAt: now,
+			})
+			.run();
+	}
+};
+
+export const getPreferredIDE = (): IDEType | null => {
+	const config = db.select().from(configurations).limit(1).all();
+
+	if (config.length === 0) {
+		return null;
+	}
+
+	return (config[0]!.preferredIde as IDEType) || null;
+};
+
+export const deletePreferredIDE = (): void => {
+	const config = db.select().from(configurations).limit(1).get();
+
+	if (!config) {
+		return;
+	}
+
+	db.update(configurations)
+		.set({
+			preferredIde: null,
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(configurations.id, config.id))
+		.run();
+};
+
 // Namespace export for consistency with other managers
 export const config = {
     setApiKey,
     getApiKey,
     hasApiKey,
     deleteApiKey,
+    setPreferredIDE,
+    getPreferredIDE,
+    deletePreferredIDE,
 };

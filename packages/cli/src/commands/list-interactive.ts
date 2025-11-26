@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
 import { getStatusBadge, formatDate } from '../utils/formatters';
 import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { selectAndOpenIDE } from '../utils/ide-selector';
 
 const displaySessionDetails = async (session: WorktreeSession) => {
     console.clear();
@@ -59,6 +60,11 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             disabled: !session.worktreePath,
         },
         {
+            name: '💻 Open in IDE',
+            value: 'open-ide',
+            disabled: !session.worktreePath,
+        },
+        {
             name: '🗑️  Delete session',
             value: 'delete',
         },
@@ -83,6 +89,14 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             console.log(chalk.cyan('To navigate to the worktree, run:'));
             console.log(chalk.yellow(`  cd ${session.worktreePath}`));
             console.log();
+            console.log(chalk.gray('Press Enter to continue...'));
+            await new Promise((resolve) => {
+                process.stdin.once('data', resolve);
+            });
+            return 'back';
+
+        case 'open-ide':
+            await selectAndOpenIDE(session.worktreePath);
             console.log(chalk.gray('Press Enter to continue...'));
             await new Promise((resolve) => {
                 process.stdin.once('data', resolve);

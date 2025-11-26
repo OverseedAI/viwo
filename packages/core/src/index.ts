@@ -19,6 +19,7 @@ export * as DockerManager from './managers/docker-manager';
 export * as AgentManager from './managers/agent-manager';
 export * as PortManager from './managers/port-manager';
 export * as ConfigManager from './managers/config-manager';
+export * as IDEManager from './managers/ide-manager';
 
 // Export repository management
 export {
