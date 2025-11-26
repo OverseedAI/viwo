@@ -2,51 +2,7 @@
 
 VIWO (Virtualized Isolated Worktree Orchestrator) can be installed in multiple ways depending on your preference.
 
-## Quick Install (Recommended)
 
-### Linux & macOS
-
-Install the latest version with a single command:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash
-```
-
-This will:
-- Detect your operating system and architecture
-- Download the appropriate binary from GitHub Releases
-- Verify the checksum
-- Install to `/usr/local/bin` (may require sudo)
-
-**Custom Installation Directory:**
-
-```bash
-INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash
-```
-
-### Windows
-
-Install the latest version using PowerShell (run as user, not administrator):
-
-```powershell
-irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex
-```
-
-This will:
-- Download the Windows x64 binary from GitHub Releases
-- Verify the checksum
-- Install to `%LOCALAPPDATA%\Programs\viwo`
-- Add the installation directory to your PATH
-
-**Custom Installation Directory:**
-
-```powershell
-irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex -InstallDir "C:\custom\path"
-```
-
-**Note:**
-- You may need to restart your terminal after installation for the PATH changes to take effect.
-- ARM64 Windows devices will use the x64 binary via emulation.
 
 ## Manual Installation
 
@@ -107,37 +63,6 @@ shasum -a 256 -c viwo-macos-arm64.sha256
 - **Git**: Required for worktree management
 - **Disk Space**: ~100MB for the binary
 
-## Uninstall
-
-### Linux & macOS
-
-```bash
-rm /usr/local/bin/viwo  # or wherever you installed it
-```
-
-### Windows
-
-```powershell
-# Remove the binary
-Remove-Item "$env:LOCALAPPDATA\Programs\viwo\viwo.exe"
-
-# Remove from PATH (optional)
-# Open "Edit environment variables for your account" and remove the viwo directory from PATH
-```
 
 ## Getting Started
 
-After installation, initialize your first session:
-
-```bash
-# Register a repository
-viwo register /path/to/your/repo
-
-# Start a session
-viwo start
-
-# List sessions
-viwo list
-```
-
-For more information, see the [main README](./README.md) or run `viwo --help`.

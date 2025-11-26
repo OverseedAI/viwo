@@ -2,13 +2,76 @@
 
 **VIWO** (Virtualized Isolated Worktree Orchestrator) is an AI-powered development environment orchestrator that manages git worktrees, Docker containers, and AI agents for isolated development sessions.
 
-## 🚀 Getting Started
+<!-- TOC -->
+* [VIWO](#viwo)
+  * [Installation](#installation)
+  * [Quick Start](#quick-start)
+  * [🚀 Development Guidelines](#-development-guidelines)
+    * [Prerequisites](#prerequisites)
+    * [Installation](#installation-1)
+  * [📦 Project Structure](#-project-structure)
+  * [🛠️ Development](#-development)
+    * [Running the CLI](#running-the-cli)
+    * [Making Changes](#making-changes)
+    * [Type Checking](#type-checking)
+    * [Testing](#testing)
+    * [Code Quality](#code-quality)
+  * [📝 CLI Usage](#-cli-usage)
+    * [Initialize a new session](#initialize-a-new-session)
+    * [List all sessions](#list-all-sessions)
+  * [🏗️ Building for Production](#-building-for-production)
+  * [🧹 Cleaning](#-cleaning)
+  * [📚 Architecture](#-architecture)
+    * [Core Package (`@viwo/core`)](#core-package-viwocore)
+    * [CLI Package (`@viwo/cli`)](#cli-package-viwocli)
+  * [Uninstall](#uninstall)
+    * [Linux & macOS](#linux--macos)
+    * [Windows](#windows)
+<!-- TOC -->
+
+## Installation
+
+**MacOS & Linux**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash
+```
+
+**Windows**
+
+```powershell
+irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex
+```
+
+**Note:**
+- You may need to restart your terminal after installation for the PATH changes to take effect.
+
+## Quick Start
+
+After installation, initialize your first session:
+
+```bash
+# Register your Anthropic API key
+viwo auth 
+
+# Register a repository
+cd /path/to/your/repo
+viwo register # viwo register /path/to/your/repo also works
+
+# Start a session
+viwo start
+
+# List sessions
+viwo list
+```
+
+## 🚀 Development Guidelines
 
 ### Prerequisites
 
 - [Bun](https://bun.sh) v1.0 or higher
 - Git
-- Docker (optional, for container support)
+- Docker (Daemon must be running)
 
 ### Installation
 
@@ -155,3 +218,21 @@ A command-line interface built on top of `@viwo/core`:
 - Pretty-printed output with colors and tables
 - Progress indicators
 - Comprehensive error handling
+
+## Uninstall
+
+### Linux & macOS
+
+```bash
+rm /usr/local/bin/viwo  # or wherever you installed it
+```
+
+### Windows
+
+```powershell
+# Remove the binary
+Remove-Item "$env:LOCALAPPDATA\Programs\viwo\viwo.exe"
+
+# Remove from PATH (optional)
+# Open "Edit environment variables for your account" and remove the viwo directory from PATH
+```
