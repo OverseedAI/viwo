@@ -150,7 +150,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             // Check prerequisites before syncing
             // Sync Docker state with database before listing
             if (options.status === undefined || options.limit === undefined) {
-                await checkPrerequisitesOrExit({ requireGit: false });
+                // await checkPrerequisitesOrExit({ requireGit: false });
                 await viwo.sync();
             }
 
