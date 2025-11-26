@@ -100,5 +100,12 @@ export const migrations: Migration[] = [
             ALTER TABLE \`__new_configurations\` RENAME TO \`configurations\`;
             PRAGMA foreign_keys=ON;
         `
+    },
+    {
+        version: 5,
+        name: 'puzzling_anita_blake',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`preferred_ide\` text;
+        `
     }
 ];

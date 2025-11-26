@@ -14,14 +14,14 @@
     "viwo": "./dist/cli.js"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/cli.ts --outdir dist --target bun --format esm && tsc --emitDeclarationOnly",
+    "build": "bun build src/index.ts src/cli.ts --outdir dist --target bun --format esm --sourcemap=none && tsc --emitDeclarationOnly",
     "build:binaries": "npm run build:linux-x64 && npm run build:linux-arm64 && npm run build:macos-x64 && npm run build:macos-arm64 && npm run build:windows-x64",
     "build:linux-x64": "bun build src/cli.ts --compile --target=bun-linux-x64 --outfile binaries/viwo-linux-x64",
     "build:linux-arm64": "bun build src/cli.ts --compile --target=bun-linux-arm64 --outfile binaries/viwo-linux-arm64",
     "build:macos-x64": "bun build src/cli.ts --compile --target=bun-darwin-x64 --outfile binaries/viwo-macos-x64",
     "build:macos-arm64": "bun build src/cli.ts --compile --target=bun-darwin-arm64 --outfile binaries/viwo-macos-arm64",
     "build:windows-x64": "bun build src/cli.ts --compile --target=bun-windows-x64 --outfile binaries/viwo-windows-x64.exe",
-    "dev": "bun build src/index.ts src/cli.ts --outdir dist --target bun --format esm --watch",
+    "dev": "bun build src/index.ts src/cli.ts --outdir dist --target bun --format esm --sourcemap=external --watch",
     "clean": "rm -rf dist *.tsbuildinfo binaries",
     "typecheck": "tsc --noEmit",
     "viwo": "bun run ./dist/cli.js"
