@@ -83,6 +83,8 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
+- `config-manager.ts` - Configuration management (API keys, IDE preferences)
+- `ide-manager.ts` - IDE detection and launching
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
 
@@ -129,6 +131,10 @@ Commands in `packages/cli/src/commands/`:
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, and runs `git worktree prune` for affected repositories)
 - `repo` - Repository management (list, add, delete)
+- `config ide` - Configure default IDE preference
+  - Interactive list showing available IDEs on the system
+  - Displays current default IDE setting
+  - Allows changing to a different IDE or removing the default (prompts each time)
 
 ## Testing
 

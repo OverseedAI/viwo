@@ -3,6 +3,7 @@ import { hostname, userInfo } from 'os';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
+import type { IDEType } from '../types.js';
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32;
@@ -53,22 +54,6 @@ const decrypt = (encryptedData: string): string => {
 };
 
 export type ApiKeyProvider = 'anthropic';
-
-export type IDEType =
-	| 'vscode'
-	| 'vscode-insiders'
-	| 'cursor'
-	| 'webstorm'
-	| 'intellij-idea'
-	| 'intellij-idea-ce'
-	| 'pycharm'
-	| 'pycharm-ce'
-	| 'goland'
-	| 'phpstorm'
-	| 'rubymine'
-	| 'clion'
-	| 'datagrip'
-	| 'rider';
 
 export interface SetApiKeyOptions {
     provider: ApiKeyProvider;
