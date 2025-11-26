@@ -11,6 +11,7 @@ export { createViwo, viwo } from './viwo';
 
 // Export all schemas and types
 export * from './schemas';
+export * from './types';
 
 // Export managers for advanced usage
 export * as SessionManager from './managers/session-manager';

@@ -86,6 +86,8 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
 
+**Centralized public types** - All public types and interfaces are exported from `packages/core/src/types.ts`. Manager files in `packages/core/src/managers/` should import types from this central file rather than exporting their own types. Internal types (not exported) can remain in manager files.
+
 ### Database
 
 - **SQLite database** stored in app data directory: `{app-data-path}/sqlite.db`

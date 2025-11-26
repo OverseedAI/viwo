@@ -1,28 +1,6 @@
 import { $ } from 'bun';
 import { exists } from 'node:fs/promises';
-
-export type IDEType =
-    | 'vscode'
-    | 'vscode-insiders'
-    | 'cursor'
-    | 'webstorm'
-    | 'intellij-idea'
-    | 'intellij-idea-ce'
-    | 'pycharm'
-    | 'pycharm-ce'
-    | 'goland'
-    | 'phpstorm'
-    | 'rubymine'
-    | 'clion'
-    | 'datagrip'
-    | 'rider';
-
-export interface IDEInfo {
-    type: IDEType;
-    name: string;
-    command: string;
-    available: boolean;
-}
+import type { IDEType, IDEInfo } from '../types.js';
 
 interface IDEConfig {
     type: IDEType;
