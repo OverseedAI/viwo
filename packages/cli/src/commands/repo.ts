@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 import ora from 'ora';
-import { viwo, type ListRepositoryOptions } from '@viwo/core';
+import { viwo } from '@viwo/core';
 import { basename } from 'node:path';
 import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { runInteractiveRepoList } from './repo-list-interactive';
 
 export const repoCommand = new Command('repo').description('Manage repositories');
 
@@ -16,36 +16,7 @@ repoCommand
     .description('List all repositories')
     .action(async () => {
         try {
-            const listOptions: ListRepositoryOptions = {};
-
-            const repositories = viwo.repo.list(listOptions);
-
-            if (repositories.length === 0) {
-                console.log(chalk.yellow('No repositories found.'));
-                console.log(
-                    chalk.gray('Add a repository with: ') + chalk.cyan('viwo repo add [path]')
-                );
-                return;
-            }
-
-            const table = new Table({
-                head: [chalk.cyan('ID'), chalk.cyan('Name'), chalk.cyan('Path')],
-                colWidths: [10, 25, 50],
-            });
-
-            for (const repo of repositories) {
-                table.push([String(repo.id), repo.name, repo.path]);
-            }
-
-            console.log();
-            console.log(table.toString());
-            console.log();
-            console.log(
-                chalk.gray(
-                    `Total: ${repositories.length} repositor${repositories.length !== 1 ? 'ies' : 'y'}`
-                )
-            );
-            console.log();
+            await runInteractiveRepoList();
         } catch (error) {
             console.error(chalk.red(error instanceof Error ? error.message : String(error)));
             process.exit(1);
