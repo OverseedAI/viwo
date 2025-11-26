@@ -1,6 +1,6 @@
 {
   "name": "@viwo/cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "CLI for VIWO - AI-powered development environment orchestrator",
   "main": "./dist/index.js",
