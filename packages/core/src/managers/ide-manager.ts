@@ -1,6 +1,7 @@
 import { $ } from 'bun';
-import { exists } from 'node:fs/promises';
-import type { IDEType, IDEInfo } from '../types.js';
+import { access, constants, exists } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import type { IDEType, IDEInfo } from '../types';
 
 interface IDEConfig {
     type: IDEType;
@@ -222,6 +223,48 @@ const checkPathExists = async (path: string): Promise<boolean> => {
     }
 };
 
+const isExecutable = async (path: string): Promise<boolean> => {
+    try {
+        await access(path, constants.X_OK);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+// Helper: Cross-platform command check
+const findCommandPath = async (command: string): Promise<string | null> => {
+    try {
+        // 'Bun.which' is efficient and cross-platform
+        const path = await Bun.which(command);
+        return path || null;
+    } catch {
+        return null;
+    }
+};
+
+// Returns the executable string (either a command like 'code' or a path like '/opt/...')
+const resolveLaunchStrategy = async (config: IDEConfig): Promise<string | null> => {
+    // 1. Check PATH first (fastest/preferred)
+    const cmdPath = await findCommandPath(config.command);
+    if (cmdPath) return config.command; // It's in PATH, so we can just call the command
+
+    // 2. Check Hardcoded Paths
+    const platform = process.platform as 'darwin' | 'linux' | 'win32';
+    const platformPaths = config.paths?.[platform];
+
+    if (platformPaths) {
+        // Parallelize filesystem checks for this specific IDE
+        const checks = await Promise.all(
+            platformPaths.map(async (p) => ({ path: p, exists: await isExecutable(p) }))
+        );
+        const found = checks.find((c) => c.exists);
+        if (found) return found.path;
+    }
+
+    return null;
+};
+
 const isIDEAvailableByConfig = async (config: IDEConfig): Promise<boolean> => {
     const platform = process.platform as 'darwin' | 'linux' | 'win32';
 
@@ -246,19 +289,22 @@ const isIDEAvailableByConfig = async (config: IDEConfig): Promise<boolean> => {
 };
 
 export const detectAvailableIDEs = async (): Promise<IDEInfo[]> => {
-    const results: IDEInfo[] = [];
+    // 3. Run ALL IDE checks in parallel
+    const strategies = await Promise.all(
+        IDE_CONFIGS.map(async (config) => {
+            const strategy = await resolveLaunchStrategy(config);
+            return { config, strategy };
+        })
+    );
 
-    for (const config of IDE_CONFIGS) {
-        const available = await isIDEAvailableByConfig(config);
-        results.push({
+    return strategies
+        .filter((item) => item.strategy !== null)
+        .map(({ config }) => ({
             type: config.type,
             name: config.name,
-            command: config.command,
-            available,
-        });
-    }
-
-    return results.filter((ide) => ide.available);
+            command: config.command, // Keep original command name for display
+            available: true,
+        }));
 };
 
 export const isIDEAvailable = async (type: IDEType): Promise<boolean> => {
@@ -269,41 +315,36 @@ export const isIDEAvailable = async (type: IDEType): Promise<boolean> => {
     return isIDEAvailableByConfig(config);
 };
 
-export const openInIDE = async (type: IDEType, path: string): Promise<void> => {
+export const openInIDE = async (type: IDEType, targetPath: string): Promise<void> => {
     const config = IDE_CONFIGS.find((c) => c.type === type);
-    if (!config) {
-        throw new Error(`Unknown IDE type: ${type}`);
-    }
+    if (!config) throw new Error(`Unknown IDE type: ${type}`);
 
-    const available = await isIDEAvailableByConfig(config);
-    if (!available) {
-        throw new Error(`IDE ${config.name} is not available on this system`);
-    }
+    // Resolve target path to absolute to avoid CWD ambiguity
+    const absolutePath = resolve(targetPath);
+
+    // Re-detect how to run it (or you could cache this in detectAvailableIDEs)
+    const execCommand = await resolveLaunchStrategy(config);
+    if (!execCommand) throw new Error(`${config.name} not found`);
 
     const platform = process.platform;
 
-    console.log('process.platform:', process.platform);
-
     try {
-        // For macOS, try using 'open -a' if the app bundle exists
         if (platform === 'darwin') {
-            const appPath = config.paths?.darwin?.[0];
-            const pathExists = await checkPathExists(path);
-
-            console.log('path exists', pathExists);
-            if (appPath && pathExists) {
-                console.log('open -a ${config.name} ${path}:', `open -a ${config.name} ${path}`);
-                await $`open -a "${config.name}" "${path}"`;
+            // macOS Specifics: Use 'open' if it looks like an App Bundle,
+            // otherwise execute directly.
+            if (execCommand.includes('.app')) {
+                // Open via bundle name to ensure it attaches to running instance
+                await $`open -a "${config.name}" "${absolutePath}"`;
                 return;
             }
         }
 
-        // Fall back to direct command execution
-        await $`${config.command} ${path}`;
+        // Universal fallback: execute the command or absolute path
+        // Note: We use the `execCommand` we resolved earlier, which might be
+        // '/usr/local/bin/code' if it wasn't in PATH but exists on disk.
+        await $`${execCommand} "${absolutePath}"`;
     } catch (error) {
-        throw new Error(
-            `Failed to launch ${config.name}: ${error instanceof Error ? error.message : String(error)}`
-        );
+        throw new Error(`Failed to launch ${config.name}`);
     }
 };
 
