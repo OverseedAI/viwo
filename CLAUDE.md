@@ -120,6 +120,14 @@ The `agent-manager.ts` implements automatic container cleanup:
   - Logs the cleanup operation
 - This ensures containers don't linger after the Claude Code process completes
 
+### Docker Integration
+
+VIWO uses platform-specific Docker socket configuration:
+- **Windows**: Named pipe at `\\.\pipe\docker_engine` (Docker Desktop, works with both WSL2 and Hyper-V backends)
+- **macOS/Linux**: Unix socket at `/var/run/docker.sock`
+
+The `docker-manager.ts` automatically detects the platform via `process.platform` and configures the correct socket path. This ensures Docker connectivity works reliably across all supported operating systems without requiring manual configuration.
+
 ### CLI Commands
 
 Commands in `packages/cli/src/commands/`:

@@ -4,7 +4,35 @@ import path from 'path';
 import { ContainerInfo, PortMapping, SessionStatus } from '../schemas';
 import { listSessions, updateSession } from './session-manager';
 
-const dockerSdk = new Docker();
+/**
+ * Get platform-specific Docker configuration
+ *
+ * On Windows, Docker Desktop exposes the Docker daemon via a named pipe at
+ * \\.\pipe\docker_engine. This works for both WSL2 and Hyper-V backends.
+ *
+ * On Unix-based systems (macOS, Linux), Docker uses a Unix socket at
+ * /var/run/docker.sock.
+ *
+ * @returns Docker configuration with the appropriate socket path
+ */
+const getDockerConfig = (): Docker.DockerOptions => {
+    const platform = process.platform;
+
+    if (platform === 'win32') {
+        // Windows: Use named pipe for Docker Desktop
+        // This works for both WSL2 and Hyper-V backends
+        return {
+            socketPath: '\\\\.\\pipe\\docker_engine',
+        };
+    }
+
+    // macOS and Linux: Use Unix socket
+    return {
+        socketPath: '/var/run/docker.sock',
+    };
+};
+
+const dockerSdk = new Docker(getDockerConfig());
 
 // Default Claude Code image name
 export const CLAUDE_CODE_IMAGE = 'viwo-claude-code:latest';
@@ -14,7 +42,13 @@ export const isDockerRunning = async (): Promise<boolean> => {
         await dockerSdk.ping();
         return true;
     } catch (err) {
-        console.error('Docker ping failed:', err);
+        // Enhanced error logging for Windows users
+        if (process.platform === 'win32') {
+            console.error('Docker ping failed on Windows:', err);
+            console.error('Ensure Docker Desktop is running and using the default named pipe.');
+        } else {
+            console.error('Docker ping failed:', err);
+        }
         return false;
     }
 };
