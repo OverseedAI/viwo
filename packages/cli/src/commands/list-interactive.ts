@@ -55,11 +55,6 @@ const displaySessionDetails = async (session: WorktreeSession) => {
 const handleSessionAction = async (session: WorktreeSession): Promise<'back' | 'exit'> => {
     const actions = [
         {
-            name: `📂 Open worktree in terminal (${session.worktreePath})`,
-            value: 'cd',
-            disabled: !session.worktreePath,
-        },
-        {
             name: '💻 Open in IDE',
             value: 'open-ide',
             disabled: !session.worktreePath,
@@ -84,17 +79,6 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
     });
 
     switch (action) {
-        case 'cd':
-            console.log();
-            console.log(chalk.cyan('To navigate to the worktree, run:'));
-            console.log(chalk.yellow(`  cd ${session.worktreePath}`));
-            console.log();
-            console.log(chalk.gray('Press Enter to continue...'));
-            await new Promise((resolve) => {
-                process.stdin.once('data', resolve);
-            });
-            return 'back';
-
         case 'open-ide':
             await selectAndOpenIDE(session.worktreePath);
             console.log(chalk.gray('Press Enter to continue...'));
