@@ -3,6 +3,8 @@ import { exists } from 'node:fs/promises';
 import path from 'path';
 import { ContainerInfo, PortMapping, SessionStatus } from '../schemas';
 import { listSessions, updateSession } from './session-manager';
+import { db } from '../db';
+import { chats, NewChat } from '../db-schemas';
 
 /**
  * Get platform-specific Docker configuration
@@ -263,6 +265,40 @@ export const getContainerLogs = async (
     });
 };
 
+/**
+ * Get container logs since a specific timestamp (non-streaming)
+ * Returns all logs as a single string
+ *
+ * Note: When follow=false, Docker returns raw log content as a Buffer without multiplexing.
+ * The multiplexed format (with 8-byte headers) is only used with follow=true.
+ */
+export const getContainerLogsSince = async (
+    options: Omit<GetContainerLogsOptions, 'follow'>
+): Promise<string> => {
+    const container = dockerSdk.getContainer(options.containerId);
+
+    const result = await container.logs({
+        follow: false,
+        stdout: options.stdout ?? true,
+        stderr: options.stderr ?? true,
+        since: options.since ?? 0,
+        tail: options.tail,
+    });
+
+    // When follow is false, logs() returns raw Buffer content (no multiplexing)
+    if (Buffer.isBuffer(result)) {
+        return result.toString('utf8');
+    }
+
+    // Fallback: if it's a string
+    if (typeof result === 'string') {
+        return result;
+    }
+
+    // Shouldn't reach here, but just in case
+    return '';
+};
+
 export interface WaitForContainerOptions {
     containerId: string;
 }
@@ -430,6 +466,39 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
 
             const containerInfo = await inspectContainer({ containerId: session.containerId });
 
+            // Capture logs since last activity and store in chats table
+            let hasNewLogs = false;
+            try {
+                if (session.lastActivity) {
+                    // Convert lastActivity to Unix timestamp (seconds)
+                    const lastActivityDate = new Date(session.lastActivity.replace(' ', 'T') + 'Z');
+                    const sinceTimestamp = Math.floor(lastActivityDate.getTime() / 1000);
+
+                    // Fetch logs since last activity
+                    const logs = await getContainerLogsSince({
+                        containerId: session.containerId,
+                        since: sinceTimestamp,
+                        stdout: true,
+                        stderr: true,
+                    });
+
+                    // Store logs in chats table if there are any
+                    if (logs && logs.trim()) {
+                        const chatEntry: NewChat = {
+                            sessionId: session.id.toString(),
+                            type: 'assistant',
+                            content: logs,
+                            createdAt: new Date().toISOString(),
+                        };
+                        db.insert(chats).values(chatEntry).run();
+                        hasNewLogs = true;
+                    }
+                }
+            } catch (logError) {
+                // Log errors shouldn't fail the sync, just log them
+                console.warn(`Failed to capture logs for session ${session.id}:`, logError);
+            }
+
             // Determine new session status based on container state
             let newStatus: SessionStatus | null = null;
             let reason = '';
@@ -459,7 +528,7 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
                 }
             }
 
-            // Update session if status changed
+            // Update session if status changed or we have new logs
             if (newStatus && newStatus !== session.status) {
                 const updates: { status: string; error?: string; lastActivity: string } = {
                     status: newStatus,
@@ -480,6 +549,14 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
                     previousStatus: session.status || 'unknown',
                     newStatus,
                     reason,
+                });
+            } else if (hasNewLogs) {
+                // Update lastActivity even if status didn't change, since we captured new logs
+                updateSession({
+                    id: session.id,
+                    updates: {
+                        lastActivity: new Date().toISOString(),
+                    },
                 });
             }
         } catch (error) {
@@ -505,6 +582,7 @@ export const docker = {
     removeContainer,
     getContainerStatus,
     getContainerLogs,
+    getContainerLogsSince,
     waitForContainer,
     containerExists,
     inspectContainer,

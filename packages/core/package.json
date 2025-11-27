@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun --format esm && tsc --emitDeclarationOnly",
-    "db:generate": "bunx drizzle-kit generate --dialect sqlite --schema ./src/db-schemas/index.ts",
+    "db:generate": "drizzle-kit generate --dialect sqlite --schema ./src/db-schemas/index.ts",
     "db:migrate": "bun scripts/generate-migrations.ts",
     "typecheck": "tsc --noEmit",
     "test": "NODE_ENV=test bun test"
@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@types/dockerode": "^3.3.23",
+    "drizzle-kit": "^0.31.7",
     "typescript": "^5.7.2"
   }
 }
