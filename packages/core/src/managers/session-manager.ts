@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { NewSession, Session, sessions } from '../db-schemas';
 
@@ -13,6 +13,8 @@ export const listSessions = (options: ListSessionsOptions = {}): Session[] => {
     if (options.status) {
         query = query.where(eq(sessions.status, options.status)) as typeof query;
     }
+
+    query = query.orderBy(desc(sessions.createdAt)) as typeof query;
 
     const results = query.all();
 
