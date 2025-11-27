@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
 import * as readline from 'readline';
-import { viwo } from '@viwo/core';
+import { viwo, AttachManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { checkPrerequisitesOrExit } from '../utils/prerequisites';
 
@@ -157,7 +157,41 @@ export const startCommand = new Command('start')
                 'Session Details'
             );
 
-            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} then start coding!`);
+            // Attach to container and stream output
+            const dbSession = await viwo.get(session.id);
+            if (dbSession && dbSession.containers.length > 0) {
+                console.log();
+                console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                console.log(
+                    chalk.cyan.bold('Claude Code Output') +
+                        chalk.dim(' (Press Ctrl+C to detach, container will keep running)')
+                );
+                console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                console.log();
+
+                try {
+                    // Attach to container and wait for user to press Ctrl+C
+                    await AttachManager.attachAndWaitForDetach({
+                        containerId: dbSession.containers[0].id,
+                    });
+
+                    console.log();
+                    console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                    console.log(chalk.yellow('Detached from container'));
+                    console.log(
+                        chalk.dim(`Container ${dbSession.containers[0].id} is still running in the background`)
+                    );
+                    console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                } catch (attachError) {
+                    console.error(
+                        chalk.yellow('\nFailed to attach to container:'),
+                        attachError instanceof Error ? attachError.message : String(attachError)
+                    );
+                }
+            }
+
+            console.log();
+            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));
             process.exit(1);

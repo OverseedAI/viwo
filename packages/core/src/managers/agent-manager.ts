@@ -74,7 +74,9 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         command.push('--model', config.model);
     }
 
-    command.push(`"${config.initialPrompt}"`);
+    // Add the prompt as the final argument
+    // Docker handles argument separation, so no manual quoting needed
+    command.push(config.initialPrompt);
 
     // Create the container
     const containerInfo = await createContainer({
