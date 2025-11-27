@@ -15,7 +15,7 @@ using Docker to sandbox the runtime environment.
 - [COMING SOON] **Improved multiline support**: Paste in large amounts of text and play around with your prompt before submitting.
 - [COMING SOON] **Recap of changes made**: View a recap of the work completed by AI directly inside VIWO CLI.
 
-![gif](./viwo-gif.mov)
+![Demo](https://raw.githubusercontent.com/overseedai/viwo/main/viwo-gif.gif)
 
 ## Table of Contents
 <!-- TOC -->
