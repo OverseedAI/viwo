@@ -2,7 +2,7 @@
 
 Ever wanted to test out an idea or fix a bug, but you didn't want
 to pollute your working branch? Or do you ever get super annoyed by all the questions and permissions Claude
-asks you? 
+asks you?
 
 Well, **VIWO** (**Vi**rtual **Wo**rkspaces) might just be your solution:
 
@@ -14,6 +14,8 @@ using Docker to sandbox the runtime environment.
 - [COMING SOON] **GitHub/GitLab integration**: Once you're done, let AI handle submitting "your" work for you!
 - [COMING SOON] **Improved multiline support**: Paste in large amounts of text and play around with your prompt before submitting.
 - [COMING SOON] **Recap of changes made**: View a recap of the work completed by AI directly inside VIWO CLI.
+
+![gif](./viwo-gif.mov)
 
 ## Table of Contents
 <!-- TOC -->
