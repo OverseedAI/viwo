@@ -8,7 +8,7 @@ Well, **VIWO** (**Vi**rtual **Wo**rkspaces) might just be your solution:
 
 - **Docker-sandboxed environments**: In order to use Claude Code with `--dangerously-skip-permissions`, we are
 using Docker to sandbox the runtime environment. 
-- **Git worktrees**: Maintain a clean separation between your working branch and Claude's branch—so you can work while you work!
+- **Git worktrees**: Maintain a clean separation between your working branch and Claude's branch—so you can work while Claude works!
 - **Ease-of-use**: Quickly jump in to a worktree session by opening it in your favourite IDE.
 - **Multiple agents**: With VIWO, it's extremely easy to spin up multiple agents to go do your task for you.
 - [COMING SOON] **GitHub/GitLab integration**: Once you're done, let AI handle submitting "your" work for you!
