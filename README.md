@@ -82,6 +82,24 @@ viwo start
 viwo list
 ```
 
+## How it works
+
+The end result is a Claude Code instance in a Docker container. To get there, VIWO takes a git repository,
+creates a git worktree in a separate directory, then creates a Docker container with a volume mount to that
+new git worktree. The Docker container then runs a fresh installation of Claude Code in "print" mode with
+`--dangerously-skip-permissions` enabled to help you one-shot your prompts.
+
+- `viwo auth` stores your API key in a sqlite database in your app data directory. This API key is then provided to the Docker containers that run Claude Code. 
+- `viwo register` stores the repository path and name into the sqlite database for subsequent retrieval.
+- `viwo start` creates a new git worktree and a Docker container. This container then runs `claude -p "YOUR PROMPT"`.
+
+## Security
+
+Running Claude with `--dangerously-skip-permissions` (DSP) comes with its own risks. The safest way to run Claude with
+DSP would be isolated virtual machines. VIWO relies on the security of Docker containers to limit the attack surface of AI hackers,
+but that does not mean Docker containers are inherently impenetrable. You can learn more about how Docker manages the
+security of their containers [here](https://docs.docker.com/engine/security/).
+
 ## 🚀 Development Guidelines
 
 ### Prerequisites
