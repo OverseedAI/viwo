@@ -160,7 +160,7 @@ viwo --help
 2. Changes are immediately available - no build step needed!
 3. Run the CLI to test your changes:
    ```bash
-   viwo init --prompt "Your task here"
+   viwo start
    ```
 
 The core package uses **direct TypeScript source imports** - Bun's native TypeScript support makes this possible without compilation during development.
@@ -200,9 +200,7 @@ bun run lint
 ### Initialize a new session
 
 ```bash
-viwo init --prompt "Add user authentication feature" \
-  --agent claude-code \
-  --branch feat/auth
+viwo start
 ```
 
 ### List all sessions
