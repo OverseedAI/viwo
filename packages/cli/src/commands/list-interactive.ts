@@ -1,4 +1,4 @@
-import { select } from '@inquirer/prompts';
+import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
 import { getStatusBadge, formatDate } from '../utils/formatters';
@@ -183,11 +183,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
                 description: `${session.agent.type} | ${session.id.substring(0, 12)}`,
             }));
 
-            choices.push({
-                name: chalk.gray('─'.repeat(70)),
-                value: '__separator__',
-                description: '',
-            });
+            choices.push(new Separator(chalk.gray('─'.repeat(70))));
 
             choices.push({
                 name: chalk.gray('❌ Exit'),
@@ -203,10 +199,6 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
 
             if (selectedId === '__exit__') {
                 break;
-            }
-
-            if (selectedId === '__separator__') {
-                continue;
             }
 
             // Fetch the full session details
