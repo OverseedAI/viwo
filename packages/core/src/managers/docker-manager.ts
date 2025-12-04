@@ -37,7 +37,7 @@ const getDockerConfig = (): Docker.DockerOptions => {
 const dockerSdk = new Docker(getDockerConfig());
 
 // Default Claude Code image name
-export const CLAUDE_CODE_IMAGE = 'viwo-claude-code:latest';
+export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:1.0.0';
 
 export const isDockerRunning = async (): Promise<boolean> => {
     try {
@@ -342,11 +342,11 @@ export const getContainerStatus = async (
     return mapContainerStatus(info.State.Status);
 };
 
-interface PullImageOptions {
+export interface PullImageOptions {
     image: string;
 }
 
-const pullImage = async (options: PullImageOptions): Promise<void> => {
+export const pullImage = async (options: PullImageOptions): Promise<void> => {
     return new Promise((resolve, reject) => {
         dockerSdk.pull(options.image, (err: any, stream: any) => {
             if (err) {

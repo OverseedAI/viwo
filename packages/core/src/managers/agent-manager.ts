@@ -10,8 +10,7 @@ import {
     createContainer,
     startContainer,
     getContainerLogs,
-    waitForContainer,
-    removeContainer,
+    pullImage,
 } from './docker-manager';
 import { getApiKey } from './config-manager';
 
@@ -56,10 +55,11 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
 
     if (!imageExists) {
-        throw new Error(
-            `Claude Code Docker image '${CLAUDE_CODE_IMAGE}' not found. ` +
-                `Please build the image first or ensure it's available locally.`
-        );
+        await pullImage({ image: CLAUDE_CODE_IMAGE });
+        // throw new Error(
+        //     `Claude Code Docker image '${CLAUDE_CODE_IMAGE}' not found. ` +
+        //         `Please build the image first or ensure it's available locally.`
+        // );
     }
 
     // Generate container name
