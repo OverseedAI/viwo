@@ -1,4 +1,4 @@
-import { select } from '@inquirer/prompts';
+import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { viwo } from '@viwo/core';
 import { formatDate } from '../utils/formatters';
@@ -144,11 +144,7 @@ export const runInteractiveRepoList = async () => {
                     : `ID: ${repo.id}`,
             }));
 
-            choices.push({
-                name: chalk.gray('─'.repeat(70)),
-                value: -999999, // Use special number for separator
-                description: '',
-            });
+            choices.push(new Separator(chalk.gray('─'.repeat(70))));
 
             choices.push({
                 name: chalk.gray('➕ Add new repository'),
@@ -170,10 +166,6 @@ export const runInteractiveRepoList = async () => {
 
             if (selectedId === -777777) {
                 break;
-            }
-
-            if (selectedId === -999999) {
-                continue;
             }
 
             if (selectedId === -888888) {
