@@ -165,7 +165,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
                 console.log(chalk.yellow('No sessions found.'));
                 console.log(
                     chalk.gray('Create a new session with: ') +
-                        chalk.cyan('viwo start --prompt "your task"')
+                        chalk.cyan('viwo start')
                 );
                 console.log();
                 break;
