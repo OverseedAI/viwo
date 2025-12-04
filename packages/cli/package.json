@@ -24,7 +24,7 @@
     "dev": "bun build src/index.ts src/cli.ts --outdir dist --target bun --format esm --sourcemap=external --watch",
     "clean": "rm -rf dist *.tsbuildinfo binaries",
     "typecheck": "tsc --noEmit",
-    "viwo": "bun run ./dist/cli.js"
+    "viwo": "bun run ./src/cli.ts"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",

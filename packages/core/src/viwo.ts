@@ -26,7 +26,6 @@ import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
-import { db } from './db';
 
 export interface Viwo {
     repo: typeof repo;
