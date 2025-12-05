@@ -34,3 +34,4 @@ export {
 
 // Export path utilities
 export * from './utils/paths';
+export { AppPaths } from './utils/paths';

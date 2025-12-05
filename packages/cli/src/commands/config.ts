@@ -1,7 +1,8 @@
 import { Command } from 'commander';
-import { select } from '@inquirer/prompts';
+import { select, input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { IDEManager, ConfigManager, type IDEType, type IDEInfo } from '@viwo/core';
+import { IDEManager, ConfigManager, type IDEType, type IDEInfo, AppPaths } from '@viwo/core';
+import { isAbsolute } from 'path';
 
 const runIDEConfig = async (): Promise<void> => {
 	try {
@@ -166,6 +167,175 @@ const ideCommand = new Command('ide')
 		}
 	});
 
+const runWorktreesLocationConfig = async (): Promise<void> => {
+	try {
+		console.clear();
+		console.log();
+		console.log(chalk.bold.cyan('Worktrees Storage Location'));
+		console.log(chalk.gray('═'.repeat(70)));
+		console.log();
+
+		// Get current worktrees location
+		const currentLocation = ConfigManager.getWorktreesStorageLocation();
+		const defaultLocation = AppPaths.joinDataPath('worktrees');
+
+		console.log(chalk.bold('Current Worktrees Location'));
+		if (currentLocation) {
+			console.log(chalk.gray('  ') + chalk.green(currentLocation));
+		} else {
+			console.log(chalk.gray('  ') + chalk.yellow('Default: ') + chalk.white(defaultLocation));
+		}
+		console.log();
+		console.log(chalk.gray('═'.repeat(70)));
+		console.log();
+
+		// Show selection
+		const action = await select<string>({
+			message: 'What would you like to do?',
+			choices: [
+				{
+					name: chalk.cyan('Set custom location'),
+					value: 'set',
+					description: 'Specify a custom directory for git worktrees',
+				},
+				{
+					name: chalk.yellow('Reset to default'),
+					value: 'reset',
+					description: `Use default location: ${defaultLocation}`,
+				},
+				{
+					name: chalk.gray('❌ Cancel'),
+					value: 'cancel',
+					description: 'Exit without changes',
+				},
+			],
+			pageSize: 10,
+		});
+
+		if (action === 'cancel') {
+			console.log();
+			console.log(chalk.gray('No changes made'));
+			console.log();
+			return;
+		}
+
+		if (action === 'reset') {
+			// Reset to default
+			if (!currentLocation) {
+				console.log();
+				console.log(chalk.yellow('Already using default location'));
+				console.log();
+				return;
+			}
+
+			// Confirm reset
+			const confirmReset = await select<boolean>({
+				message: chalk.yellow('Reset worktrees location to default?'),
+				choices: [
+					{ name: 'No, cancel', value: false },
+					{ name: 'Yes, reset', value: true },
+				],
+			});
+
+			if (confirmReset) {
+				ConfigManager.deleteWorktreesStorageLocation();
+				console.log();
+				console.log(chalk.green('✓ Worktrees location reset to default'));
+				console.log(chalk.gray('  ') + chalk.white(defaultLocation));
+				console.log();
+			} else {
+				console.log();
+				console.log(chalk.gray('No changes made'));
+				console.log();
+			}
+			return;
+		}
+
+		if (action === 'set') {
+			// Set custom location
+			console.log();
+			console.log(chalk.gray('Enter the path where git worktrees should be stored.'));
+			console.log(chalk.gray('You can use:'));
+			console.log(chalk.gray('  • Absolute path (e.g., /home/user/viwo-worktrees)'));
+			console.log(chalk.gray('  • Tilde expansion (e.g., ~/.config/viwo)'));
+			console.log(chalk.gray('  • Relative path (relative to app data directory)'));
+			console.log();
+
+			const newLocation = await input({
+				message: 'Worktrees location:',
+				default: currentLocation || defaultLocation,
+				validate: (value: string) => {
+					if (!value || value.trim() === '') {
+						return 'Location cannot be empty';
+					}
+					return true;
+				},
+			});
+
+			const trimmedLocation = newLocation.trim();
+			// Expand tilde to show the actual path
+			const expandedLocation = AppPaths.expandTilde(trimmedLocation);
+
+			// Confirm the new location
+			console.log();
+			console.log(chalk.bold('New Worktrees Location'));
+			console.log(chalk.gray('  ') + chalk.white(trimmedLocation));
+			if (!isAbsolute(expandedLocation)) {
+				const resolvedPath = AppPaths.joinDataPath(expandedLocation);
+				console.log(chalk.gray('  Resolved to: ') + chalk.cyan(resolvedPath));
+			} else if (expandedLocation !== trimmedLocation) {
+				// Show expanded path if tilde was used
+				console.log(chalk.gray('  Expands to: ') + chalk.cyan(expandedLocation));
+			}
+			console.log();
+
+			const confirmSet = await select<boolean>({
+				message: 'Save this location?',
+				choices: [
+					{ name: 'Yes, save', value: true },
+					{ name: 'No, cancel', value: false },
+				],
+			});
+
+			if (confirmSet) {
+				ConfigManager.setWorktreesStorageLocation(trimmedLocation);
+				console.log();
+				console.log(chalk.green('✓ Worktrees location updated'));
+				console.log(chalk.gray('  ') + chalk.white(trimmedLocation));
+				console.log();
+			} else {
+				console.log();
+				console.log(chalk.gray('No changes made'));
+				console.log();
+			}
+		}
+	} catch (error) {
+		if ((error as any).name === 'ExitPromptError') {
+			// User pressed Ctrl+C
+			console.log();
+			console.log(chalk.gray('Operation cancelled'));
+			console.log();
+			process.exit(0);
+		}
+		throw error;
+	}
+};
+
+const worktreesCommand = new Command('worktrees')
+	.description('Configure worktrees storage location')
+	.action(async () => {
+		try {
+			await runWorktreesLocationConfig();
+		} catch (error) {
+			console.error(
+				chalk.red('Configuration failed:'),
+				error instanceof Error ? error.message : String(error)
+			);
+			process.exit(1);
+		}
+	});
+
 export const configCommand = new Command('config')
 	.description('Manage VIWO configuration')
-	.addCommand(ideCommand);
+	.addCommand(ideCommand)
+	.addCommand(worktreesCommand);

@@ -107,5 +107,12 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`configurations\` ADD \`preferred_ide\` text;
         `
+    },
+    {
+        version: 6,
+        name: 'confused_the_renegades',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`worktrees_storage_location\` text;
+        `
     }
 ];

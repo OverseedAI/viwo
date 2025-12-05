@@ -84,7 +84,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, IDE preferences)
+- `config-manager.ts` - Configuration management (API keys, IDE preferences, worktrees storage location)
 - `ide-manager.ts` - IDE detection and launching
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
@@ -99,6 +99,10 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
   - Linux: `~/.local/share/viwo/sqlite.db`
 - **Drizzle ORM** with schemas in `packages/core/src/db-schemas/`
 - **Tables**: repositories, sessions, chats, configurations
+- **Configuration storage**: The `configurations` table stores user preferences including:
+  - API keys (encrypted)
+  - Preferred IDE
+  - Worktrees storage location (supports absolute or relative paths)
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 - **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
@@ -109,6 +113,24 @@ The main SDK in `packages/core/src/viwo.ts` exposes:
 - `createViwo()` - Factory function returning Viwo instance
 - `init()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → init agent
 - `cleanup()` - Removes session: stop containers → remove containers → remove worktree → update status
+
+### Worktrees Storage Configuration
+
+Git worktrees storage location is configurable through the `config-manager.ts`:
+- **Default location**: `{app-data-path}/worktrees/`
+- **Custom location**: Users can configure a custom path via `config worktrees` CLI command
+- **Path types**:
+  - Absolute paths (e.g., `/home/user/viwo-worktrees`) are used as-is
+  - Tilde expansion (e.g., `~/.config/viwo`) is supported and expands to the user's home directory
+  - Relative paths are resolved relative to the app data directory
+- **Implementation**:
+  - The `paths.ts` utility provides `expandTilde()` to expand `~` to the user's home directory
+  - `getWorktreesPath()` and `joinWorktreesPath()` check the configuration database first, then fall back to the default location
+  - Tilde expansion happens automatically when setting the worktrees storage location
+- **Configuration methods**:
+  - `setWorktreesStorageLocation(location)` - Set custom location (automatically expands tilde)
+  - `getWorktreesStorageLocation()` - Get current custom location (null if using default)
+  - `deleteWorktreesStorageLocation()` - Reset to default location
 
 ### Container Lifecycle Management
 
@@ -156,6 +178,10 @@ Commands in `packages/cli/src/commands/`:
   - Interactive list showing available IDEs on the system
   - Displays current default IDE setting
   - Allows changing to a different IDE or removing the default (prompts each time)
+- `config worktrees` - Configure worktrees storage location
+  - View current worktrees storage location (custom or default)
+  - Set custom location (absolute or relative to app data directory)
+  - Reset to default location (app data directory)
 
 ### Prerequisites & Version Checking
 
@@ -206,3 +232,4 @@ Current test coverage focuses on:
 - Follow the 'less is more' paradigm where applicable. Strike a good balance between readability and succinctness of code.
 - Prefer using a typed object for function arguments rather than a series of positional arguments.
 - Use arrow functions over traditional functions.
+- Imports should always just use the file name. Do not append .js at the end.

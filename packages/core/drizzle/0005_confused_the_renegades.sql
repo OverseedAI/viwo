@@ -1,0 +1,1 @@
+ALTER TABLE `configurations` ADD `worktrees_storage_location` text;
