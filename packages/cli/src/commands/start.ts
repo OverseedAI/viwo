@@ -146,16 +146,14 @@ export const startCommand = new Command('start')
 
             spinner.stop('Session created successfully!');
 
-            clack.note(
-                [
-                    `${chalk.cyan('ID:')}        ${session.id}`,
-                    `${chalk.cyan('Branch:')}    ${session.branchName}`,
-                    `${chalk.cyan('Worktree:')}  ${session.worktreePath}`,
-                    `${chalk.cyan('Agent:')}     ${session.agent.type}`,
-                    `${chalk.cyan('Status:')}    ${getStatusBadge(session.status)}`,
-                ].join('\n'),
-                'Session Details'
-            );
+            console.log();
+            console.log(chalk.bold('Session Details'));
+            console.log();
+            console.log(`  ${chalk.cyan('ID:')}        ${session.id}`);
+            console.log(`  ${chalk.cyan('Branch:')}    ${session.branchName}`);
+            console.log(`  ${chalk.cyan('Worktree:')}  ${session.worktreePath}`);
+            console.log(`  ${chalk.cyan('Agent:')}     ${session.agent.type}`);
+            console.log(`  ${chalk.cyan('Status:')}    ${getStatusBadge(session.status)}`);
 
             // Attach to container and stream output
             const dbSession = await viwo.get(session.id);
