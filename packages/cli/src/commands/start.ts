@@ -189,16 +189,19 @@ export const startCommand = new Command('start')
                     console.log(
                         chalk.dim('───────────────────────────────────────────────────────')
                     );
+                    console.log();
+                    clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
+                    process.exit(0);
                 } catch (attachError) {
                     console.error(
                         chalk.yellow('\nFailed to attach to container:'),
                         attachError instanceof Error ? attachError.message : String(attachError)
                     );
+                    console.log();
+                    clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
+                    process.exit(0);
                 }
             }
-
-            console.log();
-            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));
             process.exit(1);
