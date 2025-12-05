@@ -546,15 +546,12 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
 
                 // Capture full container output when session completes or errors
                 if (newStatus === SessionStatus.COMPLETED || newStatus === SessionStatus.ERROR) {
-                    console.log('Grabbing session logs...');
                     try {
                         const fullOutput = await getContainerLogsSince({
                             containerId: session.containerId,
                             stdout: true,
                             stderr: true,
                         });
-
-                        console.log('fullOutput:', fullOutput);
 
                         if (fullOutput && fullOutput.trim()) {
                             updates.containerOutput = fullOutput;
