@@ -159,6 +159,7 @@ export const startCommand = new Command('start')
 
             // Attach to container and stream output
             const dbSession = await viwo.get(session.id);
+
             if (dbSession && dbSession.containers.length > 0) {
                 console.log();
                 console.log(chalk.dim('───────────────────────────────────────────────────────'));
@@ -176,12 +177,18 @@ export const startCommand = new Command('start')
                     });
 
                     console.log();
-                    console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                    console.log(
+                        chalk.dim('───────────────────────────────────────────────────────')
+                    );
                     console.log(chalk.yellow('Detached from container'));
                     console.log(
-                        chalk.dim(`Container ${dbSession.containers[0].id} is still running in the background`)
+                        chalk.dim(
+                            `Container ${dbSession.containers[0].id} is still running in the background`
+                        )
                     );
-                    console.log(chalk.dim('───────────────────────────────────────────────────────'));
+                    console.log(
+                        chalk.dim('───────────────────────────────────────────────────────')
+                    );
                 } catch (attachError) {
                     console.error(
                         chalk.yellow('\nFailed to attach to container:'),

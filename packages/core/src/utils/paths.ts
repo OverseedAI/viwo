@@ -8,10 +8,24 @@
  */
 
 import envPaths from 'env-paths';
-import { join } from 'node:path';
+import { join, isAbsolute } from 'node:path';
 import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { getWorktreesStorageLocation } from '../managers/config-manager.js';
 
 const paths = envPaths('viwo', { suffix: '' });
+
+/**
+ * Expands tilde (~) in a path to the user's home directory
+ * @param filepath Path that may contain tilde
+ * @returns Path with tilde expanded
+ */
+export const expandTilde = (filepath: string): string => {
+    if (filepath.startsWith('~/') || filepath === '~') {
+        return filepath.replace(/^~/, homedir());
+    }
+    return filepath;
+};
 
 /**
  * Get the app data directory path
@@ -78,8 +92,21 @@ export const ensureDataPath = async (...segments: string[]): Promise<string> => 
 
 /**
  * Get the worktrees directory path
+ * Uses configured location if set, otherwise defaults to app data directory
  */
 export const getWorktreesPath = (): string => {
+    const configuredLocation = getWorktreesStorageLocation();
+
+    if (configuredLocation) {
+        // If configured location is absolute, use it as is
+        if (isAbsolute(configuredLocation)) {
+            return configuredLocation;
+        }
+        // Otherwise, treat it as relative to app data directory
+        return joinDataPath(configuredLocation);
+    }
+
+    // Default to app data directory
     return joinDataPath('worktrees');
 };
 
@@ -87,7 +114,8 @@ export const getWorktreesPath = (): string => {
  * Join path segments to the worktrees directory
  */
 export const joinWorktreesPath = (...segments: string[]): string => {
-    return joinDataPath('worktrees', ...segments);
+    const worktreesPath = getWorktreesPath();
+    return join(worktreesPath, ...segments);
 };
 
 /**
@@ -114,4 +142,5 @@ export const AppPaths = {
     getWorktreesPath,
     joinWorktreesPath,
     ensureWorktreesPath,
+    expandTilde,
 };

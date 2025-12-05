@@ -4,6 +4,7 @@ import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
 import type { IDEType } from '../types.js';
+import { expandTilde } from '../utils/paths.js';
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32;
@@ -202,6 +203,59 @@ export const deletePreferredIDE = (): void => {
 		.run();
 };
 
+export const setWorktreesStorageLocation = (location: string): void => {
+	const now = new Date().toISOString();
+	// Expand tilde (~) to home directory before storing
+	const expandedLocation = expandTilde(location);
+	const existing = db.select().from(configurations).limit(1).all();
+
+	if (existing.length > 0) {
+		// Update existing
+		db.update(configurations)
+			.set({
+				worktreesStorageLocation: expandedLocation,
+				updatedAt: now,
+			})
+			.where(eq(configurations.id, existing[0]!.id))
+			.run();
+	} else {
+		// Insert new
+		db.insert(configurations)
+			.values({
+				worktreesStorageLocation: expandedLocation,
+				createdAt: now,
+				updatedAt: now,
+			})
+			.run();
+	}
+};
+
+export const getWorktreesStorageLocation = (): string | null => {
+	const config = db.select().from(configurations).limit(1).all();
+
+	if (config.length === 0) {
+		return null;
+	}
+
+	return config[0]!.worktreesStorageLocation || null;
+};
+
+export const deleteWorktreesStorageLocation = (): void => {
+	const config = db.select().from(configurations).limit(1).get();
+
+	if (!config) {
+		return;
+	}
+
+	db.update(configurations)
+		.set({
+			worktreesStorageLocation: null,
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(configurations.id, config.id))
+		.run();
+};
+
 // Namespace export for consistency with other managers
 export const config = {
     setApiKey,
@@ -211,4 +265,7 @@ export const config = {
     setPreferredIDE,
     getPreferredIDE,
     deletePreferredIDE,
+    setWorktreesStorageLocation,
+    getWorktreesStorageLocation,
+    deleteWorktreesStorageLocation,
 };
