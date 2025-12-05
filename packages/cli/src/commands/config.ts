@@ -3,9 +3,13 @@ import { select, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { IDEManager, ConfigManager, type IDEType, type IDEInfo, AppPaths } from '@viwo/core';
 import { isAbsolute } from 'path';
+import { preflightChecksOrExit } from '../utils/prerequisites';
 
 const runIDEConfig = async (): Promise<void> => {
 	try {
+		// Run preflight checks before proceeding
+		await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
 		console.clear();
 		console.log();
 		console.log(chalk.bold.cyan('IDE Configuration'));
@@ -169,6 +173,9 @@ const ideCommand = new Command('ide')
 
 const runWorktreesLocationConfig = async (): Promise<void> => {
 	try {
+		// Run preflight checks before proceeding
+		await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
 		console.clear();
 		console.log();
 		console.log(chalk.bold.cyan('Worktrees Storage Location'));

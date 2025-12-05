@@ -2,7 +2,7 @@ import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
 import { getStatusBadge, formatDate } from '../utils/formatters';
-import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { preflightChecksOrExit } from '../utils/prerequisites';
 import { selectAndOpenIDE } from '../utils/ide-selector';
 
 const displaySessionDetails = async (session: WorktreeSession) => {
@@ -150,7 +150,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             // Check prerequisites before syncing
             // Sync Docker state with database before listing
             if (options.status === undefined || options.limit === undefined) {
-                // await checkPrerequisitesOrExit({ requireGit: false });
+                await preflightChecksOrExit({ requireGit: false });
                 await viwo.sync();
             }
 

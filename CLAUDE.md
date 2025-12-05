@@ -183,9 +183,10 @@ Commands in `packages/cli/src/commands/`:
   - Set custom location (absolute or relative to app data directory)
   - Reset to default location (app data directory)
 
-### Prerequisites & Version Checking
+### Preflight Checks & Version Checking
 
-The CLI performs automatic prerequisite checks before running commands via `packages/cli/src/utils/prerequisites.ts`:
+The CLI performs automatic preflight checks before running commands via `packages/cli/src/utils/prerequisites.ts`:
+- **Database migration** - Runs `viwo.migrate()` to ensure the database is up to date
 - **Git installation** - Verifies git is available in PATH
 - **Docker daemon** - Checks if Docker is running
 - **Version check** - Compares current CLI version against latest GitHub release
@@ -193,6 +194,12 @@ The CLI performs automatic prerequisite checks before running commands via `pack
   - Shows non-blocking warning when newer version is available
   - Displays update instructions: re-run install script or download from GitHub releases
   - Uses semantic version comparison (major.minor.patch)
+
+The main function is `preflightChecksOrExit()` which:
+- Runs database migrations first (exits on failure)
+- Checks for git and Docker availability (configurable via options)
+- Shows version update warnings (non-blocking)
+- Called by all CLI commands including `viwo config` commands
 
 ## Testing
 
