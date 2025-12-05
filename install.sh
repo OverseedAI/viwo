@@ -84,8 +84,8 @@ download_binary() {
 
     info "Downloading VIWO ${VERSION} for ${PLATFORM}..."
 
-    # Download binary
-    if ! curl -fsSL -o "$tmp_binary" "$download_url"; then
+    # Download binary with progress bar
+    if ! curl -fL --progress-bar -o "$tmp_binary" "$download_url"; then
         error "Failed to download binary from ${download_url}"
     fi
 

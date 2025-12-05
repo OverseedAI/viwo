@@ -79,8 +79,10 @@ function Download-Binary {
     Write-Info "Downloading VIWO $Version for $Platform..."
 
     try {
-        # Download binary
+        # Download binary with progress bar
+        $ProgressPreference = 'Continue'
         Invoke-WebRequest -Uri $downloadUrl -OutFile $tempBinary
+        $ProgressPreference = 'SilentlyContinue'
 
         # Download checksum
         try {
