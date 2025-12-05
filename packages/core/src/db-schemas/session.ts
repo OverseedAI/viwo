@@ -14,6 +14,7 @@ export const sessions = sqliteTable('sessions', {
     agent: text('agent'),
     status: text('status').default('initializing'),
     error: text('error'),
+    containerOutput: text('containerOutput'),
     createdAt: text('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
     lastActivity: text('lastActivity').default(sql`(CURRENT_TIMESTAMP)`),
 });

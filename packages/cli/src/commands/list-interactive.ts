@@ -48,6 +48,22 @@ const displaySessionDetails = async (session: WorktreeSession) => {
         console.log();
     }
 
+    if (session.containerOutput) {
+        console.log(chalk.bold('Container Output'));
+        console.log(chalk.gray('─'.repeat(70)));
+        // Display first 500 characters with option to see full output
+        const output = session.containerOutput;
+        const maxPreviewLength = 500;
+        if (output.length > maxPreviewLength) {
+            console.log(output.substring(0, maxPreviewLength));
+            console.log(chalk.yellow(`\n... (${output.length - maxPreviewLength} more characters)`));
+            console.log(chalk.gray('  Full output stored in database'));
+        } else {
+            console.log(output);
+        }
+        console.log();
+    }
+
     console.log(chalk.gray('═'.repeat(70)));
     console.log();
 };

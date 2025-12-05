@@ -530,13 +530,41 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
 
             // Update session if status changed or we have new logs
             if (newStatus && newStatus !== session.status) {
-                const updates: { status: string; error?: string; lastActivity: string } = {
+                const updates: {
+                    status: string;
+                    error?: string;
+                    lastActivity: string;
+                    containerOutput?: string;
+                } = {
                     status: newStatus,
                     lastActivity: new Date().toISOString(),
                 };
 
                 if (newStatus === SessionStatus.ERROR) {
                     updates.error = reason;
+                }
+
+                // Capture full container output when session completes or errors
+                if (newStatus === SessionStatus.COMPLETED || newStatus === SessionStatus.ERROR) {
+                    console.log('Grabbing session logs...');
+                    try {
+                        const fullOutput = await getContainerLogsSince({
+                            containerId: session.containerId,
+                            stdout: true,
+                            stderr: true,
+                        });
+
+                        console.log('fullOutput:', fullOutput);
+
+                        if (fullOutput && fullOutput.trim()) {
+                            updates.containerOutput = fullOutput;
+                        }
+                    } catch (outputError) {
+                        console.warn(
+                            `Failed to capture full container output for session ${session.id}:`,
+                            outputError
+                        );
+                    }
                 }
 
                 updateSession({

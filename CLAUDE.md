@@ -103,6 +103,8 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
   - API keys (encrypted)
   - Preferred IDE
   - Worktrees storage location (supports absolute or relative paths)
+- **Session storage**: The `sessions` table stores worktree session details including:
+  - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 - **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
@@ -160,6 +162,15 @@ The `attach-manager.ts` provides live output streaming from Docker containers us
   - `attachToContainer()` - Spawns `docker logs -f` subprocess and streams all container output (historical and new)
   - `attachAndWaitForDetach()` - Follows logs and waits for CTRL+C to stop streaming
 - **CLI integration**: The `viwo start` command automatically streams Claude Code container output after initialization, showing all output in real-time. Pressing CTRL+C stops streaming while leaving the container running in the background.
+
+### Docker State Synchronization
+
+The `docker-manager.ts` provides `syncDockerState()` to keep the database in sync with Docker container states:
+- **Automatic sync**: Called by `viwo list` command before displaying sessions to ensure accurate status
+- **Container output capture**: When a session transitions to 'completed' or 'error' status, the full container stdout/stderr is captured and stored in the `sessions.containerOutput` field
+- **Incremental log capture**: For running sessions, captures logs since `lastActivity` timestamp and stores them in the `chats` table
+- **Status updates**: Syncs container state (running, exited, etc.) with session status in the database
+- **Session details display**: The `viwo list` command shows captured container output in session details, with preview of first 500 characters for long outputs
 
 ### CLI Commands
 

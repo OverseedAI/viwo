@@ -114,5 +114,12 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`configurations\` ADD \`worktrees_storage_location\` text;
         `
+    },
+    {
+        version: 7,
+        name: 'swift_silverclaw',
+        up: `
+            ALTER TABLE \`sessions\` ADD \`containerOutput\` text;
+        `
     }
 ];
