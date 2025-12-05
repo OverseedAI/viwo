@@ -38,7 +38,7 @@ export interface Viwo {
     cleanup: (options: CleanupOptions) => Promise<void>;
     prune: () => Promise<void>;
     sync: () => Promise<SyncDockerStateResult>;
-    migrate: () => Promise<void>;
+    migrate: (verbose: boolean) => Promise<void>;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
@@ -292,13 +292,18 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         async sync(): Promise<SyncDockerStateResult> {
             return syncDockerState();
         },
-        async migrate() {
-            console.log('Running database migrations...');
+        async migrate(verbose = false) {
+            if (verbose) {
+                console.log('Running database migrations...');
+            }
             const dbPath = joinDataPath('sqlite.db');
             mkdirSync(dirname(dbPath), { recursive: true });
             const sqlite = new Database(dbPath);
             initializeDatabase(sqlite);
-            console.log('Migrations complete!');
+
+            if (verbose) {
+                console.log('Migrations complete!');
+            }
         },
     };
 }
