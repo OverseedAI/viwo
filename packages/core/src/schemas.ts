@@ -67,6 +67,7 @@ export const WorktreeSessionSchema = z.object({
     createdAt: z.date(),
     lastActivity: z.date(),
     error: z.string().optional(),
+    containerOutput: z.string().optional(),
 });
 export type WorktreeSession = z.infer<typeof WorktreeSessionSchema>;
 

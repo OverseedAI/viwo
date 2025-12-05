@@ -43,6 +43,13 @@
       "when": 1764892109788,
       "tag": "0005_confused_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1764897221784,
+      "tag": "0006_swift_silverclaw",
+      "breakpoints": true
     }
   ]
 }
