@@ -4,7 +4,7 @@ import * as clack from '@clack/prompts';
 import * as readline from 'readline';
 import { viwo, AttachManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
-import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { preflightChecksOrExit } from '../utils/prerequisites';
 
 /**
  * Prompts for multiline text input that supports pasting multiple lines.
@@ -60,8 +60,8 @@ export const startCommand = new Command('start')
     .option('--no-sync', 'Skip syncing Docker state before starting')
     .action(async (options) => {
         try {
-            // Check prerequisites before proceeding
-            await checkPrerequisitesOrExit();
+            // Run preflight checks before proceeding
+            await preflightChecksOrExit();
 
             // Sync Docker state with database before starting
             if (options.sync !== false) {

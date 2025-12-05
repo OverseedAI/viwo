@@ -81,16 +81,16 @@ export const checkVersion = async (): Promise<string | null> => {
     return null;
 };
 
-export interface PrerequisiteCheckResult {
+export interface PreflightCheckResult {
     gitInstalled: boolean;
     dockerRunning: boolean;
     latestVersion: string | null;
 }
 
 /**
- * Check all prerequisites (git, Docker, and version)
+ * Check all preflight requirements (git, Docker, and version)
  */
-export const checkPrerequisites = async (): Promise<PrerequisiteCheckResult> => {
+export const preflightChecks = async (): Promise<PreflightCheckResult> => {
     const [gitInstalled, dockerRunning, latestVersion] = await Promise.all([
         isGitInstalled(),
         isDockerRunning(),
@@ -106,16 +106,28 @@ export interface PrerequisiteOptions {
 }
 
 /**
- * Check prerequisites and show friendly error messages if requirements are not met.
+ * Run preflight checks and show friendly error messages if requirements are not met.
  * Exits the process if any required prerequisite is missing.
  * Shows a warning if a newer version is available.
+ * Runs database migrations to ensure the database is up to date.
  */
-export const checkPrerequisitesOrExit = async (
+export const preflightChecksOrExit = async (
     options: PrerequisiteOptions = {}
 ): Promise<void> => {
     const { requireGit = true, requireDocker = true } = options;
 
-    const { gitInstalled, dockerRunning, latestVersion } = await checkPrerequisites();
+    // Run database migrations first to ensure DB is up to date
+    try {
+        await viwo.migrate();
+    } catch (error) {
+        console.error(
+            chalk.red('Database migration failed:'),
+            error instanceof Error ? error.message : String(error)
+        );
+        process.exit(1);
+    }
+
+    const { gitInstalled, dockerRunning, latestVersion } = await preflightChecks();
 
     const missing: string[] = [];
 

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { viwo } from '@viwo/core';
-import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { preflightChecksOrExit } from '../utils/prerequisites';
 
 export const cleanCommand = new Command('clean')
     .description(
@@ -18,8 +18,8 @@ export const cleanCommand = new Command('clean')
     )
     .action(async (options) => {
         try {
-            // Check prerequisites before proceeding
-            await checkPrerequisitesOrExit();
+            // Run preflight checks before proceeding
+            await preflightChecksOrExit();
 
             const spinner = ora('Finding sessions to clean...').start();
 

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { viwo } from '@viwo/core';
 import { basename } from 'node:path';
-import { checkPrerequisitesOrExit } from '../utils/prerequisites';
+import { preflightChecksOrExit } from '../utils/prerequisites';
 import { runInteractiveRepoList } from './repo-list-interactive';
 
 export const repoCommand = new Command('repo').description('Manage repositories');
@@ -32,8 +32,8 @@ repoCommand
     .argument('[path]', 'Path to the git repository (defaults to current directory)', process.cwd())
     .option('-n, --name <name>', 'Custom name for the repository')
     .action(async (repoPath: string, options) => {
-        // Check prerequisites before proceeding
-        await checkPrerequisitesOrExit({ requireDocker: false });
+        // Run preflight checks before proceeding
+        await preflightChecksOrExit({ requireDocker: false });
 
         const spinner = ora('Adding repository...').start();
         const possiblyRelativePath = repoPath === '.' ? process.cwd() : repoPath;
