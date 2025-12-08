@@ -1,4 +1,19 @@
-# VIWO
+<div style="text-align: center;">
+
+# viwo-cli
+
+<i>⚡️Fastest way one-shot prompts with Claude Code ⚡</i>
+
+<div>
+
+[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+
+</div>
+
+</div>
+
+---
+
 
 Ever wanted to test out an idea or fix a bug, but you didn't want
 to pollute your working branch? Or do you ever get super annoyed by all the questions and permissions Claude
