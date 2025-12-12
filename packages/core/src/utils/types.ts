@@ -18,6 +18,26 @@ const parseSqliteTimestamp = (timestamp: string | null | undefined): Date => {
     return isNaN(date.getTime()) ? new Date() : date;
 };
 
+// Helper to derive container status from session status
+const deriveContainerStatus = (
+    sessionStatus: string | null
+): 'created' | 'running' | 'exited' | 'error' | 'stopped' => {
+    switch (sessionStatus) {
+        case SessionStatus.RUNNING:
+            return 'running';
+        case SessionStatus.COMPLETED:
+            return 'exited';
+        case SessionStatus.ERROR:
+            return 'error';
+        case SessionStatus.STOPPED:
+            return 'stopped';
+        case SessionStatus.INITIALIZING:
+            return 'created';
+        default:
+            return 'stopped';
+    }
+};
+
 export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | null => {
     const repository = getRepositoryById({ id: dbSession.repoId });
     if (!repository) {
@@ -35,7 +55,7 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
                       id: dbSession.containerId,
                       name: dbSession.containerName || '',
                       image: dbSession.containerImage || '',
-                      status: 'running',
+                      status: deriveContainerStatus(dbSession.status),
                       ports: [],
                       createdAt: parseSqliteTimestamp(dbSession.createdAt),
                   },
