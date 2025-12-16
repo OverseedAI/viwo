@@ -77,7 +77,10 @@ const IDE_CONFIGS: IDEConfig[] = [
         name: 'IntelliJ IDEA Ultimate',
         command: 'idea',
         paths: {
-            darwin: ['/Applications/IntelliJ IDEA.app'],
+            darwin: [
+                '/Applications/IntelliJ IDEA.app',
+                '/Applications/IntelliJ IDEA Ultimate.app',
+            ],
             linux: [
                 '/opt/jetbrains/idea/bin/idea.sh',
                 `${process.env.HOME}/.local/share/JetBrains/Toolbox/apps/IDEA-U/bin/idea.sh`,
@@ -90,7 +93,10 @@ const IDE_CONFIGS: IDEConfig[] = [
         name: 'IntelliJ IDEA Community',
         command: 'idea-ce',
         paths: {
-            darwin: ['/Applications/IntelliJ IDEA CE.app'],
+            darwin: [
+                '/Applications/IntelliJ IDEA CE.app',
+                '/Applications/IntelliJ IDEA Community Edition.app',
+            ],
             linux: [
                 '/opt/jetbrains/idea-ce/bin/idea.sh',
                 `${process.env.HOME}/.local/share/JetBrains/Toolbox/apps/IDEA-C/bin/idea.sh`,
