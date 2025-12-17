@@ -38,6 +38,7 @@ describe('sessionToWorktreeSession', () => {
             // SQLite CURRENT_TIMESTAMP format
             createdAt: '2025-11-24 10:30:45',
             lastActivity: '2025-11-24 12:15:30',
+            containerOutput: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -77,6 +78,7 @@ describe('sessionToWorktreeSession', () => {
             error: null,
             createdAt: null,
             lastActivity: null,
+            containerOutput: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -114,6 +116,7 @@ describe('sessionToWorktreeSession', () => {
             error: null,
             createdAt: 'invalid-date',
             lastActivity: 'not-a-date',
+            containerOutput: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -123,5 +126,55 @@ describe('sessionToWorktreeSession', () => {
         expect(result!.lastActivity).toBeInstanceOf(Date);
         // Should fall back to current time
         expect(result!.createdAt.getTime()).toBeGreaterThan(Date.now() - 1000);
+    });
+
+    it('should derive container status from session status', () => {
+        const repo = db
+            .insert(repositories)
+            .values({
+                name: 'test-repo',
+                path: '/tmp/test-repo',
+                createdAt: new Date().toISOString(),
+            })
+            .returning()
+            .get();
+
+        const testCases: Array<{
+            sessionStatus: string;
+            expectedContainerStatus: 'created' | 'running' | 'exited' | 'error' | 'stopped';
+        }> = [
+            { sessionStatus: 'initializing', expectedContainerStatus: 'created' },
+            { sessionStatus: 'running', expectedContainerStatus: 'running' },
+            { sessionStatus: 'completed', expectedContainerStatus: 'exited' },
+            { sessionStatus: 'error', expectedContainerStatus: 'error' },
+            { sessionStatus: 'stopped', expectedContainerStatus: 'stopped' },
+            { sessionStatus: 'cleaned', expectedContainerStatus: 'stopped' },
+        ];
+
+        for (const { sessionStatus, expectedContainerStatus } of testCases) {
+            const dbSession: Session = {
+                id: 1,
+                repoId: repo.id,
+                name: 'test-session',
+                path: '/tmp/test-worktree',
+                branchName: 'test-branch',
+                gitWorktreeName: 'test-worktree',
+                containerName: 'test-container',
+                containerId: 'abc123',
+                containerImage: 'test-image',
+                agent: 'claude-code',
+                status: sessionStatus,
+                error: null,
+                createdAt: '2025-11-24 10:30:45',
+                lastActivity: '2025-11-24 12:15:30',
+                containerOutput: null,
+            };
+
+            const result = sessionToWorktreeSession(dbSession);
+
+            expect(result).not.toBeNull();
+            expect(result!.containers).toHaveLength(1);
+            expect(result!.containers[0].status).toBe(expectedContainerStatus);
+        }
     });
 });
