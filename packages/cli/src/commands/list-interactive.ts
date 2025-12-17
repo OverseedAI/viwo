@@ -76,6 +76,11 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             disabled: !session.worktreePath,
         },
         {
+            name: '📄 View full container output',
+            value: 'view-output',
+            disabled: !session.containerOutput,
+        },
+        {
             name: '🗑️  Delete session',
             value: 'delete',
         },
@@ -102,6 +107,34 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
                 process.stdin.once('data', resolve);
             });
             return 'back';
+
+        case 'view-output': {
+            console.clear();
+            console.log();
+            console.log(chalk.bold.cyan('Container Output'));
+            console.log(chalk.gray('═'.repeat(70)));
+            console.log();
+            console.log(session.containerOutput);
+            console.log();
+            console.log(chalk.gray('═'.repeat(70)));
+            console.log();
+            console.log(chalk.gray('Press Enter to go back...'));
+
+            // Set stdin to resume and wait for actual user input
+            process.stdin.resume();
+            process.stdin.setRawMode(false);
+            await new Promise((resolve) => {
+                const handler = () => {
+                    process.stdin.pause();
+                    resolve(undefined);
+                };
+                process.stdin.once('data', handler);
+            });
+
+            // Redisplay session details
+            await displaySessionDetails(session);
+            return await handleSessionAction(session);
+        }
 
         case 'delete': {
             console.log();
