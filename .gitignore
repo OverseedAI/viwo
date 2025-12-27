@@ -40,3 +40,7 @@ temp
 
 # Db
 sqlite.db
+
+# VIWO config files
+viwo.yml
+viwo.yaml

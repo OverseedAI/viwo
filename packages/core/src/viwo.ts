@@ -120,14 +120,17 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 }
 
                 // Load project configuration and run post-install hooks
-                const projectConfig = loadProjectConfig({ repoPath: worktreePath });
+                const projectConfig = loadProjectConfig({ repoPath });
                 if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
                     for (const command of projectConfig.postInstall) {
                         try {
                             await execAsync(command, { cwd: worktreePath });
                         } catch (error) {
-                            const errorMessage = error instanceof Error ? error.message : String(error);
-                            throw new Error(`Post-install command failed: ${command}\n${errorMessage}`);
+                            const errorMessage =
+                                error instanceof Error ? error.message : String(error);
+                            throw new Error(
+                                `Post-install command failed: ${command}\n${errorMessage}`
+                            );
                         }
                     }
                 }

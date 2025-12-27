@@ -26,18 +26,21 @@ using Docker to sandbox the runtime environment.
 - **Git worktrees**: Maintain a clean separation between your working branch and Claude's branch—so you can work while Claude works!
 - **Ease-of-use**: Quickly jump in to a worktree session by opening it in your favourite IDE.
 - **Multiple agents**: With VIWO, it's extremely easy to spin up multiple agents to go do your task for you.
+- **Recap of changes made**: View a recap of the work completed by AI directly inside VIWO CLI.
+- **Improved multiline support**: Paste in large amounts of text and play around with your prompt before submitting.
 - [COMING SOON] **GitHub/GitLab integration**: Once you're done, let AI handle submitting "your" work for you!
-- [COMING SOON] **Improved multiline support**: Paste in large amounts of text and play around with your prompt before submitting.
-- [COMING SOON] **Recap of changes made**: View a recap of the work completed by AI directly inside VIWO CLI.
 
 ![Demo](./viwo-demo.gif)
 
 ## Table of Contents
 <!-- TOC -->
-* [VIWO](#viwo)
+* [viwo-cli](#viwo-cli)
   * [Table of Contents](#table-of-contents)
   * [Installation](#installation)
   * [Quick Start](#quick-start)
+  * [Post Install Hooks](#post-install-hooks)
+  * [How it works](#how-it-works)
+  * [Security](#security)
   * [🚀 Development Guidelines](#-development-guidelines)
     * [Prerequisites](#prerequisites)
     * [Installation](#installation-1)
@@ -95,6 +98,27 @@ viwo start
 
 # List sessions
 viwo list
+```
+
+## Post Install Hooks
+
+You can add post install hooks via a YAML config file.
+
+Add the `postInstall` property and add in any scripts you want
+to run after your git worktree is initialized.
+
+This is meant for easily initializing your git worktree for development and testing.
+
+```yaml
+postInstall:
+  # Install dependencies
+  - npm install
+
+  # Build the project
+  - npm run build
+
+  # Copy environment file
+  - cp .env.example .env
 ```
 
 ## How it works
