@@ -77,7 +77,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 **No build required during development** - Core exports TypeScript source directly (`main: "./src/index.ts"`), Bun's native TS support handles it.
 
 **Functional manager pattern** - Each manager (`packages/core/src/managers/`) exports functions and a namespace object:
-- `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references)
+- `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references, and `deleteBranch` for removing local branches)
 - `docker-manager.ts` - Container orchestration via dockerode
 - `attach-manager.ts` - Docker container attachment via subprocess (uses `docker attach` command directly since dockerode's attach support is broken)
 - `session-manager.ts` - Session CRUD via Drizzle ORM
@@ -115,7 +115,34 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 The main SDK in `packages/core/src/viwo.ts` exposes:
 - `createViwo()` - Factory function returning Viwo instance
 - `start()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → run post-install hooks → init agent
-- `cleanup()` - Removes session: stop containers → remove containers → remove worktree → update status
+- `cleanup()` - Removes session: stop containers → remove containers → remove worktree → delete branch → update status
+
+### Project Configuration (viwo.yml/viwo.yaml)
+
+VIWO automatically detects and loads project-specific configuration from the repository root:
+- **Configuration files**: `viwo.yml` or `viwo.yaml` (checked in this order)
+- **Location**: Must be at the root of the repository
+- **Schema validation**: Validated using Zod schemas in `packages/core/src/schemas.ts`
+- **Supported configuration**:
+  - `postInstall`: Array of shell commands to run after git worktree creation
+    - Commands execute in the worktree directory
+    - Commands run before agent initialization
+    - If any command fails, session initialization fails and error is reported
+    - Example use cases: dependency installation, environment setup, build steps
+
+**Example configuration**:
+```yaml
+postInstall:
+  - npm install
+  - npm run build
+  - cp .env.example .env
+```
+
+**Implementation**:
+- `project-config-manager.ts` handles detection and parsing via YAML library
+- `loadProjectConfig()` reads and validates configuration file
+- `hasProjectConfig()` checks if configuration file exists
+- Post-install hooks execute in `viwo.start()` flow after worktree creation
 
 ### Project Configuration (viwo.yml/viwo.yaml)
 
@@ -211,7 +238,7 @@ Commands in `packages/cli/src/commands/`:
   - Press Ctrl+C to detach from container (container continues running in background)
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
-- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, and runs `git worktree prune` for affected repositories)
+- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
 - `repo` - Repository management (list, add, delete)
 - `config ide` - Configure default IDE preference
   - Interactive list showing available IDEs on the system
