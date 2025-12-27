@@ -144,6 +144,33 @@ postInstall:
 - `hasProjectConfig()` checks if configuration file exists
 - Post-install hooks execute in `viwo.start()` flow after worktree creation
 
+### Project Configuration (viwo.yml/viwo.yaml)
+
+VIWO automatically detects and loads project-specific configuration from the repository root:
+- **Configuration files**: `viwo.yml` or `viwo.yaml` (checked in this order)
+- **Location**: Must be at the root of the repository
+- **Schema validation**: Validated using Zod schemas in `packages/core/src/schemas.ts`
+- **Supported configuration**:
+  - `postInstall`: Array of shell commands to run after git worktree creation
+    - Commands execute in the worktree directory
+    - Commands run before agent initialization
+    - If any command fails, session initialization fails and error is reported
+    - Example use cases: dependency installation, environment setup, build steps
+
+**Example configuration**:
+```yaml
+postInstall:
+  - npm install
+  - npm run build
+  - cp .env.example .env
+```
+
+**Implementation**:
+- `project-config-manager.ts` handles detection and parsing via YAML library
+- `loadProjectConfig()` reads and validates configuration file
+- `hasProjectConfig()` checks if configuration file exists
+- Post-install hooks execute in `viwo.start()` flow after worktree creation
+
 ### Worktrees Storage Configuration
 
 Git worktrees storage location is configurable through the `config-manager.ts`:
