@@ -1,53 +1,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
-import * as readline from 'readline';
 import { viwo, AttachManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
-
-/**
- * Prompts for multiline text input that supports pasting multiple lines.
- * Press Ctrl+D to finish (empty lines are preserved as part of the input).
- */
-const getMultilineInput = async (message: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const lines: string[] = [];
-
-        console.log();
-        console.log(chalk.cyan('?') + ' ' + message);
-        console.log(chalk.gray('  Press Ctrl+D when done (Ctrl+C to cancel)'));
-        console.log();
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true,
-        });
-
-        rl.on('line', (line) => {
-            // Always add the line to our collection
-            // Don't close on empty lines - they might be part of pasted content
-            lines.push(line);
-        });
-
-        rl.on('close', () => {
-            const result = lines.join('\n').trim();
-
-            if (!result) {
-                console.log(chalk.red('✖') + ' Prompt cannot be empty');
-                process.exit(1);
-            }
-
-            resolve(result);
-        });
-
-        rl.on('SIGINT', () => {
-            console.log();
-            reject(new Error('Operation cancelled'));
-        });
-    });
-};
+import { multilineInput } from '../utils/multiline-input';
 
 export const startCommand = new Command('start')
     .description('Initialize a new worktree session with an AI agent')
@@ -128,7 +85,9 @@ export const startCommand = new Command('start')
             }
 
             // Step 3: Get prompt
-            const prompt = await getMultilineInput('Enter your prompt for the AI agent:');
+            const prompt = await multilineInput({
+                message: 'Enter your prompt for the AI agent:',
+            });
 
             // Create session
             const spinner = clack.spinner();
