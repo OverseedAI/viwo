@@ -119,3 +119,11 @@ export const ViwoConfigSchema = z.object({
         .default({ start: 3000, end: 9999 }),
 });
 export type ViwoConfig = z.infer<typeof ViwoConfigSchema>;
+
+/**
+ * Project configuration schemas (from viwo.yml/viwo.yaml)
+ */
+export const ProjectConfigSchema = z.object({
+    postInstall: z.array(z.string()).optional(),
+});
+export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
