@@ -278,6 +278,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                         repoPath: worktreeSession.repoPath,
                         worktreePath: worktreeSession.worktreePath,
                     });
+
+                    // Delete the associated local branch
+                    if (dbSession.branchName) {
+                        await git.deleteBranch({
+                            repoPath: worktreeSession.repoPath,
+                            branchName: dbSession.branchName,
+                            force: true, // Use force to delete unmerged branches
+                        });
+                    }
                 }
 
                 // Update session status in database

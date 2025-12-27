@@ -6,7 +6,7 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 
 export const cleanCommand = new Command('clean')
     .description(
-        'Clean up all completed or errored sessions (removes worktrees and updates status)'
+        'Clean up all completed or errored sessions (removes worktrees, branches, and updates status)'
     )
     .option('--keep-worktree', 'Keep the worktree directories')
     .option('--keep-containers', 'Keep containers running')

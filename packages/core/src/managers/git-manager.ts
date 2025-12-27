@@ -148,6 +148,24 @@ export const pruneWorktrees = async (options: RepoPathOptions): Promise<void> =>
     await gitInstance.raw(['worktree', 'prune']);
 };
 
+export interface DeleteBranchOptions {
+    repoPath: string;
+    branchName: string;
+    force?: boolean;
+}
+
+export const deleteBranch = async (options: DeleteBranchOptions): Promise<void> => {
+    const gitInstance = simpleGit(options.repoPath);
+    try {
+        // Delete the local branch
+        const flag = options.force ? '-D' : '-d';
+        await gitInstance.raw(['branch', flag, options.branchName]);
+    } catch (error) {
+        // If branch doesn't exist or can't be deleted, log warning but don't fail
+        console.warn(`Failed to delete branch ${options.branchName}:`, error);
+    }
+};
+
 export const git = {
     isValidRepository,
     checkValidRepositoryOrThrow,
@@ -159,4 +177,5 @@ export const git = {
     hasUncommittedChanges,
     copyEnvFile,
     pruneWorktrees,
+    deleteBranch,
 };
