@@ -1,0 +1,19 @@
+# Example VIWO project configuration file
+# Place this file at the root of your repository as viwo.yml or viwo.yaml
+
+# Post-install hooks run after git worktree creation and before agent initialization
+# Commands execute in the worktree directory
+# If any command fails, session initialization will fail
+postInstall:
+  # Install dependencies
+  - npm install
+
+  # Build the project
+  - npm run build
+
+  # Copy environment file
+  - cp .env.example .env
+
+  # Any other setup commands your project needs
+  # - docker-compose up -d
+  # - npx prisma generate

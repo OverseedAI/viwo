@@ -26,6 +26,11 @@ import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
+import { loadProjectConfig } from './managers/project-config-manager';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export interface Viwo {
     repo: typeof repo;
@@ -112,6 +117,22 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                         sourceEnvPath: validatedOptions.envFile,
                         targetPath: worktreePath,
                     });
+                }
+
+                // Load project configuration and run post-install hooks
+                const projectConfig = loadProjectConfig({ repoPath });
+                if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
+                    for (const command of projectConfig.postInstall) {
+                        try {
+                            await execAsync(command, { cwd: worktreePath });
+                        } catch (error) {
+                            const errorMessage =
+                                error instanceof Error ? error.message : String(error);
+                            throw new Error(
+                                `Post-install command failed: ${command}\n${errorMessage}`
+                            );
+                        }
+                    }
                 }
 
                 // Initialize agent

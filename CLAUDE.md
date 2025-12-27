@@ -86,6 +86,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `port-manager.ts` - Port allocation via get-port
 - `config-manager.ts` - Configuration management (API keys, IDE preferences, worktrees storage location)
 - `ide-manager.ts` - IDE detection and launching
+- `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
 
@@ -113,8 +114,35 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 
 The main SDK in `packages/core/src/viwo.ts` exposes:
 - `createViwo()` - Factory function returning Viwo instance
-- `init()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → init agent
+- `start()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → run post-install hooks → init agent
 - `cleanup()` - Removes session: stop containers → remove containers → remove worktree → update status
+
+### Project Configuration (viwo.yml/viwo.yaml)
+
+VIWO automatically detects and loads project-specific configuration from the repository root:
+- **Configuration files**: `viwo.yml` or `viwo.yaml` (checked in this order)
+- **Location**: Must be at the root of the repository
+- **Schema validation**: Validated using Zod schemas in `packages/core/src/schemas.ts`
+- **Supported configuration**:
+  - `postInstall`: Array of shell commands to run after git worktree creation
+    - Commands execute in the worktree directory
+    - Commands run before agent initialization
+    - If any command fails, session initialization fails and error is reported
+    - Example use cases: dependency installation, environment setup, build steps
+
+**Example configuration**:
+```yaml
+postInstall:
+  - npm install
+  - npm run build
+  - cp .env.example .env
+```
+
+**Implementation**:
+- `project-config-manager.ts` handles detection and parsing via YAML library
+- `loadProjectConfig()` reads and validates configuration file
+- `hasProjectConfig()` checks if configuration file exists
+- Post-install hooks execute in `viwo.start()` flow after worktree creation
 
 ### Worktrees Storage Configuration
 
@@ -230,6 +258,7 @@ Current test coverage focuses on:
 - **drizzle-orm** - SQLite ORM
 - **simple-git** - Git operations
 - **dockerode** - Docker API
+- **yaml** - YAML parsing for project configuration files
 - **zod** - Runtime validation
 - **commander** - CLI framework
 - **@inquirer/prompts** - Interactive CLI prompts with keyboard navigation
