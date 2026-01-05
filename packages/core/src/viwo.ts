@@ -121,10 +121,16 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 // Load project configuration and run post-install hooks
                 const projectConfig = loadProjectConfig({ repoPath });
+
                 if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
                     for (const command of projectConfig.postInstall) {
                         try {
-                            await execAsync(command, { cwd: worktreePath });
+                            await execAsync(command, {
+                                cwd: worktreePath,
+                                env: {
+                                    VIWO_WORKTREE_PATH: worktreePath,
+                                },
+                            });
                         } catch (error) {
                             const errorMessage =
                                 error instanceof Error ? error.message : String(error);
