@@ -1,13 +1,37 @@
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { repositories, NewRepository, Repository } from '../db-schemas';
+import { repositories, NewRepository, Repository, sessions } from '../db-schemas';
 import { isValidRepository } from './git-manager';
 
 export interface ListRepositoryOptions {
     archived?: boolean;
+    orderByRecentlyUsed?: boolean;
 }
 
-export const listRepositories = (_options: ListRepositoryOptions): Repository[] => {
+export const listRepositories = (options: ListRepositoryOptions): Repository[] => {
+    const { orderByRecentlyUsed = false } = options;
+
+    if (orderByRecentlyUsed) {
+        // Order by most recently used based on session activity
+        const query = db
+            .select({
+                id: repositories.id,
+                name: repositories.name,
+                path: repositories.path,
+                url: repositories.url,
+                createdAt: repositories.createdAt,
+                lastUsedAt: sql<string>`MAX(${sessions.lastActivity})`.as('lastUsedAt'),
+            })
+            .from(repositories)
+            .leftJoin(sessions, eq(repositories.id, sessions.repoId))
+            .groupBy(repositories.id)
+            .orderBy(desc(sql`lastUsedAt`))
+            .all();
+
+        // Return as Repository[] (strip the lastUsedAt field)
+        return query.map(({ lastUsedAt, ...repo }) => repo);
+    }
+
     // TODO: Add archived filtering when schema supports it
     return db.select().from(repositories).all();
 };
