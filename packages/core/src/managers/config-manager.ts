@@ -21,7 +21,7 @@ const deriveKey = (): Buffer => {
 const encrypt = (plaintext: string): string => {
     const key = deriveKey();
     const iv = randomBytes(IV_LENGTH);
-    const cipher = createCipheriv(ALGORITHM, key, iv);
+    const cipher = createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
 
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -45,7 +45,7 @@ const decrypt = (encryptedData: string): string => {
     const iv = Buffer.from(ivHex!, 'hex');
     const authTag = Buffer.from(authTagHex!, 'hex');
 
-    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
     decipher.setAuthTag(authTag);
 
     let decrypted = decipher.update(ciphertext!, 'hex', 'utf8');
@@ -116,7 +116,8 @@ export const getApiKey = (options: GetApiKeyOptions): string | null => {
 
     try {
         return decrypt(encryptedKey);
-    } catch {
+    } catch (e) {
+        console.log('Error decrypting API key:', e);
         return null;
     }
 };
@@ -153,107 +154,107 @@ export const deleteApiKey = (options: DeleteApiKeyOptions): void => {
 };
 
 export const setPreferredIDE = (type: IDEType): void => {
-	const now = new Date().toISOString();
-	const existing = db.select().from(configurations).limit(1).all();
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
 
-	if (existing.length > 0) {
-		// Update existing
-		db.update(configurations)
-			.set({
-				preferredIde: type,
-				updatedAt: now,
-			})
-			.where(eq(configurations.id, existing[0]!.id))
-			.run();
-	} else {
-		// Insert new
-		db.insert(configurations)
-			.values({
-				preferredIde: type,
-				createdAt: now,
-				updatedAt: now,
-			})
-			.run();
-	}
+    if (existing.length > 0) {
+        // Update existing
+        db.update(configurations)
+            .set({
+                preferredIde: type,
+                updatedAt: now,
+            })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        // Insert new
+        db.insert(configurations)
+            .values({
+                preferredIde: type,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .run();
+    }
 };
 
 export const getPreferredIDE = (): IDEType | null => {
-	const config = db.select().from(configurations).limit(1).all();
+    const config = db.select().from(configurations).limit(1).all();
 
-	if (config.length === 0) {
-		return null;
-	}
+    if (config.length === 0) {
+        return null;
+    }
 
-	return (config[0]!.preferredIde as IDEType) || null;
+    return (config[0]!.preferredIde as IDEType) || null;
 };
 
 export const deletePreferredIDE = (): void => {
-	const config = db.select().from(configurations).limit(1).get();
+    const config = db.select().from(configurations).limit(1).get();
 
-	if (!config) {
-		return;
-	}
+    if (!config) {
+        return;
+    }
 
-	db.update(configurations)
-		.set({
-			preferredIde: null,
-			updatedAt: new Date().toISOString(),
-		})
-		.where(eq(configurations.id, config.id))
-		.run();
+    db.update(configurations)
+        .set({
+            preferredIde: null,
+            updatedAt: new Date().toISOString(),
+        })
+        .where(eq(configurations.id, config.id))
+        .run();
 };
 
 export const setWorktreesStorageLocation = (location: string): void => {
-	const now = new Date().toISOString();
-	// Expand tilde (~) to home directory before storing
-	const expandedLocation = expandTilde(location);
-	const existing = db.select().from(configurations).limit(1).all();
+    const now = new Date().toISOString();
+    // Expand tilde (~) to home directory before storing
+    const expandedLocation = expandTilde(location);
+    const existing = db.select().from(configurations).limit(1).all();
 
-	if (existing.length > 0) {
-		// Update existing
-		db.update(configurations)
-			.set({
-				worktreesStorageLocation: expandedLocation,
-				updatedAt: now,
-			})
-			.where(eq(configurations.id, existing[0]!.id))
-			.run();
-	} else {
-		// Insert new
-		db.insert(configurations)
-			.values({
-				worktreesStorageLocation: expandedLocation,
-				createdAt: now,
-				updatedAt: now,
-			})
-			.run();
-	}
+    if (existing.length > 0) {
+        // Update existing
+        db.update(configurations)
+            .set({
+                worktreesStorageLocation: expandedLocation,
+                updatedAt: now,
+            })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        // Insert new
+        db.insert(configurations)
+            .values({
+                worktreesStorageLocation: expandedLocation,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .run();
+    }
 };
 
 export const getWorktreesStorageLocation = (): string | null => {
-	const config = db.select().from(configurations).limit(1).all();
+    const config = db.select().from(configurations).limit(1).all();
 
-	if (config.length === 0) {
-		return null;
-	}
+    if (config.length === 0) {
+        return null;
+    }
 
-	return config[0]!.worktreesStorageLocation || null;
+    return config[0]!.worktreesStorageLocation || null;
 };
 
 export const deleteWorktreesStorageLocation = (): void => {
-	const config = db.select().from(configurations).limit(1).get();
+    const config = db.select().from(configurations).limit(1).get();
 
-	if (!config) {
-		return;
-	}
+    if (!config) {
+        return;
+    }
 
-	db.update(configurations)
-		.set({
-			worktreesStorageLocation: null,
-			updatedAt: new Date().toISOString(),
-		})
-		.where(eq(configurations.id, config.id))
-		.run();
+    db.update(configurations)
+        .set({
+            worktreesStorageLocation: null,
+            updatedAt: new Date().toISOString(),
+        })
+        .where(eq(configurations.id, config.id))
+        .run();
 };
 
 // Namespace export for consistency with other managers

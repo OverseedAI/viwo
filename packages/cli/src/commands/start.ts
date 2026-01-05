@@ -147,7 +147,9 @@ export const startCommand = new Command('start')
                         chalk.dim('───────────────────────────────────────────────────────')
                     );
                     console.log();
-                    clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
+                    clack.outro(
+                        `Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`
+                    );
                     process.exit(0);
                 } catch (attachError) {
                     console.error(
@@ -155,7 +157,9 @@ export const startCommand = new Command('start')
                         attachError instanceof Error ? attachError.message : String(attachError)
                     );
                     console.log();
-                    clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
+                    clack.outro(
+                        `Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`
+                    );
                     process.exit(0);
                 }
             }
