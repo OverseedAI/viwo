@@ -189,7 +189,7 @@ The `attach-manager.ts` provides live output streaming from Docker containers us
 - **Functions**:
   - `attachToContainer()` - Spawns `docker logs -f` subprocess and streams all container output (historical and new)
   - `attachAndWaitForDetach()` - Follows logs and waits for CTRL+C to stop streaming
-- **CLI integration**: The `viwo start` command automatically streams Claude Code container output after initialization, showing all output in real-time. Pressing CTRL+C stops streaming while leaving the container running in the background.
+- **Note**: These functions are available for future use, but currently not used by the CLI commands.
 
 ### Docker State Synchronization
 
@@ -207,8 +207,8 @@ Commands in `packages/cli/src/commands/`:
   - Interactive multiline prompt that supports pasting multiple lines
   - Press Enter on an empty line or Ctrl+D to finish entering prompt
   - Allows users to paste large blocks of text without triggering execution
-  - After initialization, automatically attaches to Claude Code container and streams output in real-time
-  - Press Ctrl+C to detach from container (container continues running in background)
+  - After initialization, displays session details and exits automatically
+  - Container continues running in the background
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
