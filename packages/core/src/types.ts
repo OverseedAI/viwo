@@ -39,10 +39,3 @@ export interface IDEInfo {
     command: string;
     available: boolean;
 }
-
-/**
- * Project configuration from viwo.yml/viwo.yaml
- */
-export interface ProjectConfig {
-    postInstall?: string[];
-}

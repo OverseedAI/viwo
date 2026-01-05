@@ -79,7 +79,6 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 **Functional manager pattern** - Each manager (`packages/core/src/managers/`) exports functions and a namespace object:
 - `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references, and `deleteBranch` for removing local branches)
 - `docker-manager.ts` - Container orchestration via dockerode
-- `attach-manager.ts` - Docker container attachment via subprocess (uses `docker attach` command directly since dockerode's attach support is broken)
 - `session-manager.ts` - Session CRUD via Drizzle ORM
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
@@ -180,16 +179,6 @@ VIWO uses platform-specific Docker socket configuration:
 - **macOS/Linux**: Unix socket at `/var/run/docker.sock`
 
 The `docker-manager.ts` automatically detects the platform via `process.platform` and configures the correct socket path. This ensures Docker connectivity works reliably across all supported operating systems without requiring manual configuration.
-
-### Docker Logs Streaming for Live Output
-
-The `attach-manager.ts` provides live output streaming from Docker containers using the `docker logs -f` command:
-- **Why docker logs instead of attach**: `docker logs -f` shows all output from the beginning and works reliably with TTY containers, unlike `docker attach` which only shows new output from the attachment point
-- **Why subprocess instead of dockerode**: Dockerode's `attach()` API is currently broken/unreliable
-- **Functions**:
-  - `attachToContainer()` - Spawns `docker logs -f` subprocess and streams all container output (historical and new)
-  - `attachAndWaitForDetach()` - Follows logs and waits for CTRL+C to stop streaming
-- **Note**: These functions are available for future use, but currently not used by the CLI commands.
 
 ### Docker State Synchronization
 
