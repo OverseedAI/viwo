@@ -79,7 +79,6 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 **Functional manager pattern** - Each manager (`packages/core/src/managers/`) exports functions and a namespace object:
 - `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references, and `deleteBranch` for removing local branches)
 - `docker-manager.ts` - Container orchestration via dockerode
-- `attach-manager.ts` - Docker container attachment via subprocess (uses `docker attach` command directly since dockerode's attach support is broken)
 - `session-manager.ts` - Session CRUD via Drizzle ORM
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
@@ -181,16 +180,6 @@ VIWO uses platform-specific Docker socket configuration:
 
 The `docker-manager.ts` automatically detects the platform via `process.platform` and configures the correct socket path. This ensures Docker connectivity works reliably across all supported operating systems without requiring manual configuration.
 
-### Docker Logs Streaming for Live Output
-
-The `attach-manager.ts` provides live output streaming from Docker containers using the `docker logs -f` command:
-- **Why docker logs instead of attach**: `docker logs -f` shows all output from the beginning and works reliably with TTY containers, unlike `docker attach` which only shows new output from the attachment point
-- **Why subprocess instead of dockerode**: Dockerode's `attach()` API is currently broken/unreliable
-- **Functions**:
-  - `attachToContainer()` - Spawns `docker logs -f` subprocess and streams all container output (historical and new)
-  - `attachAndWaitForDetach()` - Follows logs and waits for CTRL+C to stop streaming
-- **CLI integration**: The `viwo start` command automatically streams Claude Code container output after initialization, showing all output in real-time. Pressing CTRL+C stops streaming while leaving the container running in the background.
-
 ### Docker State Synchronization
 
 The `docker-manager.ts` provides `syncDockerState()` to keep the database in sync with Docker container states:
@@ -207,8 +196,8 @@ Commands in `packages/cli/src/commands/`:
   - Interactive multiline prompt that supports pasting multiple lines
   - Press Enter on an empty line or Ctrl+D to finish entering prompt
   - Allows users to paste large blocks of text without triggering execution
-  - After initialization, automatically attaches to Claude Code container and streams output in real-time
-  - Press Ctrl+C to detach from container (container continues running in background)
+  - After initialization, displays session details and exits automatically
+  - Container continues running in the background
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)

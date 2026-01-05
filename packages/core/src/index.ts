@@ -21,7 +21,6 @@ export * as AgentManager from './managers/agent-manager';
 export * as PortManager from './managers/port-manager';
 export * as ConfigManager from './managers/config-manager';
 export * as IDEManager from './managers/ide-manager';
-export * as AttachManager from './managers/attach-manager';
 export * as ProjectConfigManager from './managers/project-config-manager';
 
 // Export repository management
