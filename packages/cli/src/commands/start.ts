@@ -37,7 +37,7 @@ export const startCommand = new Command('start')
                     process.exit(1);
                 }
             } else {
-                const repositories = viwo.repo.list({ archived: false });
+                const repositories = viwo.repo.list({ archived: false, orderByRecentlyUsed: true });
 
                 if (repositories.length === 0) {
                     clack.cancel('No repositories found.');
