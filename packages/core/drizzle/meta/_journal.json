@@ -50,6 +50,13 @@
       "when": 1764897221784,
       "tag": "0006_swift_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1767657243125,
+      "tag": "0007_glorious_ironclad",
+      "breakpoints": true
     }
   ]
 }
