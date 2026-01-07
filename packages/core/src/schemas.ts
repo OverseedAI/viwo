@@ -80,8 +80,8 @@ export const InitOptionsSchema = z.object({
     agent: AgentTypeSchema.default('claude-code'),
     branchName: z.string().optional(),
     dockerCompose: z.string().optional(),
-    setupCommands: z.array(z.string()).optional(),
     envFile: z.string().optional(),
+    verbose: z.boolean().default(false),
 });
 export type InitOptions = z.infer<typeof InitOptionsSchema>;
 

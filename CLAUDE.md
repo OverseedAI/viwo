@@ -83,7 +83,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, IDE preferences, worktrees storage location)
+- `config-manager.ts` - Configuration management (API keys, IDE preferences, worktrees storage location, Claude preferences import toggle)
 - `ide-manager.ts` - IDE detection and launching
 - `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
 
@@ -103,9 +103,11 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
   - API keys (encrypted)
   - Preferred IDE
   - Worktrees storage location (supports absolute or relative paths)
+  - Claude preferences import toggle (boolean)
 - **Session storage**: The `sessions` table stores worktree session details including:
   - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
+  - **IMPORTANT**: Never write migration code manually. Always update Drizzle schemas in `packages/core/src/db-schemas/` and run `bun run db:generate` to auto-generate migrations.
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 - **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
 
@@ -161,6 +163,34 @@ Git worktrees storage location is configurable through the `config-manager.ts`:
   - `getWorktreesStorageLocation()` - Get current custom location (null if using default)
   - `deleteWorktreesStorageLocation()` - Reset to default location
 
+### Claude Code Preferences Import
+
+When creating new sessions, VIWO can optionally import user's Claude Code preferences into the Docker container. This allows custom agents, commands, plugins, and settings to be available in containerized sessions.
+
+- **Feature toggle**: Disabled by default, enable via `viwo config claude-preferences`
+- **Source location**: `~/.claude/` on the host machine
+- **Target location**: `/root/.claude/` inside the Docker container
+- **Items imported**:
+  - `agents/` - Custom Claude agents
+  - `commands/` - Custom slash commands
+  - `plugins/` - Installed plugins
+  - `settings.json` - User settings
+- **Implementation**:
+  - Files are **copied** (not bind-mounted) to preserve isolation
+  - Uses Docker's `putArchive()` API to inject a tar archive into containers
+  - Copy happens after container creation but before container starts
+  - Errors during import are logged as warnings but don't fail session creation
+  - Only existing items are copied (missing directories/files are skipped)
+- **Configuration methods** (`config-manager.ts`):
+  - `setImportClaudePreferences(enabled)` - Enable or disable importing
+  - `getImportClaudePreferences()` - Check if importing is enabled (default: false)
+  - `deleteImportClaudePreferences()` - Reset to default (disabled)
+- **Utility module** (`packages/core/src/utils/claude-preferences.ts`):
+  - `getClaudeConfigPath()` - Returns host's Claude config directory path
+  - `detectClaudePreferences()` - Detects which preference items exist
+  - `hasClaudePreferences()` - Checks if any preferences exist to import
+  - `createClaudePreferencesTar()` - Creates tar stream for container injection
+
 ### Container Lifecycle Management
 
 The `agent-manager.ts` implements automatic container cleanup:
@@ -210,6 +240,10 @@ Commands in `packages/cli/src/commands/`:
   - View current worktrees storage location (custom or default)
   - Set custom location (absolute or relative to app data directory)
   - Reset to default location (app data directory)
+- `config claude-preferences` (alias: `config claude`) - Configure Claude Code preferences import
+  - View current setting (enabled/disabled)
+  - Shows what items will be imported from `~/.claude/`
+  - Toggle enable/disable importing
 
 ### Preflight Checks & Version Checking
 
@@ -241,12 +275,14 @@ Current test coverage focuses on:
 - `agent-manager.test.ts` - Claude Code agent initialization (demonstrates test database usage)
 - `prerequisites.test.ts` - Version comparison logic for update checking
 - `formatters.test.ts` - Date formatting utilities
+- `claude-preferences.test.ts` - Claude preferences detection and tar creation
 
 ## Key Dependencies
 
 - **drizzle-orm** - SQLite ORM
 - **simple-git** - Git operations
 - **dockerode** - Docker API
+- **tar-stream** - Tar archive creation for container file injection
 - **yaml** - YAML parsing for project configuration files
 - **zod** - Runtime validation
 - **commander** - CLI framework

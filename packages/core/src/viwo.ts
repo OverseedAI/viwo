@@ -43,7 +43,7 @@ export interface Viwo {
     cleanup: (options: CleanupOptions) => Promise<void>;
     prune: () => Promise<void>;
     sync: () => Promise<SyncDockerStateResult>;
-    migrate: (verbose: boolean) => Promise<void>;
+    migrate: (verbose?: boolean) => Promise<void>;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
@@ -61,22 +61,37 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         async start(options: InitOptions): Promise<WorktreeSession> {
             // Validate options
             const validatedOptions = InitOptionsSchema.parse(options);
+            const verbose = validatedOptions.verbose;
+            const log = (msg: string) => verbose && console.log(`[viwo:start] ${msg}`);
+
+            log('Starting session initialization...');
+            log(`Options: repoId=${validatedOptions.repoId}, agent=${validatedOptions.agent}`);
 
             // Validate repository
+            log('Validating repository...');
             const foundRepo = getRepositoryById({ id: validatedOptions.repoId });
 
             if (!foundRepo) {
                 throw Error('This repository is not yet registered.');
             }
+            log(`Repository found: ${foundRepo.name} at ${foundRepo.path}`);
 
             const repoPath = foundRepo.path;
+            log('Checking if repository is valid...');
             await git.checkValidRepositoryOrThrow({ repoPath });
+            log('Repository is valid');
+
+            log('Checking if Docker is running...');
             await docker.checkDockerRunningOrThrow();
+            log('Docker is running');
 
             const branchName = validatedOptions.branchName || (await git.generateBranchName());
             const worktreePath = joinWorktreesPath(branchName);
+            log(`Branch name: ${branchName}`);
+            log(`Worktree path: ${worktreePath}`);
 
             // Create database session
+            log('Creating database session...');
             const createdSession = await createSession({
                 repoId: foundRepo.id,
                 name: branchName,
@@ -84,6 +99,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 branchName,
                 agent: 'claudecode',
             });
+            log(`Database session created with ID: ${createdSession.id}`);
 
             // Create WorktreeSession for return value
             const sessionId = String(createdSession.id);
@@ -105,32 +121,40 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
             try {
                 // Create worktree
+                log('Creating git worktree...');
                 await git.createWorktree({
                     branchName,
                     repoPath,
                     worktreePath,
                 });
+                log('Git worktree created');
 
                 // Copy environment file if specified
                 if (validatedOptions.envFile) {
+                    log(`Copying env file: ${validatedOptions.envFile}`);
                     await git.copyEnvFile({
                         sourceEnvPath: validatedOptions.envFile,
                         targetPath: worktreePath,
                     });
+                    log('Env file copied');
                 }
 
-                // Load project configuration and run post-install hooks
+                // Load project configuration (viwo.yml file) and run post-install hooks
+                log('Loading project configuration...');
                 const projectConfig = loadProjectConfig({ repoPath });
 
                 if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
+                    log(`Running ${projectConfig.postInstall.length} post-install hooks...`);
                     for (const command of projectConfig.postInstall) {
                         try {
+                            log(`Executing: ${command}`);
                             await execAsync(command, {
                                 cwd: worktreePath,
                                 env: {
                                     VIWO_WORKTREE_PATH: worktreePath,
                                 },
                             });
+                            log(`Command completed: ${command}`);
                         } catch (error) {
                             const errorMessage =
                                 error instanceof Error ? error.message : String(error);
@@ -139,9 +163,13 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                             );
                         }
                     }
+                    log('All post-install hooks completed');
+                } else {
+                    log('No post-install hooks to run');
                 }
 
                 // Initialize agent
+                log('Initializing agent...');
                 await agent.initializeAgent({
                     sessionId: createdSession.id,
                     worktreePath,
@@ -150,16 +178,12 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                         type: 'claude-code',
                         model: 'sonnet',
                     },
+                    verbose,
                 });
-
-                // Run setup commands if specified
-                if (validatedOptions.setupCommands) {
-                    // TODO: Execute setup commands
-                    // For now, we'll just log them
-                    console.log('Setup commands:', validatedOptions.setupCommands.join(', '));
-                }
+                log('Agent initialization complete');
 
                 // Update session status in database
+                log('Updating session status to RUNNING...');
                 updateSession({
                     id: createdSession.id,
                     updates: {
@@ -171,8 +195,12 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 worktreeSession.status = SessionStatus.RUNNING;
                 worktreeSession.lastActivity = new Date();
 
+                log('Session initialization complete');
                 return worktreeSession;
             } catch (error) {
+                log(
+                    `Error during initialization: ${error instanceof Error ? error.message : String(error)}`
+                );
                 // Update session with error in database
                 updateSession({
                     id: createdSession.id,
@@ -333,6 +361,9 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 console.log('Running database migrations...');
             }
             const dbPath = joinDataPath('sqlite.db');
+            if (verbose) {
+                console.log(`Database path: ${dbPath}`);
+            }
             mkdirSync(dirname(dbPath), { recursive: true });
             const sqlite = new Database(dbPath);
             initializeDatabase(sqlite);
