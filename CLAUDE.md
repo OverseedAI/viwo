@@ -230,7 +230,7 @@ Commands in `packages/cli/src/commands/`:
   - Container continues running in the background
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
-- `clean` - Clean up all completed, errored, or stopped sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
+- `clean` - Clean up all completed, errored, stopped, or initializing sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
 - `repo` - Repository management (list, add, delete)
 - `config ide` - Configure default IDE preference
   - Interactive list showing available IDEs on the system
