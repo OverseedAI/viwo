@@ -5,6 +5,7 @@ export const configurations = sqliteTable('configurations', {
     anthropicApiKey: text('anthropic_api_key'),
     preferredIde: text('preferred_ide'),
     worktreesStorageLocation: text('worktrees_storage_location'),
+    importClaudePreferences: integer('import_claude_preferences'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });

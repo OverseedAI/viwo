@@ -35,3 +35,7 @@ export {
 // Export path utilities
 export * from './utils/paths';
 export { AppPaths } from './utils/paths';
+
+// Export Claude preferences utilities
+export * from './utils/claude-preferences';
+export { claudePreferences } from './utils/claude-preferences';
