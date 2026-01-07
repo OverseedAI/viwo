@@ -11,14 +11,8 @@ import {
     startContainer,
     getContainerLogs,
     pullImage,
-    copyToContainer,
 } from './docker-manager';
-import { getApiKey, getImportClaudePreferences } from './config-manager';
-import {
-    hasClaudePreferences,
-    createClaudePreferencesTar,
-    CONTAINER_CLAUDE_PATH,
-} from '../utils/claude-preferences';
+import { getApiKey } from './config-manager';
 
 export interface InitializeAgentOptions {
     sessionId: number;
@@ -96,29 +90,6 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         tty: true,
         openStdin: true,
     });
-
-    // Inject Claude preferences if enabled
-    const importPreferences = getImportClaudePreferences();
-    if (importPreferences) {
-        try {
-            const hasPrefs = await hasClaudePreferences();
-            if (hasPrefs) {
-                const tarStream = await createClaudePreferencesTar();
-                if (tarStream) {
-                    await copyToContainer({
-                        containerId: containerInfo.id,
-                        tarStream,
-                        targetPath: CONTAINER_CLAUDE_PATH,
-                    });
-                }
-            }
-        } catch (error) {
-            // Log warning but don't fail the session
-            console.warn(
-                `Failed to import Claude preferences: ${error instanceof Error ? error.message : String(error)}`
-            );
-        }
-    }
 
     // Log initial prompt to chats table
     const initialChat: NewChat = {

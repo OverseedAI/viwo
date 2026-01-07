@@ -6,15 +6,15 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 
 export const cleanCommand = new Command('clean')
     .description(
-        'Clean up all completed, errored, stopped, or initializing sessions (removes worktrees, branches, and updates status)'
+        'Clean up all completed or errored sessions (removes worktrees, branches, and updates status)'
     )
     .option('--keep-worktree', 'Keep the worktree directories')
     .option('--keep-containers', 'Keep containers running')
     .option('--no-sync', 'Skip syncing Docker state before cleanup')
     .option(
         '--status <status>',
-        'Only clean sessions with specific status (completed, error, stopped, initializing)',
-        'completed,error,stopped,initializing'
+        'Only clean sessions with specific status (completed, error, stopped)',
+        'completed,error,stopped'
     )
     .action(async (options) => {
         try {

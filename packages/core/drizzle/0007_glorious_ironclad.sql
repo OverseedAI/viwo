@@ -1,1 +1,0 @@
-ALTER TABLE `configurations` ADD `import_claude_preferences` integer;

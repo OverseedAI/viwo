@@ -1,7 +1,6 @@
 import Docker from 'dockerode';
 import { exists } from 'node:fs/promises';
 import path from 'path';
-import type { Readable } from 'node:stream';
 import { ContainerInfo, PortMapping, SessionStatus } from '../schemas';
 import { listSessions, updateSession } from './session-manager';
 import { db } from '../db';
@@ -596,25 +595,6 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
     return result;
 };
 
-export interface CopyToContainerOptions {
-    containerId: string;
-    tarStream: Readable;
-    targetPath: string;
-}
-
-/**
- * Copy files to a container using a tar archive stream
- * The container must be created (but doesn't need to be running)
- */
-export const copyToContainer = async (options: CopyToContainerOptions): Promise<void> => {
-    const { containerId, tarStream, targetPath } = options;
-    const container = dockerSdk.getContainer(containerId);
-
-    await container.putArchive(tarStream, {
-        path: targetPath,
-    });
-};
-
 export const docker = {
     isDockerRunning,
     checkDockerRunningOrThrow,
@@ -632,6 +612,5 @@ export const docker = {
     containerExists,
     inspectContainer,
     syncDockerState,
-    copyToContainer,
     CLAUDE_CODE_IMAGE,
 };

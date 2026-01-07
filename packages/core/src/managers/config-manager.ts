@@ -257,55 +257,6 @@ export const deleteWorktreesStorageLocation = (): void => {
         .run();
 };
 
-export const setImportClaudePreferences = (enabled: boolean): void => {
-    const now = new Date().toISOString();
-    const existing = db.select().from(configurations).limit(1).all();
-
-    if (existing.length > 0) {
-        db.update(configurations)
-            .set({
-                importClaudePreferences: enabled ? 1 : 0,
-                updatedAt: now,
-            })
-            .where(eq(configurations.id, existing[0]!.id))
-            .run();
-    } else {
-        db.insert(configurations)
-            .values({
-                importClaudePreferences: enabled ? 1 : 0,
-                createdAt: now,
-                updatedAt: now,
-            })
-            .run();
-    }
-};
-
-export const getImportClaudePreferences = (): boolean => {
-    const config = db.select().from(configurations).limit(1).all();
-
-    if (config.length === 0) {
-        return false;
-    }
-
-    return config[0]!.importClaudePreferences === 1;
-};
-
-export const deleteImportClaudePreferences = (): void => {
-    const config = db.select().from(configurations).limit(1).get();
-
-    if (!config) {
-        return;
-    }
-
-    db.update(configurations)
-        .set({
-            importClaudePreferences: null,
-            updatedAt: new Date().toISOString(),
-        })
-        .where(eq(configurations.id, config.id))
-        .run();
-};
-
 // Namespace export for consistency with other managers
 export const config = {
     setApiKey,
@@ -318,7 +269,4 @@ export const config = {
     setWorktreesStorageLocation,
     getWorktreesStorageLocation,
     deleteWorktreesStorageLocation,
-    setImportClaudePreferences,
-    getImportClaudePreferences,
-    deleteImportClaudePreferences,
 };
