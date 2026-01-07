@@ -9,13 +9,12 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { stat, readdir, readFile } from 'node:fs/promises';
 import * as tar from 'tar-stream';
-import type { Readable } from 'node:stream';
 
 // Items to copy from ~/.claude/
 const CLAUDE_PREFERENCES_ITEMS = ['agents', 'commands', 'plugins', 'settings.json'] as const;
 
 // Target path inside container (Claude Code config location)
-export const CONTAINER_CLAUDE_PATH = '/root/.claude';
+export const CONTAINER_CLAUDE_PATH = '/home/claude/.claude';
 
 export interface ClaudePreferencesItem {
     name: string;
@@ -76,7 +75,11 @@ export const hasClaudePreferences = async (): Promise<boolean> => {
 /**
  * Recursively add directory contents to tar pack
  */
-const addDirectoryToTar = async (pack: tar.Pack, dirPath: string, baseName: string): Promise<void> => {
+const addDirectoryToTar = async (
+    pack: tar.Pack,
+    dirPath: string,
+    baseName: string
+): Promise<void> => {
     const entries = await readdir(dirPath, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -98,10 +101,11 @@ const addDirectoryToTar = async (pack: tar.Pack, dirPath: string, baseName: stri
 };
 
 /**
- * Create a tar archive of Claude preferences for container injection
- * Returns a readable stream of the tar archive
+ * Get Claude preferences as a base64-encoded tar archive
+ * This is passed as an environment variable to the container and decoded by the bootstrap script
+ * Returns null if no preferences exist to import
  */
-export const createClaudePreferencesTar = async (): Promise<Readable | null> => {
+export const getClaudePreferencesBase64 = async (): Promise<string | null> => {
     const items = await detectClaudePreferences();
     const existingItems = items.filter((item) => item.exists);
 
@@ -125,14 +129,22 @@ export const createClaudePreferencesTar = async (): Promise<Readable | null> => 
     }
 
     pack.finalize();
-    return pack;
+
+    // Collect stream into buffer and encode as base64
+    const chunks: Buffer[] = [];
+    for await (const chunk of pack) {
+        chunks.push(Buffer.from(chunk));
+    }
+    const tarBuffer = Buffer.concat(chunks);
+
+    return tarBuffer.toString('base64');
 };
 
 export const claudePreferences = {
     getClaudeConfigPath,
     detectClaudePreferences,
     hasClaudePreferences,
-    createClaudePreferencesTar,
+    getClaudePreferencesBase64,
     CONTAINER_CLAUDE_PATH,
     CLAUDE_PREFERENCES_ITEMS,
 };

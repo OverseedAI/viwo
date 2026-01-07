@@ -3,6 +3,7 @@ import { viwo } from '@viwo/core';
 
 export const migrateCommand = new Command('migrate')
     .description('Runs sqlite database migrations.')
-    .action(() => {
-        viwo.migrate();
+    .option('-v, --verbose', 'Verbose mode')
+    .action((options) => {
+        viwo.migrate(Boolean(options.verbose));
     });

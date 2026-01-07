@@ -610,9 +610,15 @@ export const copyToContainer = async (options: CopyToContainerOptions): Promise<
     const { containerId, tarStream, targetPath } = options;
     const container = dockerSdk.getContainer(containerId);
 
-    await container.putArchive(tarStream, {
-        path: targetPath,
-    });
+    try {
+        await container.putArchive(tarStream, {
+            path: targetPath,
+        });
+    } catch (e) {
+        throw new Error(
+            `Failed to copy files to container: ${e instanceof Error ? e.message : String(e)}`
+        );
+    }
 };
 
 export const docker = {

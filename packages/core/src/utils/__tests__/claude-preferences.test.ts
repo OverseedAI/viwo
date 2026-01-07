@@ -5,7 +5,7 @@ import {
     getClaudeConfigPath,
     detectClaudePreferences,
     hasClaudePreferences,
-    createClaudePreferencesTar,
+    getClaudePreferencesBase64,
     CONTAINER_CLAUDE_PATH,
 } from '../claude-preferences';
 
@@ -18,8 +18,8 @@ describe('claude-preferences', () => {
     });
 
     describe('CONTAINER_CLAUDE_PATH', () => {
-        test('is set to /root/.claude', () => {
-            expect(CONTAINER_CLAUDE_PATH).toBe('/root/.claude');
+        test('is set to /home/claude/.claude', () => {
+            expect(CONTAINER_CLAUDE_PATH).toBe('/home/claude/.claude');
         });
     });
 
@@ -56,17 +56,19 @@ describe('claude-preferences', () => {
         });
     });
 
-    describe('createClaudePreferencesTar', () => {
-        test('returns null or readable stream', async () => {
+    describe('getClaudePreferencesBase64', () => {
+        test('returns null or base64 string', async () => {
             const hasPrefs = await hasClaudePreferences();
-            const tar = await createClaudePreferencesTar();
+            const base64 = await getClaudePreferencesBase64();
 
             if (!hasPrefs) {
-                expect(tar).toBeNull();
+                expect(base64).toBeNull();
             } else {
-                expect(tar).not.toBeNull();
-                // If we got a stream, it should be readable
-                expect(tar).toHaveProperty('read');
+                expect(base64).not.toBeNull();
+                // If we got a string, it should be valid base64
+                expect(typeof base64).toBe('string');
+                // Base64 strings only contain these characters
+                expect(base64).toMatch(/^[A-Za-z0-9+/=]+$/);
             }
         });
     });

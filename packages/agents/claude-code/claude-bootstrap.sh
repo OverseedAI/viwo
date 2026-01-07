@@ -6,6 +6,13 @@ SETTINGS_DIR="${HOME}/.claude"
 
 mkdir -p "$SETTINGS_DIR"
 
+# Extract Claude preferences from base64-encoded tar in environment variable
+if [ -n "${VIWO_CLAUDE_PREFERENCES_TAR_BASE64:-}" ]; then
+  echo "[viwo] Extracting Claude preferences from environment variable..."
+  echo "$VIWO_CLAUDE_PREFERENCES_TAR_BASE64" | base64 -d | tar -xf - -C "$SETTINGS_DIR"
+  echo "[viwo] Claude preferences imported successfully"
+fi
+
 # Optional: approve the current API key (last 20 chars) instead of "*"
 last20=""
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then

@@ -13,8 +13,8 @@ export const startCommand = new Command('start')
     .option('-b, --branch <branch>', 'Custom branch name')
     .option('-c, --compose <path>', 'Path to docker-compose.yml')
     .option('-e, --env <path>', 'Path to .env file to copy')
-    .option('-s, --setup <commands...>', 'Setup commands to run')
     .option('--no-sync', 'Skip syncing Docker state before starting')
+    .option('-v, --verbose', 'Enable verbose debug logging')
     .action(async (options) => {
         try {
             // Run preflight checks before proceeding
@@ -100,7 +100,7 @@ export const startCommand = new Command('start')
                 branchName,
                 dockerCompose: options.compose,
                 envFile: options.env,
-                setupCommands: options.setup,
+                verbose: options.verbose ?? false,
             });
 
             spinner.stop('Session created successfully!');
