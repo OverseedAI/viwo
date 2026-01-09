@@ -308,3 +308,5 @@ Remove-Item "$env:LOCALAPPDATA\Programs\viwo\viwo.exe"
 # Remove from PATH (optional)
 # Open "Edit environment variables for your account" and remove the viwo directory from PATH
 ```
+
+Crowley was here
