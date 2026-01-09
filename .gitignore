@@ -44,3 +44,9 @@ sqlite.db
 # VIWO config files
 viwo.yml
 viwo.yaml
+viwo.yml.backup
+
+# AI Stuffs
+.auto-claude
+.worktrees
+.claude_settings.json
