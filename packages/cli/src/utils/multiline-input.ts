@@ -291,6 +291,57 @@ export const multilineInput = async (options: MultilineInputOptions): Promise<st
         state.cursorCol = getCurrentLine(state).length;
     };
 
+    // Delete word backward (Ctrl+W)
+    const deleteWordBackward = () => {
+        const line = getCurrentLine(state);
+        if (state.cursorCol === 0) {
+            // At start of line, merge with previous line (like backspace)
+            if (state.cursorRow > 0) {
+                const prevLine = state.lines[state.cursorRow - 1] ?? '';
+                state.lines[state.cursorRow - 1] = prevLine + line;
+                state.lines.splice(state.cursorRow, 1);
+                state.cursorRow--;
+                state.cursorCol = prevLine.length;
+            }
+            return;
+        }
+
+        // Find the start of the word to delete
+        let pos = state.cursorCol;
+        // Skip any trailing whitespace first
+        while (pos > 0 && /\s/.test(line[pos - 1] ?? '')) {
+            pos--;
+        }
+        // Then skip non-whitespace (the word itself)
+        while (pos > 0 && !/\s/.test(line[pos - 1] ?? '')) {
+            pos--;
+        }
+
+        state.lines[state.cursorRow] = line.slice(0, pos) + line.slice(state.cursorCol);
+        state.cursorCol = pos;
+    };
+
+    // Delete to line start (Ctrl+U)
+    const deleteToLineStart = () => {
+        const line = getCurrentLine(state);
+        state.lines[state.cursorRow] = line.slice(state.cursorCol);
+        state.cursorCol = 0;
+    };
+
+    // Delete to line end (Ctrl+K)
+    const deleteToLineEnd = () => {
+        const line = getCurrentLine(state);
+        if (state.cursorCol >= line.length && state.cursorRow < state.lines.length - 1) {
+            // At end of line, merge with next line (like delete)
+            const nextLine = state.lines[state.cursorRow + 1] ?? '';
+            state.lines[state.cursorRow] = line + nextLine;
+            state.lines.splice(state.cursorRow + 1, 1);
+        } else {
+            // Delete from cursor to end of line
+            state.lines[state.cursorRow] = line.slice(0, state.cursorCol);
+        }
+    };
+
     return new Promise<string>((resolve, reject) => {
         // Print header
         console.log();
@@ -450,18 +501,51 @@ export const multilineInput = async (options: MultilineInputOptions): Promise<st
                 return;
             }
 
-            // Ctrl+A - start of input
+            // Ctrl+A - start of current line
             if (key.ctrl && key.name === 'a') {
-                state.cursorRow = 0;
-                state.cursorCol = 0;
+                moveCursorToLineStart();
                 render();
                 return;
             }
 
-            // Ctrl+E - end of input
+            // Ctrl+E - end of current line
             if (key.ctrl && key.name === 'e') {
-                state.cursorRow = state.lines.length - 1;
-                state.cursorCol = getCurrentLine(state).length;
+                moveCursorToLineEnd();
+                render();
+                return;
+            }
+
+            // Ctrl+B - move cursor left
+            if (key.ctrl && key.name === 'b') {
+                moveCursorLeft();
+                render();
+                return;
+            }
+
+            // Ctrl+F - move cursor right
+            if (key.ctrl && key.name === 'f') {
+                moveCursorRight();
+                render();
+                return;
+            }
+
+            // Ctrl+W - delete word backward
+            if (key.ctrl && key.name === 'w') {
+                deleteWordBackward();
+                render();
+                return;
+            }
+
+            // Ctrl+U - delete to line start
+            if (key.ctrl && key.name === 'u') {
+                deleteToLineStart();
+                render();
+                return;
+            }
+
+            // Ctrl+K - delete to line end
+            if (key.ctrl && key.name === 'k') {
+                deleteToLineEnd();
                 render();
                 return;
             }
