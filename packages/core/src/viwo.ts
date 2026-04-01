@@ -123,11 +123,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 const projectConfig = loadProjectConfig({ repoPath });
 
                 if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
+                    const userShell = process.env.SHELL || '/bin/sh';
+
                     for (const command of projectConfig.postInstall) {
                         try {
                             await execAsync(command, {
                                 cwd: worktreePath,
+                                shell: userShell,
                                 env: {
+                                    ...process.env,
                                     VIWO_WORKTREE_PATH: worktreePath,
                                 },
                             });
