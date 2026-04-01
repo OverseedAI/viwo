@@ -27,6 +27,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
 import { loadProjectConfig } from './managers/project-config-manager';
+import { getPreferredModel } from './managers/config-manager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -148,7 +149,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     config: {
                         initialPrompt: validatedOptions.prompt,
                         type: 'claude-code',
-                        model: 'sonnet',
+                        model: getPreferredModel() ?? 'sonnet',
                     },
                 });
 

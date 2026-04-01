@@ -12,6 +12,11 @@ export enum SessionStatus {
 }
 
 /**
+ * Supported Claude model types
+ */
+export type ModelType = 'sonnet' | 'opus' | 'haiku';
+
+/**
  * Supported IDE types
  */
 export type IDEType =

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { select, input } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { IDEManager, ConfigManager, type IDEType, type IDEInfo, AppPaths } from '@viwo/core';
+import { IDEManager, ConfigManager, type IDEType, type IDEInfo, type ModelType, AppPaths } from '@viwo/core';
 import { isAbsolute } from 'path';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 
@@ -342,7 +342,127 @@ const worktreesCommand = new Command('worktrees')
 		}
 	});
 
+const MODEL_DISPLAY_NAMES: Record<ModelType, string> = {
+	sonnet: 'Sonnet',
+	opus: 'Opus',
+	haiku: 'Haiku',
+};
+
+const runModelConfig = async (): Promise<void> => {
+	try {
+		await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+		console.clear();
+		console.log();
+		console.log(chalk.bold.cyan('Model Configuration'));
+		console.log(chalk.gray('═'.repeat(70)));
+		console.log();
+
+		const currentModel = ConfigManager.getPreferredModel();
+
+		console.log(chalk.bold('Current Model'));
+		if (currentModel) {
+			console.log(chalk.gray('  ') + chalk.green(MODEL_DISPLAY_NAMES[currentModel]));
+		} else {
+			console.log(chalk.gray('  ') + chalk.yellow('Default: ') + chalk.white('Sonnet'));
+		}
+		console.log();
+		console.log(chalk.gray('═'.repeat(70)));
+		console.log();
+
+		const models: ModelType[] = ['sonnet', 'opus', 'haiku'];
+
+		const choices = models.map((model) => ({
+			name:
+				model === currentModel
+					? `${MODEL_DISPLAY_NAMES[model]} ${chalk.green('(current)')}`
+					: MODEL_DISPLAY_NAMES[model],
+			value: model as string,
+		}));
+
+		choices.push({
+			name: chalk.gray('─'.repeat(70)),
+			value: '__separator__',
+		});
+
+		choices.push({
+			name: chalk.yellow('Reset to default (Sonnet)'),
+			value: '__reset__',
+		});
+
+		choices.push({
+			name: chalk.gray('❌ Cancel'),
+			value: '__cancel__',
+		});
+
+		const selection = await select<string>({
+			message: 'Select your preferred model:',
+			choices,
+			pageSize: 10,
+		});
+
+		if (selection === '__cancel__' || selection === '__separator__') {
+			console.log();
+			console.log(chalk.gray('No changes made'));
+			console.log();
+			return;
+		}
+
+		if (selection === '__reset__') {
+			if (!currentModel) {
+				console.log();
+				console.log(chalk.yellow('Already using default model'));
+				console.log();
+				return;
+			}
+
+			ConfigManager.deletePreferredModel();
+			console.log();
+			console.log(chalk.green('✓ Model reset to default (Sonnet)'));
+			console.log();
+			return;
+		}
+
+		const selectedModel = selection as ModelType;
+
+		if (selectedModel === currentModel) {
+			console.log();
+			console.log(chalk.yellow(`${MODEL_DISPLAY_NAMES[selectedModel]} is already your preferred model`));
+			console.log();
+			return;
+		}
+
+		ConfigManager.setPreferredModel(selectedModel);
+		console.log();
+		console.log(chalk.green(`✓ Set ${MODEL_DISPLAY_NAMES[selectedModel]} as preferred model`));
+		console.log();
+	} catch (error) {
+		if ((error as any).name === 'ExitPromptError') {
+			console.log();
+			console.log(chalk.gray('Operation cancelled'));
+			console.log();
+			process.exit(0);
+		}
+		throw error;
+	}
+};
+
+const modelCommand = new Command('model')
+	.description('Configure preferred Claude model')
+	.action(async () => {
+		try {
+			await runModelConfig();
+		} catch (error) {
+			console.error(
+				chalk.red('Configuration failed:'),
+				error instanceof Error ? error.message : String(error)
+			);
+			process.exit(1);
+		}
+	});
+
 export const configCommand = new Command('config')
 	.description('Manage VIWO configuration')
 	.addCommand(ideCommand)
-	.addCommand(worktreesCommand);
+	.addCommand(worktreesCommand)
+	.addCommand(modelCommand);

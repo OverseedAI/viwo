@@ -3,7 +3,7 @@ import { hostname, userInfo } from 'os';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
-import type { IDEType } from '../types.js';
+import type { IDEType, ModelType } from '../types.js';
 import { expandTilde } from '../utils/paths.js';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -204,6 +204,55 @@ export const deletePreferredIDE = (): void => {
         .run();
 };
 
+export const setPreferredModel = (model: ModelType): void => {
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({
+                modelPreference: model,
+                updatedAt: now,
+            })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({
+                modelPreference: model,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .run();
+    }
+};
+
+export const getPreferredModel = (): ModelType | null => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) {
+        return null;
+    }
+
+    return (config[0]!.modelPreference as ModelType) || null;
+};
+
+export const deletePreferredModel = (): void => {
+    const config = db.select().from(configurations).limit(1).get();
+
+    if (!config) {
+        return;
+    }
+
+    db.update(configurations)
+        .set({
+            modelPreference: null,
+            updatedAt: new Date().toISOString(),
+        })
+        .where(eq(configurations.id, config.id))
+        .run();
+};
+
 export const setWorktreesStorageLocation = (location: string): void => {
     const now = new Date().toISOString();
     // Expand tilde (~) to home directory before storing
@@ -266,6 +315,9 @@ export const config = {
     setPreferredIDE,
     getPreferredIDE,
     deletePreferredIDE,
+    setPreferredModel,
+    getPreferredModel,
+    deletePreferredModel,
     setWorktreesStorageLocation,
     getWorktreesStorageLocation,
     deleteWorktreesStorageLocation,

@@ -121,5 +121,12 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`sessions\` ADD \`containerOutput\` text;
         `
+    },
+    {
+        version: 8,
+        name: 'gentle_star_lord',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`model_preference\` text;
+        `
     }
 ];
