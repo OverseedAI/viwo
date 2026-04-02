@@ -1,65 +1,119 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
-import { ConfigManager } from '@viwo/core';
+import { ConfigManager, CredentialManager } from '@viwo/core';
 
-const PROVIDERS = [
+const AUTH_METHODS = [
     {
-        value: 'anthropic' as const,
-        label: 'Anthropic',
-        hint: 'Claude API key',
+        value: 'oauth' as const,
+        label: 'Use Claude subscription',
+        hint: 'Auto-detect from Claude Code login (Max, Pro, Teams)',
+    },
+    {
+        value: 'api-key' as const,
+        label: 'Use Anthropic API key',
+        hint: 'Enter an sk-ant-... key manually',
     },
 ];
 
+const configureOAuth = async (): Promise<void> => {
+    const spinner = clack.spinner();
+    spinner.start('Detecting Claude subscription credentials...');
+
+    const summary = await CredentialManager.getCredentialSummary();
+
+    if (!summary) {
+        spinner.stop('No Claude subscription detected.');
+        clack.log.error(
+            'Could not find Claude Code OAuth credentials.\n' +
+                '  Make sure you have Claude Code installed and logged in.\n' +
+                '  Run "claude" on your host to authenticate first.'
+        );
+        return;
+    }
+
+    spinner.stop('Claude subscription detected!');
+
+    clack.log.info(
+        [
+            `Email: ${chalk.cyan(summary.emailAddress)}`,
+            summary.organizationName ? `Organization: ${chalk.cyan(summary.organizationName)}` : null,
+            summary.subscriptionType ? `Subscription: ${chalk.cyan(summary.subscriptionType)}` : null,
+            `Token expires: ${chalk.cyan(summary.expiresAt.toLocaleString())}${summary.tokenExpired ? chalk.yellow(' (expired - will refresh automatically)') : ''}`,
+        ]
+            .filter(Boolean)
+            .join('\n')
+    );
+
+    const confirmed = await clack.confirm({
+        message: 'Use this subscription for VIWO sessions?',
+    });
+
+    if (clack.isCancel(confirmed) || !confirmed) {
+        clack.cancel('Operation cancelled.');
+        process.exit(0);
+    }
+
+    ConfigManager.setAuthMethod('oauth');
+    clack.log.success('Authentication method set to Claude subscription.');
+    clack.log.info('Credentials will be read from your Claude Code login at each session start.');
+};
+
+const configureApiKey = async (): Promise<void> => {
+    const apiKey = await clack.password({
+        message: 'Enter your Anthropic API key',
+        validate: (value) => {
+            if (!value || !value.trim()) {
+                return 'API key cannot be empty';
+            }
+            if (!value.startsWith('sk-ant-')) {
+                return 'Anthropic API keys should start with "sk-ant-"';
+            }
+        },
+    });
+
+    if (clack.isCancel(apiKey)) {
+        clack.cancel('Operation cancelled.');
+        process.exit(0);
+    }
+
+    const spinner = clack.spinner();
+    spinner.start('Saving API key...');
+
+    await ConfigManager.setApiKey({ provider: 'anthropic', key: apiKey });
+    ConfigManager.setAuthMethod('api-key');
+
+    spinner.stop('API key saved successfully!');
+};
+
 export const authCommand = new Command('auth')
-    .description('Configure API keys for AI providers')
+    .description('Configure authentication for AI providers')
     .action(async () => {
         try {
             clack.intro(chalk.bgCyan(' viwo auth '));
 
-            // Step 1: Select provider
-            const selectedProvider = await clack.select({
-                message: 'Select an API provider to configure',
-                options: PROVIDERS.map((provider) => ({
-                    label: provider.label,
-                    value: provider.value,
-                    hint: provider.hint,
+            const currentMethod = ConfigManager.getAuthMethod();
+            clack.log.info(`Current auth method: ${chalk.cyan(currentMethod)}`);
+
+            const selectedMethod = await clack.select({
+                message: 'Select authentication method',
+                options: AUTH_METHODS.map((method) => ({
+                    label: method.label,
+                    value: method.value,
+                    hint: method.hint,
                 })),
             });
 
-            if (clack.isCancel(selectedProvider)) {
+            if (clack.isCancel(selectedMethod)) {
                 clack.cancel('Operation cancelled.');
                 process.exit(0);
             }
 
-            // Step 2: Get API key with masked input
-            const apiKey = await clack.password({
-                message: `Enter your ${PROVIDERS.find((p) => p.value === selectedProvider)?.label} API key`,
-                validate: (value) => {
-                    if (!value || !value.trim()) {
-                        return 'API key cannot be empty';
-                    }
-                    if (selectedProvider === 'anthropic' && !value.startsWith('sk-ant-')) {
-                        return 'Anthropic API keys should start with "sk-ant-"';
-                    }
-                },
-            });
-
-            if (clack.isCancel(apiKey)) {
-                clack.cancel('Operation cancelled.');
-                process.exit(0);
+            if (selectedMethod === 'oauth') {
+                await configureOAuth();
+            } else {
+                await configureApiKey();
             }
-
-            // Step 3: Save the API key
-            const spinner = clack.spinner();
-            spinner.start('Saving API key...');
-
-            await ConfigManager.setApiKey({
-                provider: selectedProvider,
-                key: apiKey,
-            });
-
-            spinner.stop('API key saved successfully!');
 
             clack.outro(chalk.green('Authentication configured!'));
         } catch (error) {

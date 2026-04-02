@@ -121,5 +121,12 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`sessions\` ADD \`containerOutput\` text;
         `
+    },
+    {
+        version: 8,
+        name: 'gentle_oauth_support',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`auth_method\` text DEFAULT 'api-key';
+        `
     }
 ];

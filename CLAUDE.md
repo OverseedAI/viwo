@@ -83,7 +83,8 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, IDE preferences, worktrees storage location)
+- `config-manager.ts` - Configuration management (API keys, auth method, IDE preferences, worktrees storage location)
+- `credential-manager.ts` - OAuth credential extraction from host system (macOS Keychain, Linux credential files)
 - `ide-manager.ts` - IDE detection and launching
 - `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
 
@@ -101,6 +102,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - **Tables**: repositories, sessions, chats, configurations
 - **Configuration storage**: The `configurations` table stores user preferences including:
   - API keys (encrypted)
+  - Auth method (`'api-key'` or `'oauth'`)
   - Preferred IDE
   - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
@@ -161,6 +163,21 @@ Git worktrees storage location is configurable through the `config-manager.ts`:
   - `getWorktreesStorageLocation()` - Get current custom location (null if using default)
   - `deleteWorktreesStorageLocation()` - Reset to default location
 
+### Authentication
+
+VIWO supports two authentication methods, configured via `viwo auth`:
+
+- **API Key** (`auth_method = 'api-key'`): Traditional Anthropic API key (`sk-ant-api...`). Stored encrypted in the SQLite database. Passed to Docker container as `ANTHROPIC_API_KEY` env var.
+
+- **OAuth / Claude Subscription** (`auth_method = 'oauth'`): For Claude Max, Pro, and Teams users. Credentials are extracted from the host's Claude Code installation at each session start (not stored in VIWO's database):
+  - **macOS**: Read from Keychain service `"Claude Code-credentials"` via `security` CLI
+  - **Linux**: Read from `~/.claude/.credentials.json`
+  - Passed to container as `VIWO_OAUTH_CREDENTIALS` and `VIWO_OAUTH_ACCOUNT` env vars
+  - The bootstrap script (`claude-bootstrap.sh`) writes them to `~/.claude/.credentials.json` inside the container, which Claude Code reads natively on Linux
+  - Access tokens expire but Claude Code auto-refreshes using the refresh token
+
+The `credential-manager.ts` handles host credential extraction, and `config-manager.ts` stores the auth method preference.
+
 ### Container Lifecycle Management
 
 The `agent-manager.ts` implements automatic container cleanup:
@@ -201,6 +218,10 @@ Commands in `packages/cli/src/commands/`:
 - `list` - List all sessions in interactive mode
   - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `clean` - Clean up all completed, errored, stopped, or initializing sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
+- `auth` - Configure authentication method
+  - Choose between Claude subscription (OAuth auto-detect) or Anthropic API key
+  - OAuth mode detects credentials from host's Claude Code installation
+  - Displays subscription details (email, org, expiry) for confirmation
 - `repo` - Repository management (list, add, delete)
 - `config ide` - Configure default IDE preference
   - Interactive list showing available IDEs on the system
@@ -239,6 +260,7 @@ Current test coverage focuses on:
 - `git-manager.test.ts` - Branch name generation, repo validation, worktree pruning
 - `docker-manager.test.ts` - Docker daemon status
 - `agent-manager.test.ts` - Claude Code agent initialization (demonstrates test database usage)
+- `credential-manager.test.ts` - OAuth token expiration, credential schema validation
 - `prerequisites.test.ts` - Version comparison logic for update checking
 - `formatters.test.ts` - Date formatting utilities
 

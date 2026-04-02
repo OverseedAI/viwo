@@ -127,3 +127,27 @@ export const ProjectConfigSchema = z.object({
     postInstall: z.array(z.string()).optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
+
+/**
+ * Authentication schemas
+ */
+export const AuthMethodSchema = z.enum(['api-key', 'oauth']);
+
+export const OAuthCredentialsSchema = z.object({
+    accessToken: z.string().startsWith('sk-ant-oat'),
+    refreshToken: z.string().startsWith('sk-ant-ort'),
+    expiresAt: z.number(),
+    scopes: z.array(z.string()),
+    subscriptionType: z.string().optional(),
+    rateLimitTier: z.string().optional(),
+});
+
+export const OAuthAccountInfoSchema = z.object({
+    accountUuid: z.string(),
+    emailAddress: z.string(),
+    organizationUuid: z.string().optional(),
+    hasExtraUsageEnabled: z.boolean().optional(),
+    billingType: z.string().optional(),
+    displayName: z.string().optional(),
+    organizationName: z.string().optional(),
+});
