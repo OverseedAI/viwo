@@ -8,7 +8,7 @@ export interface ListRepositoryOptions {
     orderByRecentlyUsed?: boolean;
 }
 
-export const listRepositories = (options: ListRepositoryOptions): Repository[] => {
+export const listRepositories = (options: ListRepositoryOptions = {}): Repository[] => {
     const { orderByRecentlyUsed = false } = options;
 
     if (orderByRecentlyUsed) {
@@ -30,7 +30,7 @@ export const listRepositories = (options: ListRepositoryOptions): Repository[] =
             .all();
 
         // Return as Repository[] (strip the lastUsedAt field)
-        return query.map(({ lastUsedAt, ...repo }) => repo);
+        return query.map(({ lastUsedAt: _lastUsedAt, ...repo }) => repo);
     }
 
     // TODO: Add archived filtering when schema supports it

@@ -32,7 +32,16 @@ export default [
         },
     },
     {
-        ignores: ['node_modules', 'dist', 'build', '.turbo', 'coverage'],
+        ignores: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/build/**',
+            '**/.turbo/**',
+            '**/coverage/**',
+            '.worktrees/**',
+            'packages/core/drizzle/**',
+            'packages/core/src/migrations/**',
+        ],
     },
     prettier,
 ];

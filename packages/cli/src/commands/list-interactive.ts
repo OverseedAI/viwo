@@ -56,7 +56,9 @@ const displaySessionDetails = async (session: WorktreeSession) => {
         const maxPreviewLength = 500;
         if (output.length > maxPreviewLength) {
             console.log(output.substring(0, maxPreviewLength));
-            console.log(chalk.yellow(`\n... (${output.length - maxPreviewLength} more characters)`));
+            console.log(
+                chalk.yellow(`\n... (${output.length - maxPreviewLength} more characters)`)
+            );
             console.log(chalk.gray('  Full output stored in database'));
         } else {
             console.log(output);
@@ -212,10 +214,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
                 console.clear();
                 console.log();
                 console.log(chalk.yellow('No sessions found.'));
-                console.log(
-                    chalk.gray('Create a new session with: ') +
-                        chalk.cyan('viwo start')
-                );
+                console.log(chalk.gray('Create a new session with: ') + chalk.cyan('viwo start'));
                 console.log();
                 break;
             }
@@ -226,23 +225,23 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             console.log(chalk.gray('Use arrow keys to navigate, Enter to select'));
             console.log();
 
-            const choices = sessions.map((session) => ({
+            const sessionChoices = sessions.map((session) => ({
                 name: `${getStatusBadge(session.status)} ${session.branchName.padEnd(40)} ${chalk.gray(formatDate(session.createdAt))}`,
                 value: session.id,
                 description: `${session.agent.type} | ${session.id.substring(0, 12)}`,
             }));
 
-            choices.push(new Separator(chalk.gray('─'.repeat(70))));
-
-            choices.push({
-                name: chalk.gray('❌ Exit'),
-                value: '__exit__',
-                description: 'Exit interactive mode',
-            });
-
             const selectedId = await select({
                 message: `Select a session (${sessions.length} total):`,
-                choices,
+                choices: [
+                    ...sessionChoices,
+                    new Separator(chalk.gray('─'.repeat(70))),
+                    {
+                        name: chalk.gray('❌ Exit'),
+                        value: '__exit__',
+                        description: 'Exit interactive mode',
+                    },
+                ],
                 pageSize: 15,
             });
 
@@ -272,7 +271,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
         console.log(chalk.gray('Goodbye! 👋'));
         console.log();
     } catch (error) {
-        if ((error as any).name === 'ExitPromptError') {
+        if (error instanceof Error && error.name === 'ExitPromptError') {
             // User pressed Ctrl+C
             console.log();
             console.log(chalk.gray('Goodbye! 👋'));

@@ -12,7 +12,7 @@ export const isValidRepository = async (options: RepoPathOptions): Promise<boole
         const gitInstance = simpleGit(options.repoPath);
         await gitInstance.status();
         return true;
-    } catch (error) {
+    } catch {
         return false;
     }
 };
@@ -98,7 +98,7 @@ export const removeWorktree = async (options: RemoveWorktreeOptions): Promise<vo
     try {
         // Remove the worktree
         await gitInstance.raw(['worktree', 'remove', options.worktreePath, '--force']);
-    } catch (error) {
+    } catch {
         // If the worktree doesn't exist in git, just remove the directory
         if (await exists(options.worktreePath)) {
             await rm(options.worktreePath, { recursive: true, force: true });

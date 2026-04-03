@@ -49,11 +49,13 @@ export const isVersionOutdated = (current: string, latest: string): boolean => {
  */
 const getLatestVersion = async (): Promise<string | null> => {
     try {
-        const response = await fetch('https://api.github.com/repos/OverseedAI/viwo/releases/latest');
+        const response = await fetch(
+            'https://api.github.com/repos/OverseedAI/viwo/releases/latest'
+        );
         if (!response.ok) {
             return null;
         }
-        const data = await response.json();
+        const data = (await response.json()) as { tag_name?: string };
         // tag_name is in format "v0.1.2", remove the 'v' prefix
         const tagName = data.tag_name || null;
         return tagName ? tagName.replace(/^v/, '') : null;
@@ -111,9 +113,7 @@ export interface PrerequisiteOptions {
  * Shows a warning if a newer version is available.
  * Runs database migrations to ensure the database is up to date.
  */
-export const preflightChecksOrExit = async (
-    options: PrerequisiteOptions = {}
-): Promise<void> => {
+export const preflightChecksOrExit = async (options: PrerequisiteOptions = {}): Promise<void> => {
     const { requireGit = true, requireDocker = true } = options;
 
     // Run database migrations first to ensure DB is up to date
@@ -155,10 +155,18 @@ export const preflightChecksOrExit = async (
         // Show OS-specific install command
         const platform = process.platform;
         if (platform === 'win32') {
-            console.log(chalk.cyan('  irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex'));
+            console.log(
+                chalk.cyan(
+                    '  irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex'
+                )
+            );
         } else {
             // macOS and Linux
-            console.log(chalk.cyan('  curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash'));
+            console.log(
+                chalk.cyan(
+                    '  curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash'
+                )
+            );
         }
 
         console.log();
@@ -185,9 +193,7 @@ export const preflightChecksOrExit = async (
     if (!gitInstalled) {
         console.log(chalk.cyan('Git:'));
         console.log(
-            chalk.gray(
-                '  Git is not installed or not available in your PATH. Please install Git:'
-            )
+            chalk.gray('  Git is not installed or not available in your PATH. Please install Git:')
         );
         console.log(chalk.gray('  → https://git-scm.com/downloads'));
         console.log();
@@ -196,7 +202,9 @@ export const preflightChecksOrExit = async (
     if (!dockerRunning) {
         console.log(chalk.cyan('Docker:'));
         console.log(
-            chalk.gray('  Docker daemon is not running. Please start Docker Desktop or Docker Engine:')
+            chalk.gray(
+                '  Docker daemon is not running. Please start Docker Desktop or Docker Engine:'
+            )
         );
         console.log(chalk.gray('  → https://docs.docker.com/get-docker/'));
         console.log();

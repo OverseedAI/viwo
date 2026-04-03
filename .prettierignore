@@ -3,6 +3,7 @@ dist
 build
 .turbo
 coverage
+.worktrees
 *.log
 .DS_Store
 package.json

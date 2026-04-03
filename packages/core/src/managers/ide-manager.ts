@@ -77,10 +77,7 @@ const IDE_CONFIGS: IDEConfig[] = [
         name: 'IntelliJ IDEA Ultimate',
         command: 'idea',
         paths: {
-            darwin: [
-                '/Applications/IntelliJ IDEA.app',
-                '/Applications/IntelliJ IDEA Ultimate.app',
-            ],
+            darwin: ['/Applications/IntelliJ IDEA.app', '/Applications/IntelliJ IDEA Ultimate.app'],
             linux: [
                 '/opt/jetbrains/idea/bin/idea.sh',
                 `${process.env.HOME}/.local/share/JetBrains/Toolbox/apps/IDEA-U/bin/idea.sh`,
@@ -349,7 +346,7 @@ export const openInIDE = async (type: IDEType, targetPath: string): Promise<void
         // Note: We use the `execCommand` we resolved earlier, which might be
         // '/usr/local/bin/code' if it wasn't in PATH but exists on disk.
         await $`${execCommand} "${absolutePath}"`;
-    } catch (error) {
+    } catch {
         throw new Error(`Failed to launch ${config.name}`);
     }
 };

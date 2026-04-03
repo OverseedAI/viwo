@@ -25,6 +25,11 @@ export const loadProjectConfig = (options: LoadProjectConfigOptions): ProjectCon
                 const fileContent = readFileSync(configPath, 'utf-8');
                 const parsed = YAML.parse(fileContent);
 
+                // Empty YAML files parse to null — treat as empty config
+                if (parsed === null || parsed === undefined) {
+                    return {};
+                }
+
                 // Validate with Zod schema
                 const validated = ProjectConfigSchema.parse(parsed);
                 return validated;

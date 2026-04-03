@@ -4,7 +4,7 @@ import { generateBranchName, isValidRepository } from '../git-manager';
 describe('git-manager', () => {
     describe('initializing the repository', () => {
         test('detects valid git repository', async () => {
-            const isValid = await isValidRepository({ repoPath: '/Users/hal/overseed/viwo' });
+            const isValid = await isValidRepository({ repoPath: process.cwd() });
 
             expect(isValid).toBe(true);
         });

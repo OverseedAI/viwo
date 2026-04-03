@@ -37,8 +37,12 @@ const configureOAuth = async (): Promise<void> => {
     clack.log.info(
         [
             `Email: ${chalk.cyan(summary.emailAddress)}`,
-            summary.organizationName ? `Organization: ${chalk.cyan(summary.organizationName)}` : null,
-            summary.subscriptionType ? `Subscription: ${chalk.cyan(summary.subscriptionType)}` : null,
+            summary.organizationName
+                ? `Organization: ${chalk.cyan(summary.organizationName)}`
+                : null,
+            summary.subscriptionType
+                ? `Subscription: ${chalk.cyan(summary.subscriptionType)}`
+                : null,
             `Token expires: ${chalk.cyan(summary.expiresAt.toLocaleString())}${summary.tokenExpired ? chalk.yellow(' (expired - will refresh automatically)') : ''}`,
         ]
             .filter(Boolean)

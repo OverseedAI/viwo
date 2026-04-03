@@ -44,12 +44,12 @@ export interface Viwo {
     cleanup: (options: CleanupOptions) => Promise<void>;
     prune: () => Promise<void>;
     sync: () => Promise<SyncDockerStateResult>;
-    migrate: (verbose: boolean) => Promise<void>;
+    migrate: (verbose?: boolean) => Promise<void>;
 }
 
 export function createViwo(config?: Partial<ViwoConfig>): Viwo {
     // Merge with defaults
-    const viwoConfig = ViwoConfigSchema.parse(config || {});
+    ViwoConfigSchema.parse(config || {});
 
     return {
         repo,
@@ -325,7 +325,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         },
 
         async prune() {
-            const erroredSessions = viwo.session.list({ status: SessionStatus.ERROR });
+            // TODO: implement prune logic for errored sessions
         },
 
         /**

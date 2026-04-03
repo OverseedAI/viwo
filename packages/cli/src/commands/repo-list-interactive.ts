@@ -202,7 +202,7 @@ export const runInteractiveRepoList = async () => {
             console.log(chalk.gray('Use arrow keys to navigate, Enter to select'));
             console.log();
 
-            const choices = repositories.map((repo) => ({
+            const repoChoices = repositories.map((repo) => ({
                 name: `${repo.name.padEnd(30)} ${chalk.gray(repo.path)}`,
                 value: repo.id,
                 description: repo.createdAt
@@ -210,23 +210,22 @@ export const runInteractiveRepoList = async () => {
                     : `ID: ${repo.id}`,
             }));
 
-            choices.push(new Separator(chalk.gray('─'.repeat(70))));
-
-            choices.push({
-                name: chalk.gray('➕ Add new repository'),
-                value: -888888, // Use special number for add action
-                description: 'Add a new repository to VIWO',
-            });
-
-            choices.push({
-                name: chalk.gray('❌ Exit'),
-                value: -777777, // Use special number for exit
-                description: 'Exit interactive mode',
-            });
-
             const selectedId = await select({
                 message: `Select a repository (${repositories.length} total):`,
-                choices,
+                choices: [
+                    ...repoChoices,
+                    new Separator(chalk.gray('─'.repeat(70))),
+                    {
+                        name: chalk.gray('➕ Add new repository'),
+                        value: -888888,
+                        description: 'Add a new repository to VIWO',
+                    },
+                    {
+                        name: chalk.gray('❌ Exit'),
+                        value: -777777,
+                        description: 'Exit interactive mode',
+                    },
+                ],
                 pageSize: 15,
             });
 
@@ -268,7 +267,7 @@ export const runInteractiveRepoList = async () => {
         console.log(chalk.gray('Goodbye! 👋'));
         console.log();
     } catch (error) {
-        if ((error as any).name === 'ExitPromptError') {
+        if (error instanceof Error && error.name === 'ExitPromptError') {
             // User pressed Ctrl+C
             console.log();
             console.log(chalk.gray('Goodbye! 👋'));
