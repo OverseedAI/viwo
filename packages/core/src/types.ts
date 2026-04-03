@@ -46,6 +46,11 @@ export interface IDEInfo {
 export type AuthMethod = 'api-key' | 'oauth';
 
 /**
+ * Supported Claude model types
+ */
+export type ModelType = 'sonnet' | 'opus' | 'haiku';
+
+/**
  * OAuth credentials from Claude Code's credential store
  */
 export interface OAuthCredentials {

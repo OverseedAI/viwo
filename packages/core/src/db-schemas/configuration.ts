@@ -6,6 +6,7 @@ export const configurations = sqliteTable('configurations', {
     authMethod: text('auth_method'),
     preferredIde: text('preferred_ide'),
     worktreesStorageLocation: text('worktrees_storage_location'),
+    preferredModel: text('preferred_model'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });
