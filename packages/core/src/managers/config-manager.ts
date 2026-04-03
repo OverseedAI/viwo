@@ -3,7 +3,7 @@ import { hostname, userInfo } from 'os';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
-import type { IDEType } from '../types.js';
+import type { AuthMethod, IDEType } from '../types.js';
 import { expandTilde } from '../utils/paths.js';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -257,12 +257,47 @@ export const deleteWorktreesStorageLocation = (): void => {
         .run();
 };
 
+export const setAuthMethod = (method: AuthMethod): void => {
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({
+                authMethod: method,
+                updatedAt: now,
+            })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({
+                authMethod: method,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .run();
+    }
+};
+
+export const getAuthMethod = (): AuthMethod => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) {
+        return 'api-key';
+    }
+
+    return (config[0]!.authMethod as AuthMethod) || 'api-key';
+};
+
 // Namespace export for consistency with other managers
 export const config = {
     setApiKey,
     getApiKey,
     hasApiKey,
     deleteApiKey,
+    setAuthMethod,
+    getAuthMethod,
     setPreferredIDE,
     getPreferredIDE,
     deletePreferredIDE,

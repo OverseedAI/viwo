@@ -12,7 +12,8 @@ import {
     getContainerLogs,
     pullImage,
 } from './docker-manager';
-import { getApiKey } from './config-manager';
+import { getApiKey, getAuthMethod } from './config-manager';
+import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
 
 export interface InitializeAgentOptions {
     sessionId: number;
@@ -37,61 +38,52 @@ export const initializeAgent = async (options: InitializeAgentOptions): Promise<
 };
 
 const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
-    const { sessionId, worktreePath, config } = options;
+    const authMethod = getAuthMethod();
 
-    // Check if Docker is running
-    await docker.checkDockerRunningOrThrow();
-
-    // Get API key from configuration
-    const apiKey = getApiKey({ provider: 'anthropic' });
-
-    if (!apiKey) {
-        throw new Error(
-            'Anthropic API key not configured. ' + 'Please run "viwo auth" to set up your API key.'
-        );
+    if (authMethod === 'oauth') {
+        await initializeClaudeCodeWithOAuth(options);
+    } else {
+        await initializeClaudeCodeWithApiKey(options);
     }
+};
 
-    // Check if Claude Code image exists
-    const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
-
-    if (!imageExists) {
-        await pullImage({ image: CLAUDE_CODE_IMAGE });
-        // throw new Error(
-        //     `Claude Code Docker image '${CLAUDE_CODE_IMAGE}' not found. ` +
-        //         `Please build the image first or ensure it's available locally.`
-        // );
-    }
-
-    // Generate container name
-    const containerName = `viwo-claude-${sessionId}-${Date.now()}`;
-
-    // Build the claude command
-    // The prompt will be passed as arguments to the claude CLI
+const buildClaudeCommand = (config: AgentConfig): string[] => {
     const command = ['claude', '--dangerously-skip-permissions', '--print', '--verbose'];
 
-    // Add model flag if specified
     if (config.model) {
         command.push('--model', config.model);
     }
 
-    // Add the prompt as the final argument
-    // Docker handles argument separation, so no manual quoting needed
     command.push(config.initialPrompt);
+    return command;
+};
 
-    // Create the container
+const startClaudeContainer = async (options: {
+    sessionId: number;
+    worktreePath: string;
+    config: AgentConfig;
+    env: Record<string, string>;
+}): Promise<void> => {
+    const { sessionId, worktreePath, config, env } = options;
+
+    const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
+    if (!imageExists) {
+        await pullImage({ image: CLAUDE_CODE_IMAGE });
+    }
+
+    const containerName = `viwo-claude-${sessionId}-${Date.now()}`;
+    const command = buildClaudeCommand(config);
+
     const containerInfo = await createContainer({
         name: containerName,
         image: CLAUDE_CODE_IMAGE,
         worktreePath,
         command,
-        env: {
-            ANTHROPIC_API_KEY: apiKey,
-        },
+        env,
         tty: true,
         openStdin: true,
     });
 
-    // Log initial prompt to chats table
     const initialChat: NewChat = {
         sessionId: sessionId.toString(),
         type: 'user',
@@ -100,10 +92,8 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
     };
     db.insert(chats).values(initialChat).run();
 
-    // Start the container
     await startContainer({ containerId: containerInfo.id });
 
-    // Update session with container info and running status
     session.update({
         id: sessionId,
         updates: {
@@ -115,8 +105,6 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
         },
     });
 
-    // Set up background log streaming to chats table
-    // This runs in the background and doesn't block the function return
     getContainerLogs(
         {
             containerId: containerInfo.id,
@@ -125,7 +113,6 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
             stderr: true,
         },
         (logContent: string) => {
-            // Insert each log entry as an assistant message in the chats table
             const chatEntry: NewChat = {
                 sessionId: sessionId.toString(),
                 type: 'assistant',
@@ -134,7 +121,6 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
             };
             db.insert(chats).values(chatEntry).run();
 
-            // Update last activity timestamp
             session.update({
                 id: sessionId,
                 updates: {
@@ -143,7 +129,6 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
             });
         }
     ).catch((error) => {
-        // Log streaming error - update session with error status
         console.error(`Log streaming error for session ${sessionId}:`, error);
         session.update({
             id: sessionId,
@@ -153,9 +138,58 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
             },
         });
     });
+};
 
-    // Return immediately without waiting for container to finish
-    // The container will run in the background
+const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): Promise<void> => {
+    await docker.checkDockerRunningOrThrow();
+
+    const apiKey = getApiKey({ provider: 'anthropic' });
+    if (!apiKey) {
+        throw new Error(
+            'Anthropic API key not configured. Please run "viwo auth" to set up your API key.'
+        );
+    }
+
+    await startClaudeContainer({
+        sessionId: options.sessionId,
+        worktreePath: options.worktreePath,
+        config: options.config,
+        env: { ANTHROPIC_API_KEY: apiKey },
+    });
+};
+
+const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): Promise<void> => {
+    await docker.checkDockerRunningOrThrow();
+
+    const credentials = await extractOAuthCredentials();
+    if (!credentials) {
+        throw new Error(
+            'No Claude subscription credentials found. ' +
+                'Please log in with Claude Code first (run "claude" on your host), ' +
+                'or switch to API key auth with "viwo auth".'
+        );
+    }
+
+    const accountInfo = extractOAuthAccountInfo();
+    const claudeConfig = JSON.stringify({
+        hasCompletedOnboarding: true,
+        hasCompletedProjectOnboarding: true,
+        hasTrustDialogAccepted: true,
+        bypassPermissionsAccepted: true,
+        ...(accountInfo ? { oauthAccount: accountInfo } : {}),
+    });
+    const credentialsFile = JSON.stringify({ claudeAiOauth: credentials });
+
+    await startClaudeContainer({
+        sessionId: options.sessionId,
+        worktreePath: options.worktreePath,
+        config: options.config,
+        env: {
+            CLAUDE_CODE_OAUTH_TOKEN: credentials.accessToken,
+            VIWO_OAUTH_CREDENTIALS: credentialsFile,
+            VIWO_OAUTH_CONFIG: claudeConfig,
+        },
+    });
 };
 
 const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {

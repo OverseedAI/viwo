@@ -3,17 +3,24 @@ set -euo pipefail
 
 CONFIG="${HOME}/.claude.json"
 SETTINGS_DIR="${HOME}/.claude"
+CREDENTIALS_FILE="${SETTINGS_DIR}/.credentials.json"
 
 mkdir -p "$SETTINGS_DIR"
 
-# Optional: approve the current API key (last 20 chars) instead of "*"
-last20=""
-if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-  last20="${ANTHROPIC_API_KEY: -20}"
-fi
+if [ -n "${VIWO_OAUTH_CREDENTIALS:-}" ]; then
+  # OAuth mode: write pre-built JSON files directly
+  printf '%s' "$VIWO_OAUTH_CREDENTIALS" > "$CREDENTIALS_FILE"
+  chmod 600 "$CREDENTIALS_FILE"
 
-# Global config: onboarding + API key approval
-cat > "$CONFIG" <<EOF
+  printf '%s' "$VIWO_OAUTH_CONFIG" > "$CONFIG"
+
+  unset VIWO_OAUTH_CREDENTIALS
+  unset VIWO_OAUTH_CONFIG
+
+elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  # API key mode
+  last20="${ANTHROPIC_API_KEY: -20}"
+  cat > "$CONFIG" <<EOF
 {
   "hasCompletedOnboarding": true,
   "hasCompletedProjectOnboarding": true,
@@ -26,16 +33,10 @@ cat > "$CONFIG" <<EOF
 }
 EOF
 
-# Settings: default permission mode = bypassPermissions
-#cat > "${SETTINGS_DIR}/settings.json" <<'EOF'
-#{
-#  "$schema": "https://json.schemastore.org/claude-code-settings.json",
-#  "permissions": {
-#    "allow": [],
-#    "deny": [],
-#    "defaultMode": "bypassPermissions"
-#  }
-#}
-#EOF
+else
+  echo "Error: No authentication credentials provided" >&2
+  echo "Configure auth with 'viwo auth' (API key or Claude subscription)" >&2
+  exit 1
+fi
 
 exec "$@"

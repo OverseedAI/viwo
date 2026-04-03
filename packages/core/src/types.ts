@@ -39,3 +39,33 @@ export interface IDEInfo {
     command: string;
     available: boolean;
 }
+
+/**
+ * Authentication method for Claude Code
+ */
+export type AuthMethod = 'api-key' | 'oauth';
+
+/**
+ * OAuth credentials from Claude Code's credential store
+ */
+export interface OAuthCredentials {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    scopes: string[];
+    subscriptionType?: string;
+    rateLimitTier?: string;
+}
+
+/**
+ * OAuth account metadata from ~/.claude.json
+ */
+export interface OAuthAccountInfo {
+    accountUuid: string;
+    emailAddress: string;
+    organizationUuid?: string;
+    hasExtraUsageEnabled?: boolean;
+    billingType?: string;
+    displayName?: string;
+    organizationName?: string;
+}
