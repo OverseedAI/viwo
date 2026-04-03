@@ -1,0 +1,1 @@
+ALTER TABLE `configurations` ADD `auth_method` text;
