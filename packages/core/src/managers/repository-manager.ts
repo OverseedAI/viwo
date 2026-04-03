@@ -83,7 +83,20 @@ export interface DeleteRepositoryOptions {
 }
 
 export const deleteRepository = (options: DeleteRepositoryOptions): void => {
-    db.delete(repositories).where(eq(repositories.id, options.id)).run();
+    try {
+        const existing = db.select().from(repositories).where(eq(repositories.id, options.id)).get();
+
+        if (!existing) {
+            throw new Error(`Repository with ID ${options.id} not found`);
+        }
+
+        db.delete(repositories).where(eq(repositories.id, options.id)).run();
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('not found')) {
+            throw error;
+        }
+        throw new Error(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+    }
 };
 
 export const repo = {

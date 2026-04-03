@@ -71,6 +71,8 @@ repoCommand
     .argument('<id>', 'Repository ID to delete')
     .option('-f, --force', 'Skip confirmation')
     .action(async (id: string, _options) => {
+        await preflightChecksOrExit({ requireDocker: false });
+
         const spinner = ora('Deleting repository...').start();
 
         try {
