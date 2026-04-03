@@ -105,11 +105,12 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             };
 
             try {
-                // Create worktree
+                // Create worktree (from default branch if configured)
                 await git.createWorktree({
                     branchName,
                     repoPath,
                     worktreePath,
+                    fromBranch: foundRepo.defaultBranch ?? undefined,
                 });
 
                 // Copy environment file if specified

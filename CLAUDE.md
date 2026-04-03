@@ -40,26 +40,29 @@ bun run release 0.1.2          # Bump version, commit, and tag
 To release a new version:
 
 1. **Bump version and create tag**:
-   ```bash
-   bun run release <version>
-   # Example: bun run release 0.1.2
-   ```
-   This will:
-   - Update version in `packages/core/package.json` and `packages/cli/package.json`
-   - Create a git commit: "chore: bump version to X.Y.Z"
-   - Create a git tag: vX.Y.Z
+
+    ```bash
+    bun run release <version>
+    # Example: bun run release 0.1.2
+    ```
+
+    This will:
+    - Update version in `packages/core/package.json` and `packages/cli/package.json`
+    - Create a git commit: "chore: bump version to X.Y.Z"
+    - Create a git tag: vX.Y.Z
 
 2. **Push to trigger release workflow**:
-   ```bash
-   git push origin main
-   git push origin vX.Y.Z
-   ```
+
+    ```bash
+    git push origin main
+    git push origin vX.Y.Z
+    ```
 
 3. **GitHub Actions workflow** (`.github/workflows/release.yml`):
-   - Triggered on tag push matching `v*`
-   - Builds binaries for all platforms (Linux, macOS, Windows)
-   - Creates checksums
-   - Creates GitHub release with binaries attached
+    - Triggered on tag push matching `v*`
+    - Builds binaries for all platforms (Linux, macOS, Windows)
+    - Creates checksums
+    - Creates GitHub release with binaries attached
 
 **Important**: Always bump package.json versions before creating git tags to keep them in sync.
 
@@ -77,11 +80,12 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 **No build required during development** - Core exports TypeScript source directly (`main: "./src/index.ts"`), Bun's native TS support handles it.
 
 **Functional manager pattern** - Each manager (`packages/core/src/managers/`) exports functions and a namespace object:
+
 - `git-manager.ts` - Worktree operations via simple-git (including `pruneWorktrees` for cleaning up stale worktree references, and `deleteBranch` for removing local branches)
 - `docker-manager.ts` - Container orchestration via dockerode
 - `session-manager.ts` - Session CRUD via Drizzle ORM
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
-- `repository-manager.ts` - Repository CRUD
+- `repository-manager.ts` - Repository CRUD and default branch management
 - `port-manager.ts` - Port allocation via get-port
 - `config-manager.ts` - Configuration management (API keys, auth method, IDE preferences, model preference, worktrees storage location)
 - `credential-manager.ts` - OAuth credential extraction from host system (macOS Keychain, Linux credential files)
@@ -95,19 +99,20 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 ### Database
 
 - **SQLite database** stored in app data directory: `{app-data-path}/sqlite.db`
-  - macOS: `~/Library/Application Support/viwo/sqlite.db`
-  - Windows: `%APPDATA%/viwo/sqlite.db`
-  - Linux: `~/.local/share/viwo/sqlite.db`
+    - macOS: `~/Library/Application Support/viwo/sqlite.db`
+    - Windows: `%APPDATA%/viwo/sqlite.db`
+    - Linux: `~/.local/share/viwo/sqlite.db`
 - **Drizzle ORM** with schemas in `packages/core/src/db-schemas/`
 - **Tables**: repositories, sessions, chats, configurations
+- **Repository storage**: The `repositories` table includes a `defaultBranch` field (nullable) — when set, new worktrees are based from this branch instead of HEAD
 - **Configuration storage**: The `configurations` table stores user preferences including:
-  - API keys (encrypted)
-  - Auth method (`'api-key'` or `'oauth'`)
-  - Preferred IDE
-  - Preferred Claude model (`'sonnet'`, `'opus'`, or `'haiku'` — defaults to Sonnet)
-  - Worktrees storage location (supports absolute or relative paths)
+    - API keys (encrypted)
+    - Auth method (`'api-key'` or `'oauth'`)
+    - Preferred IDE
+    - Preferred Claude model (`'sonnet'`, `'opus'`, or `'haiku'` — defaults to Sonnet)
+    - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
-  - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
+    - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
 - **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 - **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
@@ -115,6 +120,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 ### Core SDK Flow
 
 The main SDK in `packages/core/src/viwo.ts` exposes:
+
 - `createViwo()` - Factory function returning Viwo instance
 - `start()` - Creates worktree session: validate repo → check Docker → generate branch → create worktree → copy env → run post-install hooks → init agent
 - `cleanup()` - Removes session: stop containers → remove containers → remove worktree → delete branch → update status
@@ -122,25 +128,28 @@ The main SDK in `packages/core/src/viwo.ts` exposes:
 ### Project Configuration (viwo.yml/viwo.yaml)
 
 VIWO automatically detects and loads project-specific configuration from the repository root:
+
 - **Configuration files**: `viwo.yml` or `viwo.yaml` (checked in this order)
 - **Location**: Must be at the root of the repository
 - **Schema validation**: Validated using Zod schemas in `packages/core/src/schemas.ts`
 - **Supported configuration**:
-  - `postInstall`: Array of shell commands to run after git worktree creation
-    - Commands execute in the worktree directory
-    - Commands run before agent initialization
-    - If any command fails, session initialization fails and error is reported
-    - Example use cases: dependency installation, environment setup, build steps
+    - `postInstall`: Array of shell commands to run after git worktree creation
+        - Commands execute in the worktree directory
+        - Commands run before agent initialization
+        - If any command fails, session initialization fails and error is reported
+        - Example use cases: dependency installation, environment setup, build steps
 
 **Example configuration**:
+
 ```yaml
 postInstall:
-  - npm install
-  - npm run build
-  - cp .env.example .env
+    - npm install
+    - npm run build
+    - cp .env.example .env
 ```
 
 **Implementation**:
+
 - `project-config-manager.ts` handles detection and parsing via YAML library
 - `loadProjectConfig()` reads and validates configuration file
 - `hasProjectConfig()` checks if configuration file exists
@@ -149,20 +158,21 @@ postInstall:
 ### Worktrees Storage Configuration
 
 Git worktrees storage location is configurable through the `config-manager.ts`:
+
 - **Default location**: `{app-data-path}/worktrees/`
 - **Custom location**: Users can configure a custom path via `config worktrees` CLI command
 - **Path types**:
-  - Absolute paths (e.g., `/home/user/viwo-worktrees`) are used as-is
-  - Tilde expansion (e.g., `~/.config/viwo`) is supported and expands to the user's home directory
-  - Relative paths are resolved relative to the app data directory
+    - Absolute paths (e.g., `/home/user/viwo-worktrees`) are used as-is
+    - Tilde expansion (e.g., `~/.config/viwo`) is supported and expands to the user's home directory
+    - Relative paths are resolved relative to the app data directory
 - **Implementation**:
-  - The `paths.ts` utility provides `expandTilde()` to expand `~` to the user's home directory
-  - `getWorktreesPath()` and `joinWorktreesPath()` check the configuration database first, then fall back to the default location
-  - Tilde expansion happens automatically when setting the worktrees storage location
+    - The `paths.ts` utility provides `expandTilde()` to expand `~` to the user's home directory
+    - `getWorktreesPath()` and `joinWorktreesPath()` check the configuration database first, then fall back to the default location
+    - Tilde expansion happens automatically when setting the worktrees storage location
 - **Configuration methods**:
-  - `setWorktreesStorageLocation(location)` - Set custom location (automatically expands tilde)
-  - `getWorktreesStorageLocation()` - Get current custom location (null if using default)
-  - `deleteWorktreesStorageLocation()` - Reset to default location
+    - `setWorktreesStorageLocation(location)` - Set custom location (automatically expands tilde)
+    - `getWorktreesStorageLocation()` - Get current custom location (null if using default)
+    - `deleteWorktreesStorageLocation()` - Reset to default location
 
 ### Authentication
 
@@ -171,28 +181,30 @@ VIWO supports two authentication methods, configured via `viwo auth`:
 - **API Key** (`auth_method = 'api-key'`): Traditional Anthropic API key (`sk-ant-api...`). Stored encrypted in the SQLite database. Passed to Docker container as `ANTHROPIC_API_KEY` env var.
 
 - **OAuth / Claude Subscription** (`auth_method = 'oauth'`): For Claude Max, Pro, and Teams users. Credentials are extracted from the host's Claude Code installation at each session start (not stored in VIWO's database):
-  - **macOS**: Read from Keychain service `"Claude Code-credentials"` via `security` CLI
-  - **Linux**: Read from `~/.claude/.credentials.json`
-  - Passed to container as `VIWO_OAUTH_CREDENTIALS` and `VIWO_OAUTH_ACCOUNT` env vars
-  - The bootstrap script (`claude-bootstrap.sh`) writes them to `~/.claude/.credentials.json` inside the container, which Claude Code reads natively on Linux
-  - Access tokens expire but Claude Code auto-refreshes using the refresh token
+    - **macOS**: Read from Keychain service `"Claude Code-credentials"` via `security` CLI
+    - **Linux**: Read from `~/.claude/.credentials.json`
+    - Passed to container as `VIWO_OAUTH_CREDENTIALS` and `VIWO_OAUTH_ACCOUNT` env vars
+    - The bootstrap script (`claude-bootstrap.sh`) writes them to `~/.claude/.credentials.json` inside the container, which Claude Code reads natively on Linux
+    - Access tokens expire but Claude Code auto-refreshes using the refresh token
 
 The `credential-manager.ts` handles host credential extraction, and `config-manager.ts` stores the auth method preference.
 
 ### Container Lifecycle Management
 
 The `agent-manager.ts` implements automatic container cleanup:
+
 - When a Claude Code container is started, a background monitor is set up via `monitorContainerCompletion()`
 - The monitor uses Docker's `waitForContainer()` API to detect when the container exits
 - Upon container exit, the monitor automatically:
-  - Updates the session status to 'completed' (exit code 0) or 'error' (non-zero exit code)
-  - Removes the container using `removeContainer()`
-  - Logs the cleanup operation
+    - Updates the session status to 'completed' (exit code 0) or 'error' (non-zero exit code)
+    - Removes the container using `removeContainer()`
+    - Logs the cleanup operation
 - This ensures containers don't linger after the Claude Code process completes
 
 ### Docker Integration
 
 VIWO uses platform-specific Docker socket configuration:
+
 - **Windows**: Named pipe at `\\.\pipe\docker_engine` (Docker Desktop, works with both WSL2 and Hyper-V backends)
 - **macOS/Linux**: Unix socket at `/var/run/docker.sock`
 
@@ -201,6 +213,7 @@ The `docker-manager.ts` automatically detects the platform via `process.platform
 ### Docker State Synchronization
 
 The `docker-manager.ts` provides `syncDockerState()` to keep the database in sync with Docker container states:
+
 - **Automatic sync**: Called by `viwo list` command before displaying sessions to ensure accurate status
 - **Container output capture**: When a session transitions to 'completed' or 'error' status, the full container stdout/stderr is captured and stored in the `sessions.containerOutput` field
 - **Incremental log capture**: For running sessions, captures logs since `lastActivity` timestamp and stores them in the `chats` table
@@ -210,43 +223,47 @@ The `docker-manager.ts` provides `syncDockerState()` to keep the database in syn
 ### CLI Commands
 
 Commands in `packages/cli/src/commands/`:
+
 - `start` - Initialize new session with prompt and agent
-  - Interactive multiline prompt that supports pasting multiple lines
-  - Press Enter on an empty line or Ctrl+D to finish entering prompt
-  - Allows users to paste large blocks of text without triggering execution
-  - After initialization, displays session details and exits automatically
-  - Container continues running in the background
+    - Interactive multiline prompt that supports pasting multiple lines
+    - Press Enter on an empty line or Ctrl+D to finish entering prompt
+    - Allows users to paste large blocks of text without triggering execution
+    - After initialization, displays session details and exits automatically
+    - Container continues running in the background
 - `list` - List all sessions in interactive mode
-  - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
+    - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
 - `clean` - Clean up all completed, errored, stopped, or initializing sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
 - `auth` - Configure authentication method
-  - Choose between Claude subscription (OAuth auto-detect) or Anthropic API key
-  - OAuth mode detects credentials from host's Claude Code installation
-  - Displays subscription details (email, org, expiry) for confirmation
-- `repo` - Repository management (list, add, delete)
+    - Choose between Claude subscription (OAuth auto-detect) or Anthropic API key
+    - OAuth mode detects credentials from host's Claude Code installation
+    - Displays subscription details (email, org, expiry) for confirmation
+- `repo` - Repository management (list, add, delete, set-branch)
+    - `set-branch` sets a default branch per repository so worktrees are always based from it instead of HEAD
 - `config model` - Configure preferred Claude model (sonnet, opus, haiku)
 - `config ide` - Configure default IDE preference
-  - Interactive list showing available IDEs on the system
-  - Displays current default IDE setting
-  - Allows changing to a different IDE or removing the default (prompts each time)
+    - Interactive list showing available IDEs on the system
+    - Displays current default IDE setting
+    - Allows changing to a different IDE or removing the default (prompts each time)
 - `config worktrees` - Configure worktrees storage location
-  - View current worktrees storage location (custom or default)
-  - Set custom location (absolute or relative to app data directory)
-  - Reset to default location (app data directory)
+    - View current worktrees storage location (custom or default)
+    - Set custom location (absolute or relative to app data directory)
+    - Reset to default location (app data directory)
 
 ### Preflight Checks & Version Checking
 
 The CLI performs automatic preflight checks before running commands via `packages/cli/src/utils/prerequisites.ts`:
+
 - **Database migration** - Runs `viwo.migrate()` to ensure the database is up to date
 - **Git installation** - Verifies git is available in PATH
 - **Docker daemon** - Checks if Docker is running
 - **Version check** - Compares current CLI version against latest GitHub release
-  - Fetches latest version from GitHub releases API (`/repos/OverseedAI/viwo/releases/latest`)
-  - Shows non-blocking warning when newer version is available
-  - Displays update instructions: re-run install script or download from GitHub releases
-  - Uses semantic version comparison (major.minor.patch)
+    - Fetches latest version from GitHub releases API (`/repos/OverseedAI/viwo/releases/latest`)
+    - Shows non-blocking warning when newer version is available
+    - Displays update instructions: re-run install script or download from GitHub releases
+    - Uses semantic version comparison (major.minor.patch)
 
 The main function is `preflightChecksOrExit()` which:
+
 - Runs database migrations first (exits on failure)
 - Checks for git and Docker availability (configurable via options)
 - Shows version update warnings (non-blocking)
@@ -259,6 +276,7 @@ Tests use Bun's native test runner (`bun:test`). Test files are in `__tests__` d
 **Database isolation**: Tests automatically use in-memory databases to avoid overwriting production data. When running `bun run test` (or `bun test` directly in the core package), the `NODE_ENV=test` environment variable is set, which triggers the use of an in-memory SQLite database. Tests can also explicitly create isolated databases using `createTestDatabase()` from `packages/core/src/test-helpers/db.ts`.
 
 Current test coverage focuses on:
+
 - `git-manager.test.ts` - Branch name generation, repo validation, worktree pruning
 - `docker-manager.test.ts` - Docker daemon status
 - `agent-manager.test.ts` - Claude Code agent initialization (demonstrates test database usage)
