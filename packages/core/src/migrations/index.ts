@@ -128,5 +128,12 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`configurations\` ADD \`auth_method\` text DEFAULT 'api-key';
         `
+    },
+    {
+        version: 9,
+        name: 'model_preference',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`preferred_model\` text;
+        `
     }
 ];

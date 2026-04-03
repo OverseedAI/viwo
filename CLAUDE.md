@@ -83,7 +83,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, auth method, IDE preferences, worktrees storage location)
+- `config-manager.ts` - Configuration management (API keys, auth method, IDE preferences, model preference, worktrees storage location)
 - `credential-manager.ts` - OAuth credential extraction from host system (macOS Keychain, Linux credential files)
 - `ide-manager.ts` - IDE detection and launching
 - `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
@@ -104,6 +104,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
   - API keys (encrypted)
   - Auth method (`'api-key'` or `'oauth'`)
   - Preferred IDE
+  - Preferred Claude model (`'sonnet'`, `'opus'`, or `'haiku'` — defaults to Sonnet)
   - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
   - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
@@ -223,6 +224,7 @@ Commands in `packages/cli/src/commands/`:
   - OAuth mode detects credentials from host's Claude Code installation
   - Displays subscription details (email, org, expiry) for confirmation
 - `repo` - Repository management (list, add, delete)
+- `config model` - Configure preferred Claude model (sonnet, opus, haiku)
 - `config ide` - Configure default IDE preference
   - Interactive list showing available IDEs on the system
   - Displays current default IDE setting

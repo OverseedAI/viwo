@@ -3,7 +3,7 @@ import { hostname, userInfo } from 'os';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
-import type { AuthMethod, IDEType } from '../types.js';
+import type { AuthMethod, IDEType, ModelType } from '../types.js';
 import { expandTilde } from '../utils/paths.js';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -280,6 +280,55 @@ export const setAuthMethod = (method: AuthMethod): void => {
     }
 };
 
+export const setPreferredModel = (model: ModelType): void => {
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({
+                preferredModel: model,
+                updatedAt: now,
+            })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({
+                preferredModel: model,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .run();
+    }
+};
+
+export const getPreferredModel = (): ModelType | null => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) {
+        return null;
+    }
+
+    return (config[0]!.preferredModel as ModelType) || null;
+};
+
+export const deletePreferredModel = (): void => {
+    const config = db.select().from(configurations).limit(1).get();
+
+    if (!config) {
+        return;
+    }
+
+    db.update(configurations)
+        .set({
+            preferredModel: null,
+            updatedAt: new Date().toISOString(),
+        })
+        .where(eq(configurations.id, config.id))
+        .run();
+};
+
 export const getAuthMethod = (): AuthMethod => {
     const config = db.select().from(configurations).limit(1).all();
 
@@ -301,6 +350,9 @@ export const config = {
     setPreferredIDE,
     getPreferredIDE,
     deletePreferredIDE,
+    setPreferredModel,
+    getPreferredModel,
+    deletePreferredModel,
     setWorktreesStorageLocation,
     getWorktreesStorageLocation,
     deleteWorktreesStorageLocation,
