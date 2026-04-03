@@ -24,8 +24,10 @@ bun run lint                   # Lint code
 # Build for production
 bun run build                  # All packages
 
-# Database
-bun run db:generate            # Generate Drizzle migrations
+# Database (schema changes)
+cd packages/core
+bun run db:generate            # Step 1: Generate Drizzle SQL migrations from schema files
+bun run db:migrate             # Step 2: Convert SQL migrations to JS migration format in src/migrations/index.ts
 
 # Run CLI during development
 bun packages/cli/src/cli.ts --help  # Direct source execution
@@ -113,7 +115,11 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
     - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
     - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
-- **Migrations** in `packages/core/src/migrations/` - applied automatically on startup via `initializeDatabase()`
+- **Migrations**: Never edit `packages/core/src/migrations/index.ts` directly. The migration workflow is:
+    1. Update Drizzle schema files in `packages/core/src/db-schemas/`
+    2. Run `bun run db:generate` (in packages/core) to generate SQL migration files in `drizzle/`
+    3. Run `bun run db:migrate` (in packages/core) to convert SQL migrations into the JS format in `src/migrations/index.ts`
+    4. Migrations are applied automatically on startup via `initializeDatabase()`
 - **Timestamp handling**: SQLite stores timestamps as TEXT in format `YYYY-MM-DD HH:MM:SS` using `CURRENT_TIMESTAMP`. The `parseSqliteTimestamp()` helper in `packages/core/src/utils/types.ts` converts these to JavaScript Date objects by transforming to ISO 8601 format.
 - **Test isolation**: Tests automatically use in-memory databases when run with `NODE_ENV=test`. The `packages/core/src/db.ts` module detects the test environment and uses `:memory:` instead of the production database file. For explicit control, tests can use `createTestDatabase()` from `packages/core/src/test-helpers/db.ts` to create isolated database instances.
 
