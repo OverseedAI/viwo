@@ -29,6 +29,8 @@ export {
     listRepositories,
     createRepository,
     deleteRepository,
+    setRepositoryDefaultBranch,
+    deleteRepositoryDefaultBranch,
     type ListRepositoryOptions,
     type DeleteRepositoryOptions,
 } from './managers/repository-manager';

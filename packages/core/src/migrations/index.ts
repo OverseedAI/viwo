@@ -124,15 +124,16 @@ export const migrations: Migration[] = [
     },
     {
         version: 8,
-        name: 'gentle_oauth_support',
+        name: 'last_mentor',
         up: `
-            ALTER TABLE \`configurations\` ADD \`auth_method\` text DEFAULT 'api-key';
+            ALTER TABLE \`configurations\` ADD \`auth_method\` text;
         `
     },
     {
         version: 9,
-        name: 'model_preference',
+        name: 'youthful_warlock',
         up: `
+            ALTER TABLE \`repositories\` ADD \`default_branch\` text;
             ALTER TABLE \`configurations\` ADD \`preferred_model\` text;
         `
     }

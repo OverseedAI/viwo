@@ -1,6 +1,6 @@
 import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { viwo } from '@viwo/core';
+import { viwo, GitManager } from '@viwo/core';
 import { formatDate } from '../utils/formatters';
 import { selectAndOpenIDE } from '../utils/ide-selector';
 
@@ -17,6 +17,9 @@ const displayRepositoryDetails = (repo: Repository) => {
     console.log(chalk.gray('  ID:              '), repo.id);
     console.log(chalk.gray('  Name:            '), repo.name);
     console.log(chalk.gray('  Path:            '), repo.path);
+    if (repo.defaultBranch) {
+        console.log(chalk.gray('  Default Branch:  '), chalk.green(repo.defaultBranch));
+    }
     if (repo.url) {
         console.log(chalk.gray('  URL:             '), repo.url);
     }
@@ -33,6 +36,10 @@ const handleRepositoryAction = async (repo: Repository): Promise<'back' | 'exit'
         {
             name: '💻 Open in IDE',
             value: 'open-ide',
+        },
+        {
+            name: `🌿 Set default branch${repo.defaultBranch ? chalk.gray(` (${repo.defaultBranch})`) : ''}`,
+            value: 'set-branch',
         },
         {
             name: '🗑️  Delete repository',
@@ -61,6 +68,65 @@ const handleRepositoryAction = async (repo: Repository): Promise<'back' | 'exit'
                 process.stdin.once('data', resolve);
             });
             return 'back';
+
+        case 'set-branch': {
+            try {
+                const branches = await GitManager.getBranches({ repoPath: repo.path });
+                const localBranches = branches.filter((b) => !b.startsWith('remotes/'));
+
+                const branchChoices = localBranches.map((b) => ({
+                    name: b === repo.defaultBranch ? `${b} ${chalk.green('(current)')}` : b,
+                    value: b,
+                }));
+
+                if (repo.defaultBranch) {
+                    branchChoices.push({
+                        name: chalk.yellow('Clear default branch'),
+                        value: '__clear__',
+                    });
+                }
+
+                branchChoices.push({
+                    name: chalk.gray('Cancel'),
+                    value: '__cancel__',
+                });
+
+                const selectedBranch = await select({
+                    message: 'Select default branch for new worktrees:',
+                    choices: branchChoices,
+                    pageSize: 15,
+                });
+
+                if (selectedBranch === '__cancel__') {
+                    return 'back';
+                }
+
+                if (selectedBranch === '__clear__') {
+                    viwo.repo.deleteDefaultBranch({ id: repo.id });
+                    console.log(chalk.green('✓ Default branch cleared'));
+                } else {
+                    viwo.repo.setDefaultBranch({ id: repo.id, branch: selectedBranch });
+                    console.log(chalk.green(`✓ Default branch set to "${selectedBranch}"`));
+                }
+
+                console.log();
+                console.log(chalk.gray('Press Enter to continue...'));
+                await new Promise((resolve) => {
+                    process.stdin.once('data', resolve);
+                });
+            } catch (error) {
+                console.error(
+                    chalk.red('Failed to set default branch:'),
+                    error instanceof Error ? error.message : String(error)
+                );
+                console.log();
+                console.log(chalk.gray('Press Enter to continue...'));
+                await new Promise((resolve) => {
+                    process.stdin.once('data', resolve);
+                });
+            }
+            return 'back';
+        }
 
         case 'delete': {
             console.log();

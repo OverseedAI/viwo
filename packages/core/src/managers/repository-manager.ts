@@ -19,6 +19,7 @@ export const listRepositories = (options: ListRepositoryOptions): Repository[] =
                 name: repositories.name,
                 path: repositories.path,
                 url: repositories.url,
+                defaultBranch: repositories.defaultBranch,
                 createdAt: repositories.createdAt,
                 lastUsedAt: sql<string>`MAX(${sessions.lastActivity})`.as('lastUsedAt'),
             })
@@ -84,7 +85,11 @@ export interface DeleteRepositoryOptions {
 
 export const deleteRepository = (options: DeleteRepositoryOptions): void => {
     try {
-        const existing = db.select().from(repositories).where(eq(repositories.id, options.id)).get();
+        const existing = db
+            .select()
+            .from(repositories)
+            .where(eq(repositories.id, options.id))
+            .get();
 
         if (!existing) {
             throw new Error(`Repository with ID ${options.id} not found`);
@@ -95,12 +100,52 @@ export const deleteRepository = (options: DeleteRepositoryOptions): void => {
         if (error instanceof Error && error.message.includes('not found')) {
             throw error;
         }
-        throw new Error(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+            `Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`
+        );
     }
+};
+
+export const setRepositoryDefaultBranch = ({
+    id,
+    branch,
+}: {
+    id: number;
+    branch: string;
+}): Repository => {
+    const existing = db.select().from(repositories).where(eq(repositories.id, id)).get();
+
+    if (!existing) {
+        throw new Error(`Repository with ID ${id} not found`);
+    }
+
+    return db
+        .update(repositories)
+        .set({ defaultBranch: branch })
+        .where(eq(repositories.id, id))
+        .returning()
+        .get();
+};
+
+export const deleteRepositoryDefaultBranch = ({ id }: { id: number }): Repository => {
+    const existing = db.select().from(repositories).where(eq(repositories.id, id)).get();
+
+    if (!existing) {
+        throw new Error(`Repository with ID ${id} not found`);
+    }
+
+    return db
+        .update(repositories)
+        .set({ defaultBranch: null })
+        .where(eq(repositories.id, id))
+        .returning()
+        .get();
 };
 
 export const repo = {
     list: listRepositories,
     create: createRepository,
     delete: deleteRepository,
+    setDefaultBranch: setRepositoryDefaultBranch,
+    deleteDefaultBranch: deleteRepositoryDefaultBranch,
 };

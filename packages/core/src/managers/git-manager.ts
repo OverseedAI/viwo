@@ -60,6 +60,7 @@ export interface CreateWorktreeOptions {
     repoPath: string;
     branchName: string;
     worktreePath: string;
+    fromBranch?: string;
 }
 
 export const createWorktree = async (options: CreateWorktreeOptions): Promise<void> => {
@@ -71,8 +72,19 @@ export const createWorktree = async (options: CreateWorktreeOptions): Promise<vo
         await mkdir(worktreesDir, { recursive: true });
     }
 
-    // Create new branch and worktree
-    await gitInstance.raw(['worktree', 'add', '-b', options.branchName, options.worktreePath]);
+    // Create new branch and worktree, optionally from a specific starting branch
+    const args = ['worktree', 'add', '-b', options.branchName, options.worktreePath];
+    if (options.fromBranch) {
+        args.push(options.fromBranch);
+    }
+    await gitInstance.raw(args);
+};
+
+export const getBranches = async (options: RepoPathOptions): Promise<string[]> => {
+    const gitInstance = simpleGit(options.repoPath);
+    const result = await gitInstance.branch(['-a']);
+
+    return result.all.filter((b) => b !== 'HEAD' && !b.endsWith('/HEAD'));
 };
 
 export interface RemoveWorktreeOptions {
@@ -178,4 +190,5 @@ export const git = {
     copyEnvFile,
     pruneWorktrees,
     deleteBranch,
+    getBranches,
 };

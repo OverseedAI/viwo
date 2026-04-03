@@ -5,6 +5,7 @@ export const repositories = sqliteTable('repositories', {
     name: text('name').notNull(),
     path: text('path').notNull(),
     url: text('url'),
+    defaultBranch: text('default_branch'),
     createdAt: text('createdAt'),
 });
 
