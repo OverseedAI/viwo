@@ -129,6 +129,25 @@ export const ensureWorktreesPath = async (...segments: string[]): Promise<string
     return fullPath;
 };
 
+/**
+ * Get the container state directory path for a session
+ * Path: {viwo-data}/container-state/{session-id}/
+ */
+export const getContainerStatePath = (sessionId: number): string => {
+    return joinDataPath('container-state', String(sessionId));
+};
+
+/**
+ * Ensure the container state directory exists for a session
+ *
+ * @returns The full path to the created directory
+ */
+export const ensureContainerStatePath = async (sessionId: number): Promise<string> => {
+    const fullPath = getContainerStatePath(sessionId);
+    await mkdir(fullPath, { recursive: true });
+    return fullPath;
+};
+
 export const AppPaths = {
     getDataPath,
     getConfigPath,
@@ -143,4 +162,6 @@ export const AppPaths = {
     joinWorktreesPath,
     ensureWorktreesPath,
     expandTilde,
+    getContainerStatePath,
+    ensureContainerStatePath,
 };

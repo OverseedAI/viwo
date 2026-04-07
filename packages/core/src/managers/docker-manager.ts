@@ -146,6 +146,7 @@ export interface CreateContainerOptions {
     command?: string[];
     tty?: boolean;
     openStdin?: boolean;
+    additionalBinds?: string[];
 }
 
 export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
@@ -174,7 +175,10 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
         HostConfig: {
             PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
-            Binds: [`${options.worktreePath}:/workspace`],
+            Binds: [
+                        `${options.worktreePath}:/workspace`,
+                        ...(options.additionalBinds || []),
+                    ],
             AutoRemove: false,
         },
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,

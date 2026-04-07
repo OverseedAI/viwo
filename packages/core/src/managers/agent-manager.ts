@@ -15,6 +15,7 @@ import {
 } from './docker-manager';
 import { getApiKey, getAuthMethod } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
+import { ensureContainerStatePath } from '../utils/paths';
 
 export interface InitializeAgentOptions {
     sessionId: number;
@@ -75,6 +76,8 @@ const startClaudeContainer = async (options: {
     const containerName = generateContainerName(sessionId);
     const command = buildClaudeCommand(config);
 
+    const statePath = await ensureContainerStatePath(sessionId);
+
     const containerInfo = await createContainer({
         name: containerName,
         image: CLAUDE_CODE_IMAGE,
@@ -83,6 +86,7 @@ const startClaudeContainer = async (options: {
         env,
         tty: true,
         openStdin: true,
+        additionalBinds: [`${statePath}:/tmp/viwo-state`],
     });
 
     const initialChat: NewChat = {
