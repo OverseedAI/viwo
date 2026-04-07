@@ -1,69 +1,69 @@
 {
-    "version": "7",
-    "dialect": "sqlite",
-    "entries": [
-        {
-            "idx": 0,
-            "version": "6",
-            "when": 1763584946394,
-            "tag": "0000_last_skreet",
-            "breakpoints": true
-        },
-        {
-            "idx": 1,
-            "version": "6",
-            "when": 1763671273300,
-            "tag": "0001_opposite_marvel_boy",
-            "breakpoints": true
-        },
-        {
-            "idx": 2,
-            "version": "6",
-            "when": 1763671854171,
-            "tag": "0002_cuddly_queen_noir",
-            "breakpoints": true
-        },
-        {
-            "idx": 3,
-            "version": "6",
-            "when": 1763747603995,
-            "tag": "0003_high_doctor_strange",
-            "breakpoints": true
-        },
-        {
-            "idx": 4,
-            "version": "6",
-            "when": 1764116397950,
-            "tag": "0004_puzzling_anita_blake",
-            "breakpoints": true
-        },
-        {
-            "idx": 5,
-            "version": "6",
-            "when": 1764892109788,
-            "tag": "0005_confused_the_renegades",
-            "breakpoints": true
-        },
-        {
-            "idx": 6,
-            "version": "6",
-            "when": 1764897221784,
-            "tag": "0006_swift_silverclaw",
-            "breakpoints": true
-        },
-        {
-            "idx": 7,
-            "version": "6",
-            "when": 1775243798612,
-            "tag": "0007_last_mentor",
-            "breakpoints": true
-        },
-        {
-            "idx": 8,
-            "version": "6",
-            "when": 1775254281347,
-            "tag": "0008_youthful_warlock",
-            "breakpoints": true
-        }
-    ]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1763584946394,
+      "tag": "0000_last_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1763671273300,
+      "tag": "0001_opposite_marvel_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1763671854171,
+      "tag": "0002_cuddly_queen_noir",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1763747603995,
+      "tag": "0003_high_doctor_strange",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1764116397950,
+      "tag": "0004_puzzling_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1764892109788,
+      "tag": "0005_confused_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1764897221784,
+      "tag": "0006_swift_silverclaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1775243798612,
+      "tag": "0007_last_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1775254281347,
+      "tag": "0008_youthful_warlock",
+      "breakpoints": true
+    }
+  ]
 }

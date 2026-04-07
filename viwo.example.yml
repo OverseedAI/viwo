@@ -5,15 +5,15 @@
 # Commands execute in the worktree directory
 # If any command fails, session initialization will fail
 postInstall:
-    # Install dependencies
-    - npm install
+  # Install dependencies
+  - npm install
 
-    # Build the project
-    - npm run build
+  # Build the project
+  - npm run build
 
-    # Copy environment file
-    - cp .env.example .env
+  # Copy environment file
+  - cp .env.example .env
 
-    # Any other setup commands your project needs
-    # - docker-compose up -d
-    # - npx prisma generate
+  # Any other setup commands your project needs
+  # - docker-compose up -d
+  # - npx prisma generate
