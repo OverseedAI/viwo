@@ -1,10 +1,18 @@
 import {
     CleanupOptions,
     CleanupOptionsSchema,
+    CreateWorktreeOptions,
+    CreateWorktreeOptionsSchema,
+    CreateWorktreeResult,
     InitOptions,
     InitOptionsSchema,
+    LaunchAgentOptions,
+    LaunchAgentOptionsSchema,
     ListOptions,
     SessionStatus,
+    StartContainerOptions,
+    StartContainerOptionsSchema,
+    StartContainerResult,
     ViwoConfig,
     ViwoConfigSchema,
     WorktreeSession,
@@ -38,7 +46,19 @@ export interface Viwo {
     session: typeof session;
     git: typeof git;
     docker: typeof docker;
+
+    /** Phase 1: Create git worktree, session record, env copy, and post-install hooks */
+    createWorktree: (options: CreateWorktreeOptions) => Promise<CreateWorktreeResult>;
+
+    /** Phase 2: Create and start Docker container with agent configuration */
+    startContainer: (options: StartContainerOptions) => Promise<StartContainerResult>;
+
+    /** Phase 3: Finalize agent launch and update session status to running */
+    launchAgent: (options: LaunchAgentOptions) => Promise<void>;
+
+    /** Orchestrated flow: createWorktree → startContainer → launchAgent */
     start: (options: InitOptions) => Promise<WorktreeSession>;
+
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
     get: (sessionId: string) => Promise<WorktreeSession | null>;
     cleanup: (options: CleanupOptions) => Promise<void>;
@@ -51,48 +71,149 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
     // Merge with defaults
     ViwoConfigSchema.parse(config || {});
 
+    const createWorktreePhase = async (options: CreateWorktreeOptions): Promise<CreateWorktreeResult> => {
+        const validated = CreateWorktreeOptionsSchema.parse(options);
+
+        const foundRepo = getRepositoryById({ id: validated.repoId });
+        if (!foundRepo) {
+            throw Error('This repository is not yet registered.');
+        }
+
+        const repoPath = foundRepo.path;
+        await git.checkValidRepositoryOrThrow({ repoPath });
+
+        const branchName = validated.branchName || (await git.generateBranchName());
+        const worktreePath = joinWorktreesPath(branchName);
+
+        const createdSession = await createSession({
+            repoId: foundRepo.id,
+            name: branchName,
+            path: worktreePath,
+            branchName,
+            agent: 'claudecode',
+        });
+
+        try {
+            await git.createWorktree({
+                branchName,
+                repoPath,
+                worktreePath,
+                fromBranch: foundRepo.defaultBranch ?? undefined,
+            });
+
+            if (validated.envFile) {
+                await git.copyEnvFile({
+                    sourceEnvPath: validated.envFile,
+                    targetPath: worktreePath,
+                });
+            }
+
+            const projectConfig = loadProjectConfig({ repoPath });
+
+            if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
+                const userShell = process.env.SHELL || '/bin/sh';
+
+                for (const command of projectConfig.postInstall) {
+                    try {
+                        await execAsync(command, {
+                            cwd: worktreePath,
+                            shell: userShell,
+                            env: {
+                                ...process.env,
+                                VIWO_WORKTREE_PATH: worktreePath,
+                            },
+                        });
+                    } catch (error) {
+                        const errorMessage =
+                            error instanceof Error ? error.message : String(error);
+                        throw new Error(
+                            `Post-install command failed: ${command}\n${errorMessage}`
+                        );
+                    }
+                }
+            }
+
+            return {
+                sessionId: createdSession.id,
+                repoPath,
+                branchName,
+                worktreePath,
+            };
+        } catch (error) {
+            updateSession({
+                id: createdSession.id,
+                updates: {
+                    status: SessionStatus.ERROR,
+                    error: error instanceof Error ? error.message : String(error),
+                    lastActivity: new Date().toISOString(),
+                },
+            });
+            throw error;
+        }
+    };
+
+    const startContainerPhase = async (options: StartContainerOptions): Promise<StartContainerResult> => {
+        const validated = StartContainerOptionsSchema.parse(options);
+
+        await docker.checkDockerRunningOrThrow();
+
+        const result = await agent.initializeAgent({
+            sessionId: validated.sessionId,
+            worktreePath: validated.worktreePath,
+            config: {
+                initialPrompt: validated.prompt,
+                type: validated.agent ?? 'claude-code',
+                model: validated.model,
+            },
+        });
+
+        return {
+            containerId: result.containerId,
+            containerName: result.containerName,
+        };
+    };
+
+    const launchAgentPhase = async (options: LaunchAgentOptions): Promise<void> => {
+        const validated = LaunchAgentOptionsSchema.parse(options);
+
+        updateSession({
+            id: validated.sessionId,
+            updates: {
+                status: SessionStatus.RUNNING,
+                lastActivity: new Date().toISOString(),
+            },
+        });
+    };
+
     return {
         repo,
         session,
         git,
         docker,
+
+        createWorktree: createWorktreePhase,
+        startContainer: startContainerPhase,
+        launchAgent: launchAgentPhase,
+
         /**
-         * Initialize a new worktree session
+         * Orchestrated flow: createWorktree → startContainer → launchAgent
          */
         async start(options: InitOptions): Promise<WorktreeSession> {
-            // Validate options
             const validatedOptions = InitOptionsSchema.parse(options);
 
-            // Validate repository
-            const foundRepo = getRepositoryById({ id: validatedOptions.repoId });
-
-            if (!foundRepo) {
-                throw Error('This repository is not yet registered.');
-            }
-
-            const repoPath = foundRepo.path;
-            await git.checkValidRepositoryOrThrow({ repoPath });
-            await docker.checkDockerRunningOrThrow();
-
-            const branchName = validatedOptions.branchName || (await git.generateBranchName());
-            const worktreePath = joinWorktreesPath(branchName);
-
-            // Create database session
-            const createdSession = await createSession({
-                repoId: foundRepo.id,
-                name: branchName,
-                path: worktreePath,
-                branchName,
-                agent: 'claudecode',
+            // Phase 1: Create worktree
+            const worktreeResult = await createWorktreePhase({
+                repoId: validatedOptions.repoId,
+                branchName: validatedOptions.branchName,
+                envFile: validatedOptions.envFile,
             });
 
-            // Create WorktreeSession for return value
-            const sessionId = String(createdSession.id);
+            const sessionId = String(worktreeResult.sessionId);
             const worktreeSession: WorktreeSession = {
                 id: sessionId,
-                repoPath,
-                branchName,
-                worktreePath,
+                repoPath: worktreeResult.repoPath,
+                branchName: worktreeResult.branchName,
+                worktreePath: worktreeResult.worktreePath,
                 containers: [],
                 ports: [],
                 agent: {
@@ -105,73 +226,20 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             };
 
             try {
-                // Create worktree (from default branch if configured)
-                await git.createWorktree({
-                    branchName,
-                    repoPath,
-                    worktreePath,
-                    fromBranch: foundRepo.defaultBranch ?? undefined,
+                // Phase 2: Start container
+                const containerResult = await startContainerPhase({
+                    sessionId: worktreeResult.sessionId,
+                    worktreePath: worktreeResult.worktreePath,
+                    prompt: validatedOptions.prompt,
+                    agent: validatedOptions.agent,
+                    model: getPreferredModel() ?? 'sonnet',
                 });
 
-                // Copy environment file if specified
-                if (validatedOptions.envFile) {
-                    await git.copyEnvFile({
-                        sourceEnvPath: validatedOptions.envFile,
-                        targetPath: worktreePath,
-                    });
-                }
+                worktreeSession.containerName = containerResult.containerName;
 
-                // Load project configuration and run post-install hooks
-                const projectConfig = loadProjectConfig({ repoPath });
-
-                if (projectConfig?.postInstall && projectConfig.postInstall.length > 0) {
-                    const userShell = process.env.SHELL || '/bin/sh';
-
-                    for (const command of projectConfig.postInstall) {
-                        try {
-                            await execAsync(command, {
-                                cwd: worktreePath,
-                                shell: userShell,
-                                env: {
-                                    ...process.env,
-                                    VIWO_WORKTREE_PATH: worktreePath,
-                                },
-                            });
-                        } catch (error) {
-                            const errorMessage =
-                                error instanceof Error ? error.message : String(error);
-                            throw new Error(
-                                `Post-install command failed: ${command}\n${errorMessage}`
-                            );
-                        }
-                    }
-                }
-
-                // Initialize agent
-                await agent.initializeAgent({
-                    sessionId: createdSession.id,
-                    worktreePath,
-                    config: {
-                        initialPrompt: validatedOptions.prompt,
-                        type: 'claude-code',
-                        model: getPreferredModel() ?? 'sonnet',
-                    },
-                });
-
-                // Run setup commands if specified
-                if (validatedOptions.setupCommands) {
-                    // TODO: Execute setup commands
-                    // For now, we'll just log them
-                    console.log('Setup commands:', validatedOptions.setupCommands.join(', '));
-                }
-
-                // Update session status in database
-                updateSession({
-                    id: createdSession.id,
-                    updates: {
-                        status: SessionStatus.RUNNING,
-                        lastActivity: new Date().toISOString(),
-                    },
+                // Phase 3: Launch agent (update status)
+                await launchAgentPhase({
+                    sessionId: worktreeResult.sessionId,
                 });
 
                 worktreeSession.status = SessionStatus.RUNNING;
@@ -179,9 +247,8 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 return worktreeSession;
             } catch (error) {
-                // Update session with error in database
                 updateSession({
-                    id: createdSession.id,
+                    id: worktreeResult.sessionId,
                     updates: {
                         status: SessionStatus.ERROR,
                         error: error instanceof Error ? error.message : String(error),

@@ -68,8 +68,47 @@ export const WorktreeSessionSchema = z.object({
     lastActivity: z.date(),
     error: z.string().optional(),
     containerOutput: z.string().optional(),
+    containerName: z.string().optional(),
 });
 export type WorktreeSession = z.infer<typeof WorktreeSessionSchema>;
+
+/**
+ * Phase result types for viwo.start() decomposition
+ */
+export const CreateWorktreeResultSchema = z.object({
+    sessionId: z.number(),
+    repoPath: z.string(),
+    branchName: z.string(),
+    worktreePath: z.string(),
+});
+export type CreateWorktreeResult = z.infer<typeof CreateWorktreeResultSchema>;
+
+export const CreateWorktreeOptionsSchema = z.object({
+    repoId: z.number().min(0),
+    branchName: z.string().optional(),
+    envFile: z.string().optional(),
+});
+export type CreateWorktreeOptions = z.infer<typeof CreateWorktreeOptionsSchema>;
+
+export const StartContainerOptionsSchema = z.object({
+    sessionId: z.number(),
+    worktreePath: z.string(),
+    prompt: z.string().min(1),
+    agent: AgentTypeSchema.default('claude-code'),
+    model: z.string().optional(),
+});
+export type StartContainerOptions = z.infer<typeof StartContainerOptionsSchema>;
+
+export const StartContainerResultSchema = z.object({
+    containerId: z.string(),
+    containerName: z.string(),
+});
+export type StartContainerResult = z.infer<typeof StartContainerResultSchema>;
+
+export const LaunchAgentOptionsSchema = z.object({
+    sessionId: z.number(),
+});
+export type LaunchAgentOptions = z.infer<typeof LaunchAgentOptionsSchema>;
 
 /**
  * Init command options

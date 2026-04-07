@@ -23,29 +23,31 @@ export interface InitializeAgentOptions {
     config: AgentConfig;
 }
 
-export const initializeAgent = async (options: InitializeAgentOptions): Promise<void> => {
+export interface InitializeAgentResult {
+    containerId: string;
+    containerName: string;
+}
+
+export const initializeAgent = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     switch (options.config.type) {
         case 'claude-code':
-            await initializeClaudeCode(options);
-            break;
+            return initializeClaudeCode(options);
         case 'cline':
-            await initializeCline(options);
-            break;
+            return initializeCline(options);
         case 'cursor':
-            await initializeCursor(options);
-            break;
+            return initializeCursor(options);
         default:
             throw new Error(`Unsupported agent type: ${options.config.type}`);
     }
 };
 
-const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     const authMethod = getAuthMethod();
 
     if (authMethod === 'oauth') {
-        await initializeClaudeCodeWithOAuth(options);
+        return initializeClaudeCodeWithOAuth(options);
     } else {
-        await initializeClaudeCodeWithApiKey(options);
+        return initializeClaudeCodeWithApiKey(options);
     }
 };
 
@@ -66,7 +68,7 @@ const startClaudeContainer = async (options: {
     worktreePath: string;
     config: AgentConfig;
     env: Record<string, string>;
-}): Promise<void> => {
+}): Promise<InitializeAgentResult> => {
     const { sessionId, worktreePath, config, env } = options;
 
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
@@ -143,9 +145,14 @@ const startClaudeContainer = async (options: {
             },
         });
     });
+
+    return {
+        containerId: containerInfo.id,
+        containerName: containerInfo.name,
+    };
 };
 
-const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const apiKey = getApiKey({ provider: 'anthropic' });
@@ -155,7 +162,7 @@ const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): 
         );
     }
 
-    await startClaudeContainer({
+    return startClaudeContainer({
         sessionId: options.sessionId,
         worktreePath: options.worktreePath,
         config: options.config,
@@ -163,7 +170,7 @@ const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): 
     });
 };
 
-const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const credentials = await extractOAuthCredentials();
@@ -185,7 +192,7 @@ const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): P
     });
     const credentialsFile = JSON.stringify({ claudeAiOauth: credentials });
 
-    await startClaudeContainer({
+    return startClaudeContainer({
         sessionId: options.sessionId,
         worktreePath: options.worktreePath,
         config: options.config,
@@ -197,15 +204,11 @@ const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): P
     });
 };
 
-const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
-    // Placeholder for Cline initialization
-    // This would set up Cline-specific configuration
+const initializeCline = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     throw new Error('Cline support not yet implemented');
 };
 
-const initializeCursor = async (_options: InitializeAgentOptions): Promise<void> => {
-    // Placeholder for Cursor initialization
-    // This would set up Cursor-specific configuration
+const initializeCursor = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
     throw new Error('Cursor support not yet implemented');
 };
 
