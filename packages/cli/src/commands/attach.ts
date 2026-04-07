@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { select, Separator } from '@inquirer/prompts';
+import { select, confirm, Separator } from '@inquirer/prompts';
+import { existsSync } from 'node:fs';
 import { viwo, SessionStatus, DockerManager } from '@viwo/core';
 import { getCompositeStatusBadge, formatDate } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
@@ -71,16 +72,51 @@ export const attachCommand = new Command('attach')
                 DockerManager.generateContainerName(parseInt(targetSessionId, 10));
 
             // Check if container exists and is running
-            const exists = await DockerManager.containerExists({
+            let exists = await DockerManager.containerExists({
                 containerId: containerName,
             });
 
             if (!exists) {
-                console.error(chalk.red(`Container ${containerName} does not exist.`));
+                // Check if worktree still exists on disk
+                const worktreeExists = existsSync(session.worktreePath);
+
+                if (!worktreeExists) {
+                    console.error(chalk.red(`Container ${containerName} does not exist.`));
+                    console.log(
+                        chalk.gray(
+                            'The worktree has also been removed. This session cannot be recreated.'
+                        )
+                    );
+                    process.exit(1);
+                }
+
+                // Offer to recreate the container
+                console.log();
                 console.log(
-                    chalk.gray('The container may have been removed. Try recreating the session.')
+                    chalk.yellow(
+                        `Container ${containerName} no longer exists, but the session and worktree are intact.`
+                    )
                 );
-                process.exit(1);
+
+                const shouldRecreate = await confirm({
+                    message:
+                        'Recreate the container? (starts tmux + bash; run "claude --continue" inside to resume)',
+                    default: true,
+                });
+
+                if (!shouldRecreate) {
+                    process.exit(0);
+                }
+
+                console.log(chalk.dim('Recreating container...'));
+
+                await viwo.recreateContainer({
+                    sessionId: parseInt(targetSessionId, 10),
+                    worktreePath: session.worktreePath,
+                });
+
+                console.log(chalk.green(`Container ${containerName} recreated.`));
+                exists = true;
             }
 
             const containerInfo = await DockerManager.inspectContainer({
@@ -89,9 +125,7 @@ export const attachCommand = new Command('attach')
 
             if (!containerInfo.running) {
                 console.error(chalk.red(`Container ${containerName} is not running.`));
-                console.log(
-                    chalk.gray(`Container status: ${containerInfo.status}`)
-                );
+                console.log(chalk.gray(`Container status: ${containerInfo.status}`));
                 process.exit(1);
             }
 
@@ -109,9 +143,7 @@ export const attachCommand = new Command('attach')
                 console.log();
                 process.exit(0);
             }
-            console.error(
-                chalk.red(error instanceof Error ? error.message : String(error))
-            );
+            console.error(chalk.red(error instanceof Error ? error.message : String(error)));
             process.exit(1);
         }
     });

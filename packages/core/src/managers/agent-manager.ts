@@ -212,6 +212,87 @@ const initializeClaudeCodeWithOAuth = async (
     });
 };
 
+export interface RecreateContainerOptions {
+    sessionId: number;
+    worktreePath: string;
+}
+
+export const recreateContainer = async (
+    options: RecreateContainerOptions
+): Promise<InitializeAgentResult> => {
+    await docker.checkDockerRunningOrThrow();
+
+    const { sessionId, worktreePath } = options;
+    const authMethod = getAuthMethod();
+
+    let authEnv: Record<string, string> = {};
+
+    if (authMethod === 'oauth') {
+        const credentials = await extractOAuthCredentials();
+        if (!credentials) {
+            throw new Error(
+                'No Claude subscription credentials found. ' +
+                    'Please log in with Claude Code first (run "claude" on your host), ' +
+                    'or switch to API key auth with "viwo auth".'
+            );
+        }
+
+        const accountInfo = extractOAuthAccountInfo();
+        const claudeConfig = JSON.stringify({
+            hasCompletedOnboarding: true,
+            hasCompletedProjectOnboarding: true,
+            hasTrustDialogAccepted: true,
+            bypassPermissionsAccepted: true,
+            ...(accountInfo ? { oauthAccount: accountInfo } : {}),
+        });
+        const credentialsFile = JSON.stringify({ claudeAiOauth: credentials });
+
+        authEnv = {
+            CLAUDE_CODE_OAUTH_TOKEN: credentials.accessToken,
+            VIWO_OAUTH_CREDENTIALS: credentialsFile,
+            VIWO_OAUTH_CONFIG: claudeConfig,
+        };
+    } else {
+        const apiKey = getApiKey({ provider: 'anthropic' });
+        if (!apiKey) {
+            throw new Error(
+                'Anthropic API key not configured. Please run "viwo auth" to set up your API key.'
+            );
+        }
+        authEnv = { ANTHROPIC_API_KEY: apiKey };
+    }
+
+    const containerName = generateContainerName(sessionId);
+    const statePath = await ensureContainerStatePath(sessionId);
+
+    const containerInfo = await createContainer({
+        name: containerName,
+        image: CLAUDE_CODE_IMAGE,
+        worktreePath,
+        env: { ...authEnv, VIWO_RECREATE: '1' },
+        tty: true,
+        openStdin: true,
+        additionalBinds: [`${statePath}:/tmp/viwo-state`],
+    });
+
+    await startContainer({ containerId: containerInfo.id });
+
+    session.update({
+        id: sessionId,
+        updates: {
+            containerId: containerInfo.id,
+            containerName: containerInfo.name,
+            status: SessionStatus.RUNNING,
+            lastActivity: new Date().toISOString(),
+        },
+    });
+
+    return {
+        containerId: containerInfo.id,
+        containerName: containerInfo.name,
+    };
+};
+
 const initializeCline = async (
     _options: InitializeAgentOptions
 ): Promise<InitializeAgentResult> => {

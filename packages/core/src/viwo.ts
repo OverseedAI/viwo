@@ -25,6 +25,7 @@ import {
     SyncDockerStateResult,
 } from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
+import type { RecreateContainerOptions } from './managers/agent-manager';
 import {
     createSession,
     getSession,
@@ -60,6 +61,9 @@ export interface Viwo {
 
     /** Phase 3: Finalize agent launch and update session status to running */
     launchAgent: (options: LaunchAgentOptions) => Promise<void>;
+
+    /** Recreate a container for an existing session (tmux + bash, no auto-launched Claude) */
+    recreateContainer: (options: RecreateContainerOptions) => Promise<StartContainerResult>;
 
     /** Orchestrated flow: createWorktree → startContainer → launchAgent */
     start: (options: InitOptions) => Promise<WorktreeSession>;
@@ -200,6 +204,14 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         createWorktree: createWorktreePhase,
         startContainer: startContainerPhase,
         launchAgent: launchAgentPhase,
+
+        async recreateContainer(options: RecreateContainerOptions): Promise<StartContainerResult> {
+            const result = await agent.recreateContainer(options);
+            return {
+                containerId: result.containerId,
+                containerName: result.containerName,
+            };
+        },
 
         /**
          * Orchestrated flow: createWorktree → startContainer → launchAgent

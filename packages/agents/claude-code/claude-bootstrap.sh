@@ -73,6 +73,18 @@ cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 }
 SETTINGS_EOF
 
+# --- Recreate mode: tmux + bash only, no Claude auto-launch ---
+
+if [ -n "${VIWO_RECREATE:-}" ]; then
+  tmux new-session -d -s viwo bash
+
+  while tmux has-session -t viwo 2>/dev/null; do
+    sleep 2
+  done
+
+  exec bash
+fi
+
 # --- Build Claude command ---
 
 CLAUDE_CMD="claude --dangerously-skip-permissions --print --verbose"
