@@ -11,6 +11,7 @@ import {
     startContainer,
     getContainerLogs,
     pullImage,
+    generateContainerName,
 } from './docker-manager';
 import { getApiKey, getAuthMethod } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
@@ -71,7 +72,7 @@ const startClaudeContainer = async (options: {
         await pullImage({ image: CLAUDE_CODE_IMAGE });
     }
 
-    const containerName = `viwo-claude-${sessionId}-${Date.now()}`;
+    const containerName = generateContainerName(sessionId);
     const command = buildClaudeCommand(config);
 
     const containerInfo = await createContainer({

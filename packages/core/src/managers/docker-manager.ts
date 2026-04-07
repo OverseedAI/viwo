@@ -588,6 +588,15 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
     return result;
 };
 
+/**
+ * Generate a predictable container name from a session ID.
+ * Format: viwo-{first 8 chars of session ID, zero-padded}
+ */
+export const generateContainerName = (sessionId: number): string => {
+    const identifier = String(sessionId).padStart(8, '0').slice(0, 8);
+    return `viwo-${identifier}`;
+};
+
 export const docker = {
     isDockerRunning,
     checkDockerRunningOrThrow,
@@ -605,5 +614,6 @@ export const docker = {
     containerExists,
     inspectContainer,
     syncDockerState,
+    generateContainerName,
     CLAUDE_CODE_IMAGE,
 };
