@@ -18,7 +18,12 @@ import {
     WorktreeSession,
 } from './schemas';
 import { git } from './managers/git-manager';
-import { docker, syncDockerState, SyncDockerStateResult } from './managers/docker-manager';
+import {
+    docker,
+    readAgentState,
+    syncDockerState,
+    SyncDockerStateResult,
+} from './managers/docker-manager';
 import * as agent from './managers/agent-manager';
 import {
     createSession,
@@ -71,7 +76,9 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
     // Merge with defaults
     ViwoConfigSchema.parse(config || {});
 
-    const createWorktreePhase = async (options: CreateWorktreeOptions): Promise<CreateWorktreeResult> => {
+    const createWorktreePhase = async (
+        options: CreateWorktreeOptions
+    ): Promise<CreateWorktreeResult> => {
         const validated = CreateWorktreeOptionsSchema.parse(options);
 
         const foundRepo = getRepositoryById({ id: validated.repoId });
@@ -124,11 +131,8 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                             },
                         });
                     } catch (error) {
-                        const errorMessage =
-                            error instanceof Error ? error.message : String(error);
-                        throw new Error(
-                            `Post-install command failed: ${command}\n${errorMessage}`
-                        );
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        throw new Error(`Post-install command failed: ${command}\n${errorMessage}`);
                     }
                 }
             }
@@ -152,7 +156,9 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         }
     };
 
-    const startContainerPhase = async (options: StartContainerOptions): Promise<StartContainerResult> => {
+    const startContainerPhase = async (
+        options: StartContainerOptions
+    ): Promise<StartContainerResult> => {
         const validated = StartContainerOptionsSchema.parse(options);
 
         await docker.checkDockerRunningOrThrow();
@@ -273,10 +279,23 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 limit: options?.limit,
             });
 
-            return dbSessions
+            const sessions = dbSessions
                 .map(sessionToWorktreeSession)
                 .filter((s): s is WorktreeSession => s !== null)
                 .filter((s): s is WorktreeSession => s.status !== SessionStatus.CLEANED);
+
+            // Enrich sessions with agent state from viwo-state.json
+            await Promise.all(
+                sessions.map(async (s) => {
+                    const state = await readAgentState(parseInt(s.id, 10));
+                    s.agentStatus = state.status;
+                    if (state.timestamp) {
+                        s.agentStateTimestamp = new Date(state.timestamp);
+                    }
+                })
+            );
+
+            return sessions;
         },
 
         /**
@@ -293,7 +312,17 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 return null;
             }
 
-            return sessionToWorktreeSession(dbSession);
+            const worktreeSession = sessionToWorktreeSession(dbSession);
+            if (!worktreeSession) return null;
+
+            // Enrich with agent state
+            const state = await readAgentState(id);
+            worktreeSession.agentStatus = state.status;
+            if (state.timestamp) {
+                worktreeSession.agentStateTimestamp = new Date(state.timestamp);
+            }
+
+            return worktreeSession;
         },
 
         /**

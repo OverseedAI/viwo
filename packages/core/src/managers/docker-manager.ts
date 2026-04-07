@@ -1,10 +1,12 @@
 import Docker from 'dockerode';
 import { exists } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { ContainerInfo, PortMapping, SessionStatus } from '../schemas';
 import { listSessions, updateSession } from './session-manager';
 import { db } from '../db';
 import { chats, NewChat } from '../db-schemas';
+import { getContainerStatePath } from '../utils/paths';
 
 /**
  * Get platform-specific Docker configuration
@@ -598,6 +600,42 @@ export const generateContainerName = (sessionId: number): string => {
     return `viwo-${identifier}`;
 };
 
+export type AgentStatus = 'working' | 'awaiting_input' | 'exited' | 'unknown';
+
+export interface AgentState {
+    status: AgentStatus;
+    timestamp: string | null;
+    exitCode?: number;
+}
+
+/**
+ * Read agent state from the host-side viwo-state.json file.
+ * Returns { status: 'unknown', timestamp: null } if the file is missing or malformed.
+ */
+export const readAgentState = async (sessionId: number): Promise<AgentState> => {
+    const statePath = path.join(getContainerStatePath(sessionId), 'viwo-state.json');
+
+    try {
+        const raw = await readFile(statePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+
+        const status: AgentStatus =
+            parsed.status === 'working' ||
+            parsed.status === 'awaiting_input' ||
+            parsed.status === 'exited'
+                ? parsed.status
+                : 'unknown';
+
+        return {
+            status,
+            timestamp: typeof parsed.timestamp === 'string' ? parsed.timestamp : null,
+            exitCode: parsed.exitCode !== undefined ? Number(parsed.exitCode) : undefined,
+        };
+    } catch {
+        return { status: 'unknown', timestamp: null };
+    }
+};
+
 export const docker = {
     isDockerRunning,
     checkDockerRunningOrThrow,
@@ -616,5 +654,6 @@ export const docker = {
     inspectContainer,
     syncDockerState,
     generateContainerName,
+    readAgentState,
     CLAUDE_CODE_IMAGE,
 };

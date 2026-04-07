@@ -28,7 +28,9 @@ export interface InitializeAgentResult {
     containerName: string;
 }
 
-export const initializeAgent = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+export const initializeAgent = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     switch (options.config.type) {
         case 'claude-code':
             return initializeClaudeCode(options);
@@ -41,7 +43,9 @@ export const initializeAgent = async (options: InitializeAgentOptions): Promise<
     }
 };
 
-const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+const initializeClaudeCode = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     const authMethod = getAuthMethod();
 
     if (authMethod === 'oauth') {
@@ -152,7 +156,9 @@ const startClaudeContainer = async (options: {
     };
 };
 
-const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+const initializeClaudeCodeWithApiKey = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const apiKey = getApiKey({ provider: 'anthropic' });
@@ -170,7 +176,9 @@ const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): 
     });
 };
 
-const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+const initializeClaudeCodeWithOAuth = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const credentials = await extractOAuthCredentials();
@@ -204,11 +212,15 @@ const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): P
     });
 };
 
-const initializeCline = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+const initializeCline = async (
+    _options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     throw new Error('Cline support not yet implemented');
 };
 
-const initializeCursor = async (_options: InitializeAgentOptions): Promise<InitializeAgentResult> => {
+const initializeCursor = async (
+    _options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     throw new Error('Cursor support not yet implemented');
 };
 

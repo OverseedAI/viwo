@@ -55,6 +55,9 @@ export { SessionStatus };
 /**
  * Worktree session schemas
  */
+export const AgentStatusSchema = z.enum(['working', 'awaiting_input', 'exited', 'unknown']);
+export type AgentStatus = z.infer<typeof AgentStatusSchema>;
+
 export const WorktreeSessionSchema = z.object({
     id: z.string(),
     repoPath: z.string(),
@@ -69,6 +72,8 @@ export const WorktreeSessionSchema = z.object({
     error: z.string().optional(),
     containerOutput: z.string().optional(),
     containerName: z.string().optional(),
+    agentStatus: AgentStatusSchema.optional(),
+    agentStateTimestamp: z.date().optional(),
 });
 export type WorktreeSession = z.infer<typeof WorktreeSessionSchema>;
 

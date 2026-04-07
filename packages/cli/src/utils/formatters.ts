@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { WorktreeSession } from '@viwo/core';
+import type { AgentStatus, WorktreeSession } from '@viwo/core';
 
 export function getStatusBadge(status: WorktreeSession['status']): string {
     switch (status) {
@@ -18,6 +18,29 @@ export function getStatusBadge(status: WorktreeSession['status']): string {
         default:
             return status;
     }
+}
+
+export function getAgentStatusBadge(agentStatus: AgentStatus): string {
+    switch (agentStatus) {
+        case 'working':
+            return chalk.green('working');
+        case 'awaiting_input':
+            return chalk.yellow('awaiting_input');
+        case 'exited':
+            return chalk.gray('exited');
+        case 'unknown':
+        default:
+            return chalk.gray('unknown');
+    }
+}
+
+export function getCompositeStatusBadge(session: WorktreeSession): string {
+    const containerBadge = getStatusBadge(session.status);
+    const agentBadge = session.agentStatus
+        ? getAgentStatusBadge(session.agentStatus)
+        : chalk.gray('unknown');
+
+    return `${containerBadge} ${chalk.gray('/')} ${agentBadge}`;
 }
 
 export function formatDate(date: Date): string {
