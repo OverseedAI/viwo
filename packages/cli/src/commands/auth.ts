@@ -3,18 +3,27 @@ import chalk from 'chalk';
 import * as clack from '@clack/prompts';
 import { ConfigManager, CredentialManager } from '@viwo/core';
 
-const AUTH_METHODS = [
-    {
-        value: 'oauth' as const,
-        label: 'Use Claude subscription',
-        hint: 'Auto-detect from Claude Code login (Max, Pro, Teams)',
-    },
-    {
-        value: 'api-key' as const,
-        label: 'Use Anthropic API key',
-        hint: 'Enter an sk-ant-... key manually',
-    },
-];
+const getAuthMethods = () => {
+    const methods = [
+        {
+            value: 'oauth' as const,
+            label: 'Use Claude subscription',
+            hint: 'Auto-detect from Claude Code login (Max, Pro, Teams)',
+        },
+        {
+            value: 'api-key' as const,
+            label: 'Use Anthropic API key',
+            hint: 'Enter an sk-ant-... key manually',
+        },
+    ];
+
+    // OAuth is only supported on macOS and Linux
+    if (process.platform === 'win32') {
+        return methods.filter((m) => m.value !== 'oauth');
+    }
+
+    return methods;
+};
 
 const configureOAuth = async (): Promise<void> => {
     const spinner = clack.spinner();
@@ -99,9 +108,18 @@ export const authCommand = new Command('auth')
             const currentMethod = ConfigManager.getAuthMethod();
             clack.log.info(`Current auth method: ${chalk.cyan(currentMethod)}`);
 
+            // Show Windows warning if OAuth is not available
+            if (process.platform === 'win32') {
+                clack.log.warn(
+                    'OAuth authentication is not yet supported on Windows.\n' +
+                        '  You can use an Anthropic API key instead.'
+                );
+            }
+
+            const authMethods = getAuthMethods();
             const selectedMethod = await clack.select({
                 message: 'Select authentication method',
-                options: AUTH_METHODS.map((method) => ({
+                options: authMethods.map((method) => ({
                     label: method.label,
                     value: method.value,
                     hint: method.hint,
