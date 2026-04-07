@@ -34,10 +34,10 @@ import {
     updateSession,
 } from './managers/session-manager';
 import { getRepositoryById, repo } from './managers/repository-manager';
-import { joinDataPath, joinWorktreesPath } from './utils/paths';
+import { getContainerStatePath, joinDataPath, joinWorktreesPath } from './utils/paths';
 import { initializeDatabase } from './db-init';
 import { Database } from 'bun:sqlite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
 import { loadProjectConfig } from './managers/project-config-manager';
@@ -390,6 +390,17 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                             );
                         }
                     }
+                }
+
+                // Remove host-side container state directory
+                try {
+                    const statePath = getContainerStatePath(id);
+                    rmSync(statePath, { recursive: true, force: true });
+                } catch (error) {
+                    console.warn(
+                        `Failed to remove state directory for session ${id}:`,
+                        error
+                    );
                 }
 
                 // Remove worktree
