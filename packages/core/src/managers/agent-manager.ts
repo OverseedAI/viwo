@@ -49,15 +49,16 @@ const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<vo
     }
 };
 
-const buildClaudeCommand = (config: AgentConfig): string[] => {
-    const command = ['claude', '--dangerously-skip-permissions', '--print', '--verbose'];
+const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
+    const env: Record<string, string> = {
+        VIWO_PROMPT: config.initialPrompt,
+    };
 
     if (config.model) {
-        command.push('--model', config.model);
+        env.VIWO_MODEL = config.model;
     }
 
-    command.push(config.initialPrompt);
-    return command;
+    return env;
 };
 
 const startClaudeContainer = async (options: {
@@ -74,7 +75,7 @@ const startClaudeContainer = async (options: {
     }
 
     const containerName = generateContainerName(sessionId);
-    const command = buildClaudeCommand(config);
+    const claudeEnv = buildClaudeEnv(config);
 
     const statePath = await ensureContainerStatePath(sessionId);
 
@@ -82,8 +83,7 @@ const startClaudeContainer = async (options: {
         name: containerName,
         image: CLAUDE_CODE_IMAGE,
         worktreePath,
-        command,
-        env,
+        env: { ...env, ...claudeEnv },
         tty: true,
         openStdin: true,
         additionalBinds: [`${statePath}:/tmp/viwo-state`],

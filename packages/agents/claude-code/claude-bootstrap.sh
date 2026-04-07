@@ -7,6 +7,8 @@ CREDENTIALS_FILE="${SETTINGS_DIR}/.credentials.json"
 
 mkdir -p "$SETTINGS_DIR"
 
+# --- Credential setup ---
+
 if [ -n "${VIWO_OAUTH_CREDENTIALS:-}" ]; then
   # OAuth mode: write pre-built JSON files directly
   printf '%s' "$VIWO_OAUTH_CREDENTIALS" > "$CREDENTIALS_FILE"
@@ -39,4 +41,26 @@ else
   exit 1
 fi
 
-exec "$@"
+# --- Build Claude command ---
+
+CLAUDE_CMD="claude --dangerously-skip-permissions --print --verbose"
+
+if [ -n "${VIWO_MODEL:-}" ]; then
+  CLAUDE_CMD="$CLAUDE_CMD --model $VIWO_MODEL"
+fi
+
+if [ -n "${VIWO_PROMPT:-}" ]; then
+  CLAUDE_CMD="$CLAUDE_CMD \"$VIWO_PROMPT\""
+fi
+
+# --- Launch Claude Code inside tmux ---
+
+tmux new-session -d -s viwo "$CLAUDE_CMD"
+
+# Keep container alive after Claude Code exits
+# Wait for tmux session to end, then fall through to bash
+while tmux has-session -t viwo 2>/dev/null; do
+  sleep 2
+done
+
+exec bash

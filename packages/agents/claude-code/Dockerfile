@@ -41,5 +41,3 @@ USER claude
 WORKDIR /workspace
 
 ENTRYPOINT ["claude-bootstrap"]
-# Default args if none are provided
-CMD ["--help"]
