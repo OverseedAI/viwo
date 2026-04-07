@@ -43,14 +43,7 @@ export const isDockerRunning = async (): Promise<boolean> => {
     try {
         await dockerSdk.ping();
         return true;
-    } catch (err) {
-        // Enhanced error logging for Windows users
-        // if (process.platform === 'win32') {
-        //     console.error('Docker ping failed on Windows:', err);
-        //     console.error('Ensure Docker Desktop is running and using the default named pipe.');
-        // } else {
-        //     console.error('Docker ping failed:', err);
-        // }
+    } catch {
         return false;
     }
 };

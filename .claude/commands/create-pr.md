@@ -12,6 +12,7 @@ description: Commit, push, and open a PR
 ## Your task
 
 Based on the above changes:
+
 1. Create a new branch if on main
 2. If there are unstaged changes, make a commit with a message that summarizes changes.
 3. Push the branch to origin

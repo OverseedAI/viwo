@@ -2,8 +2,6 @@
 
 VIWO (Virtualized Isolated Worktree Orchestrator) can be installed in multiple ways depending on your preference.
 
-
-
 ## Manual Installation
 
 ### Download Pre-built Binaries
@@ -49,13 +47,13 @@ shasum -a 256 -c viwo-macos-arm64.sha256
 
 ## Platform Support
 
-| Platform | Architecture | Binary Name |
-|----------|--------------|-------------|
-| Linux | x86_64 | `viwo-linux-x64` |
-| Linux | ARM64 | `viwo-linux-arm64` |
-| macOS | Intel (x64) | `viwo-macos-x64` |
-| macOS | Apple Silicon (ARM64) | `viwo-macos-arm64` |
-| Windows | x86_64 | `viwo-windows-x64.exe` |
+| Platform | Architecture          | Binary Name            |
+| -------- | --------------------- | ---------------------- |
+| Linux    | x86_64                | `viwo-linux-x64`       |
+| Linux    | ARM64                 | `viwo-linux-arm64`     |
+| macOS    | Intel (x64)           | `viwo-macos-x64`       |
+| macOS    | Apple Silicon (ARM64) | `viwo-macos-arm64`     |
+| Windows  | x86_64                | `viwo-windows-x64.exe` |
 
 ## System Requirements
 
@@ -63,6 +61,4 @@ shasum -a 256 -c viwo-macos-arm64.sha256
 - **Git**: Required for worktree management
 - **Disk Space**: ~100MB for the binary
 
-
 ## Getting Started
-

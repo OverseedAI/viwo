@@ -7,7 +7,7 @@
  * Usage: bun packages/core/scripts/generate-migrations.ts
  */
 
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'path';
 
 interface JournalEntry {

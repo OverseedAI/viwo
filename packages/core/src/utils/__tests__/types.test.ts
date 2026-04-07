@@ -174,7 +174,7 @@ describe('sessionToWorktreeSession', () => {
 
             expect(result).not.toBeNull();
             expect(result!.containers).toHaveLength(1);
-            expect(result!.containers[0].status).toBe(expectedContainerStatus);
+            expect(result!.containers[0]!.status).toBe(expectedContainerStatus);
         }
     });
 });

@@ -14,7 +14,6 @@
 
 ---
 
-
 Ever wanted to test out an idea or fix a bug, but you didn't want
 to pollute your working branch? Or do you ever get super annoyed by all the questions and permissions Claude
 asks you?
@@ -22,7 +21,7 @@ asks you?
 Well, **VIWO** (**Vi**rtual **Wo**rkspaces) might just be your solution:
 
 - **Docker-sandboxed environments**: In order to use Claude Code with `--dangerously-skip-permissions`, we are
-using Docker to sandbox the runtime environment. 
+  using Docker to sandbox the runtime environment.
 - **Git worktrees**: Maintain a clean separation between your working branch and Claude's branch—so you can work while Claude works!
 - **Ease-of-use**: Quickly jump in to a worktree session by opening it in your favourite IDE.
 - **Multiple agents**: With VIWO, it's extremely easy to spin up multiple agents to go do your task for you.
@@ -33,36 +32,39 @@ using Docker to sandbox the runtime environment.
 ![Demo](./viwo-demo.gif)
 
 ## Table of Contents
+
 <!-- TOC -->
-* [viwo-cli](#viwo-cli)
-  * [Table of Contents](#table-of-contents)
-  * [Installation](#installation)
-  * [Quick Start](#quick-start)
-  * [Post Install Hooks](#post-install-hooks)
-  * [How it works](#how-it-works)
-  * [Security](#security)
-  * [🚀 Development Guidelines](#-development-guidelines)
-    * [Prerequisites](#prerequisites)
-    * [Installation](#installation-1)
-  * [📦 Project Structure](#-project-structure)
-  * [🛠️ Development](#-development)
-    * [Running the CLI](#running-the-cli)
-    * [Making Changes](#making-changes)
-    * [Type Checking](#type-checking)
-    * [Testing](#testing)
-    * [Code Quality](#code-quality)
-  * [📝 CLI Usage](#-cli-usage)
-    * [Initialize a new session](#initialize-a-new-session)
-    * [List all sessions](#list-all-sessions)
-  * [🏗️ Building for Production](#-building-for-production)
-  * [🧹 Cleaning](#-cleaning)
-  * [📚 Architecture](#-architecture)
-    * [Core Package (`@viwo/core`)](#core-package-viwocore)
-    * [CLI Package (`@viwo/cli`)](#cli-package-viwocli)
-  * [Uninstall](#uninstall)
-    * [Linux & macOS](#linux--macos)
-    * [Windows](#windows)
-<!-- TOC -->
+
+- [viwo-cli](#viwo-cli)
+    - [Table of Contents](#table-of-contents)
+    - [Installation](#installation)
+    - [Quick Start](#quick-start)
+    - [Post Install Hooks](#post-install-hooks)
+    - [How it works](#how-it-works)
+    - [Security](#security)
+    - [🚀 Development Guidelines](#-development-guidelines)
+        - [Prerequisites](#prerequisites)
+        - [Installation](#installation-1)
+    - [📦 Project Structure](#-project-structure)
+    - [🛠️ Development](#-development)
+        - [Running the CLI](#running-the-cli)
+        - [Making Changes](#making-changes)
+        - [Type Checking](#type-checking)
+        - [Testing](#testing)
+        - [Code Quality](#code-quality)
+    - [📝 CLI Usage](#-cli-usage)
+        - [Initialize a new session](#initialize-a-new-session)
+        - [List all sessions](#list-all-sessions)
+    - [🏗️ Building for Production](#-building-for-production)
+    - [🧹 Cleaning](#-cleaning)
+    - [📚 Architecture](#-architecture)
+        - [Core Package (`@viwo/core`)](#core-package-viwocore)
+        - [CLI Package (`@viwo/cli`)](#cli-package-viwocli)
+    - [Uninstall](#uninstall)
+        - [Linux & macOS](#linux--macos)
+        - [Windows](#windows)
+
+<!-- /TOC -->
 
 ## Installation
 
@@ -79,6 +81,7 @@ irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex
 ```
 
 **Note:**
+
 - You may need to restart your terminal after installation for the PATH changes to take effect.
 
 ## Quick Start
@@ -87,7 +90,7 @@ After installation, initialize your first session:
 
 ```bash
 # Register your Anthropic API key
-viwo auth 
+viwo auth
 
 # Register a repository
 cd /path/to/your/repo
@@ -111,14 +114,14 @@ This is meant for easily initializing your git worktree for development and test
 
 ```yaml
 postInstall:
-  # Install dependencies
-  - npm install
+    # Install dependencies
+    - npm install
 
-  # Build the project
-  - npm run build
+    # Build the project
+    - npm run build
 
-  # Copy environment file
-  - cp .env.example .env
+    # Copy environment file
+    - cp .env.example .env
 ```
 
 ## How it works
@@ -128,7 +131,7 @@ creates a git worktree in a separate directory, then creates a Docker container 
 new git worktree. The Docker container then runs a fresh installation of Claude Code in "print" mode with
 `--dangerously-skip-permissions` enabled to help you one-shot your prompts.
 
-- `viwo auth` stores your API key in a sqlite database in your app data directory. This API key is then provided to the Docker containers that run Claude Code. 
+- `viwo auth` stores your API key in a sqlite database in your app data directory. This API key is then provided to the Docker containers that run Claude Code.
 - `viwo register` stores the repository path and name into the sqlite database for subsequent retrieval.
 - `viwo start` creates a new git worktree and a Docker container. This container then runs `claude -p "YOUR PROMPT"`.
 
@@ -150,22 +153,24 @@ security of their containers [here](https://docs.docker.com/engine/security/).
 ### Installation
 
 1. **Clone and install dependencies**
-   ```bash
-   git clone <repository-url>
-   cd viwo
-   bun install
-   ```
+
+    ```bash
+    git clone <repository-url>
+    cd viwo
+    bun install
+    ```
 
 2. **Link the CLI globally**
-   ```bash
-   cd packages/cli
-   bun link
-   ```
+
+    ```bash
+    cd packages/cli
+    bun link
+    ```
 
 3. **Verify installation**
-   ```bash
-   viwo --help
-   ```
+    ```bash
+    viwo --help
+    ```
 
 That's it! No build step required during development. 🎉
 
@@ -198,9 +203,9 @@ viwo --help
 1. Edit source files in `packages/core/src/` or `packages/cli/src/`
 2. Changes are immediately available - no build step needed!
 3. Run the CLI to test your changes:
-   ```bash
-   viwo start
-   ```
+    ```bash
+    viwo start
+    ```
 
 The core package uses **direct TypeScript source imports** - Bun's native TypeScript support makes this possible without compilation during development.
 
@@ -275,6 +280,7 @@ bun run clean
 ### Core Package (`@viwo/core`)
 
 The core package provides:
+
 - Git worktree management
 - Docker container orchestration
 - AI agent initialization (Claude Code, Cline, Cursor)
@@ -286,6 +292,7 @@ The core package provides:
 ### CLI Package (`@viwo/cli`)
 
 A command-line interface built on top of `@viwo/core`:
+
 - Interactive session management
 - Pretty-printed output with colors and tables
 - Progress indicators

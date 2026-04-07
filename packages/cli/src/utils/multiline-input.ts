@@ -9,15 +9,7 @@
  */
 import * as readline from 'readline';
 import chalk from 'chalk';
-import {
-    Terminal,
-    PASTE_START,
-    PASTE_END,
-    enableRawMode,
-    disableRawMode,
-    write,
-    getTerminalSize,
-} from './terminal';
+import { Terminal, enableRawMode, disableRawMode, write, getTerminalSize } from './terminal';
 
 export interface MultilineInputOptions {
     message: string;
