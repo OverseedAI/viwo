@@ -6,6 +6,9 @@ Started: Tue  7 Apr 2026 15:34:03 PDT
 - CLI resolves `@viwo/core` types via `dist/*.d.ts` (project references with composite) — must run `bun run build` in core before CLI typecheck picks up schema changes
 - `viwo.start()` orchestrates three phases: `createWorktree` → `startContainer` → `launchAgent` — each independently callable on the Viwo interface
 - `initializeAgent` in agent-manager.ts returns `{ containerId, containerName }` — use this to surface container info to callers
+- Agent state is read from `{viwo-data}/container-state/{sessionId}/viwo-state.json` via `readAgentState(sessionId)` in docker-manager.ts
+- `WorktreeSession` has `agentStatus` and `agentStateTimestamp` fields — enriched in `viwo.list()` and `viwo.get()`
+- Composite status display uses `getCompositeStatusBadge(session)` from `formatters.ts` — shows "container / agent" format
 - Phase option/result types live in `schemas.ts`: `CreateWorktreeOptions/Result`, `StartContainerOptions/Result`, `LaunchAgentOptions`
 - Dockerfile is at `packages/agents/claude-code/Dockerfile`, uses Ubuntu 24.04 base image
 - Bootstrap script is `packages/agents/claude-code/claude-bootstrap.sh`, copied into container as `/usr/local/bin/claude-bootstrap`
@@ -23,6 +26,8 @@ Started: Tue  7 Apr 2026 15:34:03 PDT
 - Container stays alive after Claude exits via `exec bash` fallthrough in bootstrap script
 - State file inside container: `/tmp/viwo-state/viwo-state.json` — written by Claude Code hooks (PostToolUse/Notification) and by entrypoint on exit
 - Claude Code hooks are configured via `~/.claude/settings.json` written by bootstrap before launch
+- `viwo attach` uses `execSync('docker exec -it ...', { stdio: 'inherit' })` for interactive tmux — this is a shell command, not dockerode API
+- CLI commands that need Docker introspection import `DockerManager` from `@viwo/core` — it exposes `containerExists`, `inspectContainer`, `generateContainerName`
 ---
 
 ## 2026-04-07 - US-002
@@ -96,4 +101,36 @@ Started: Tue  7 Apr 2026 15:34:03 PDT
   - CLI resolves `@viwo/core` types via `dist/*.d.ts` (composite project references) — must `bun run build` in core before CLI typecheck sees schema changes
   - `initializeAgent` return type flows through `initializeClaudeCode` → `initializeClaudeCodeWith{ApiKey,OAuth}` → `startClaudeContainer` — all must return the same result type
   - The `launchAgent` phase is lightweight (status update) since the container entrypoint handles actual agent launch via tmux
+---
+
+## 2026-04-07 - US-007
+- Added `readAgentState(sessionId)` to docker-manager.ts — reads viwo-state.json from host-side state directory
+- Added `AgentStatus` type and `AgentStatusSchema` to schemas.ts (working | awaiting_input | exited | unknown)
+- Added `agentStatus` and `agentStateTimestamp` optional fields to `WorktreeSession` schema
+- Enriched `viwo.list()` and `viwo.get()` to read agent state from viwo-state.json files
+- Added `getAgentStatusBadge()` and `getCompositeStatusBadge()` to CLI formatters
+- Updated list-interactive.ts to show composite "container / agent" status in both list and detail views
+- Detail view also shows "Agent Updated:" timestamp when available
+- Files changed: `packages/core/src/managers/docker-manager.ts`, `packages/core/src/schemas.ts`, `packages/core/src/viwo.ts`, `packages/cli/src/utils/formatters.ts`, `packages/cli/src/commands/list-interactive.ts`
+- **Learnings for future iterations:**
+  - Agent state file is read with graceful fallback to `{ status: 'unknown', timestamp: null }` for missing/malformed files
+  - `readAgentState` is async (file I/O) — enrichment happens via `Promise.all` in list/get methods
+  - Composite badge format: `getStatusBadge(containerStatus) / getAgentStatusBadge(agentStatus)`
+---
+
+## 2026-04-07 - US-008
+- Created `viwo attach` command in `packages/cli/src/commands/attach.ts`
+- With no args: shows interactive list of running sessions via `@inquirer/prompts` select
+- With `<session-id>` arg: attaches directly to the specified session
+- Validates container exists and is running before attaching
+- Prints detach hint (Ctrl+B, D) before running `docker exec -it {containerName} tmux attach -t viwo`
+- Uses `execSync` with `stdio: 'inherit'` to pass through terminal I/O for interactive tmux
+- Registered command in `cli.ts` and exported from `commands/index.ts`
+- Updated CLAUDE.md with `attach` command documentation
+- Files changed: `packages/cli/src/commands/attach.ts` (new), `packages/cli/src/commands/index.ts`, `packages/cli/src/cli.ts`, `CLAUDE.md`
+- **Learnings for future iterations:**
+  - `DockerManager.containerExists` and `DockerManager.inspectContainer` accept `containerId` which can be a container name — dockerode resolves both
+  - Use `execSync` with `stdio: 'inherit'` for interactive Docker exec commands — this passes through stdin/stdout/stderr directly
+  - The `@inquirer/prompts` `select` throws `ExitPromptError` on Ctrl+C — catch it for graceful exit
+  - Container name is available on `WorktreeSession.containerName` or derivable via `DockerManager.generateContainerName(sessionId)`
 ---
