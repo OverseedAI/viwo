@@ -50,10 +50,13 @@ if [ -n "${VIWO_WORKTREE_NAME:-}" ] && [ -d "/repo-git" ]; then
   # Configure git user (use defaults if not set via git config in repo)
   git config --global --add safe.directory /workspace
 
-  # Use GITHUB_TOKEN for push auth if available
+  # Use GITHUB_TOKEN for push auth and gh CLI if available
   if [ -n "${GITHUB_TOKEN:-}" ]; then
     git config --global credential.helper '!f() { echo "password=$GITHUB_TOKEN"; }; f'
     git config --global credential.username 'x-access-token'
+
+    # Auth gh CLI so `gh pr create` works
+    echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
   fi
 fi
 
