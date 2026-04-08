@@ -56,6 +56,18 @@ const initializeClaudeCode = async (
     }
 };
 
+const getGitUserConfig = (): { name: string; email: string } | null => {
+    try {
+        const { execSync } = require('child_process');
+        const name = execSync('git config user.name', { encoding: 'utf-8' }).trim();
+        const email = execSync('git config user.email', { encoding: 'utf-8' }).trim();
+        if (name && email) return { name, email };
+    } catch {
+        // git config not set
+    }
+    return null;
+};
+
 const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
     const env: Record<string, string> = {
         VIWO_PROMPT: config.initialPrompt,
@@ -69,6 +81,14 @@ const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
     const githubToken = getGitHubToken();
     if (githubToken) {
         env.GITHUB_TOKEN = githubToken;
+    }
+
+    const gitUser = getGitUserConfig();
+    if (gitUser) {
+        env.GIT_AUTHOR_NAME = gitUser.name;
+        env.GIT_AUTHOR_EMAIL = gitUser.email;
+        env.GIT_COMMITTER_NAME = gitUser.name;
+        env.GIT_COMMITTER_EMAIL = gitUser.email;
     }
 
     return env;

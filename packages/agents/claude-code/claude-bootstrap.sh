@@ -47,8 +47,13 @@ if [ -n "${VIWO_WORKTREE_NAME:-}" ] && [ -d "/repo-git" ]; then
   # Rewrite .git file to point to the mounted repo-git directory
   echo "gitdir: /repo-git/worktrees/$VIWO_WORKTREE_NAME" > /workspace/.git
 
-  # Configure git user (use defaults if not set via git config in repo)
   git config --global --add safe.directory /workspace
+
+  # Forward host git identity into container
+  if [ -n "${GIT_AUTHOR_NAME:-}" ]; then
+    git config --global user.name "$GIT_AUTHOR_NAME"
+    git config --global user.email "$GIT_AUTHOR_EMAIL"
+  fi
 
   # Use GITHUB_TOKEN for push auth and gh CLI if available
   if [ -n "${GITHUB_TOKEN:-}" ]; then
