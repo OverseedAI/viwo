@@ -194,8 +194,7 @@ const initializeClaudeCodeWithOAuth = async (
     const claudeConfig = JSON.stringify({
         hasCompletedOnboarding: true,
         hasCompletedProjectOnboarding: true,
-        hasTrustDialogAccepted: true,
-        bypassPermissionsAccepted: true,
+        bypassPermissionsModeAccepted: true,
         ...(accountInfo ? { oauthAccount: accountInfo } : {}),
     });
     const credentialsFile = JSON.stringify({ claudeAiOauth: credentials });

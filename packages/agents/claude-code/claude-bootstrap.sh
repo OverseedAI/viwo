@@ -27,8 +27,7 @@ elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
 {
   "hasCompletedOnboarding": true,
   "hasCompletedProjectOnboarding": true,
-  "hasTrustDialogAccepted": true,
-  "bypassPermissionsAccepted": true,
+  "bypassPermissionsModeAccepted": true,
   "customApiKeyResponses": {
     "approved": ["$last20"],
     "rejected": []
@@ -42,10 +41,27 @@ else
   exit 1
 fi
 
+# --- Ensure workspace trust is accepted in config ---
+# Claude Code stores trust per-project in ~/.claude.json under projects[key].hasTrustDialogAccepted
+# The project key is the git toplevel path (/workspace in the container)
+# We use node to merge this into the existing config to avoid overwriting OAuth fields
+
+node -e "
+  const fs = require('fs');
+  const cfg = JSON.parse(fs.readFileSync('$CONFIG', 'utf8'));
+  cfg.bypassPermissionsModeAccepted = true;
+  cfg.projects = cfg.projects || {};
+  cfg.projects['/workspace'] = { ...(cfg.projects['/workspace'] || {}), hasTrustDialogAccepted: true };
+  fs.writeFileSync('$CONFIG', JSON.stringify(cfg));
+"
+
 # --- Configure Claude Code hooks for state reporting ---
 
 cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 {
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -82,12 +98,12 @@ if [ -n "${VIWO_RECREATE:-}" ]; then
     sleep 2
   done
 
-  exec bash
+  exit 0
 fi
 
 # --- Build Claude command ---
 
-CLAUDE_CMD="claude --dangerously-skip-permissions --print --verbose"
+CLAUDE_CMD="claude --dangerously-skip-permissions"
 
 if [ -n "${VIWO_MODEL:-}" ]; then
   CLAUDE_CMD="$CLAUDE_CMD --model $VIWO_MODEL"
@@ -100,16 +116,13 @@ fi
 # --- Launch Claude Code inside tmux ---
 
 EXIT_CODE_FILE="/tmp/viwo-state/claude-exit-code"
-tmux new-session -d -s viwo "$CLAUDE_CMD; echo \$? > $EXIT_CODE_FILE"
 
-# Keep container alive after Claude Code exits
-# Wait for tmux session to end, then fall through to bash
+# Launch Claude Code inside tmux, drop to bash when it exits
+# This keeps the tmux session alive so users can always attach
+tmux new-session -d -s viwo \
+  "$CLAUDE_CMD; echo \$? > $EXIT_CODE_FILE; printf '{\"status\":\"exited\",\"timestamp\":\"%s\",\"exitCode\":%s}' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"\$(cat $EXIT_CODE_FILE)\" > $STATE_FILE; exec bash"
+
+# Keep container alive as long as tmux session exists
 while tmux has-session -t viwo 2>/dev/null; do
   sleep 2
 done
-
-# Write exited state with exit code
-EXIT_CODE=$(cat "$EXIT_CODE_FILE" 2>/dev/null || echo "1")
-printf '{"status":"exited","timestamp":"%s","exitCode":%s}' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$EXIT_CODE" > "$STATE_FILE"
-
-exec bash
