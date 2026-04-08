@@ -41,27 +41,10 @@ else
   exit 1
 fi
 
-# --- Ensure workspace trust is accepted in config ---
-# Claude Code stores trust per-project in ~/.claude.json under projects[key].hasTrustDialogAccepted
-# The project key is the git toplevel path (/workspace in the container)
-# We use node to merge this into the existing config to avoid overwriting OAuth fields
-
-node -e "
-  const fs = require('fs');
-  const cfg = JSON.parse(fs.readFileSync('$CONFIG', 'utf8'));
-  cfg.bypassPermissionsModeAccepted = true;
-  cfg.projects = cfg.projects || {};
-  cfg.projects['/workspace'] = { ...(cfg.projects['/workspace'] || {}), hasTrustDialogAccepted: true };
-  fs.writeFileSync('$CONFIG', JSON.stringify(cfg));
-"
-
 # --- Configure Claude Code hooks for state reporting ---
 
 cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 {
-  "permissions": {
-    "defaultMode": "bypassPermissions"
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -89,18 +72,6 @@ cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 }
 SETTINGS_EOF
 
-# --- Recreate mode: tmux + bash only, no Claude auto-launch ---
-
-if [ -n "${VIWO_RECREATE:-}" ]; then
-  tmux new-session -d -s viwo bash
-
-  while tmux has-session -t viwo 2>/dev/null; do
-    sleep 2
-  done
-
-  exit 0
-fi
-
 # --- Build Claude command ---
 
 CLAUDE_CMD="claude --dangerously-skip-permissions"
@@ -109,9 +80,13 @@ if [ -n "${VIWO_MODEL:-}" ]; then
   CLAUDE_CMD="$CLAUDE_CMD --model $VIWO_MODEL"
 fi
 
-if [ -n "${VIWO_PROMPT:-}" ]; then
-  # Write prompt to file to avoid shell escaping issues with quotes/special chars
-  PROMPT_FILE="/tmp/viwo-state/prompt.txt"
+PROMPT_FILE="/tmp/viwo-state/prompt.txt"
+
+if [ -f "$PROMPT_FILE" ]; then
+  # Container was restarted — resume previous session instead of re-sending prompt
+  CLAUDE_CMD="$CLAUDE_CMD --continue"
+elif [ -n "${VIWO_PROMPT:-}" ]; then
+  # First run — write prompt to file and pass to Claude
   printf '%s' "$VIWO_PROMPT" > "$PROMPT_FILE"
   CLAUDE_CMD="$CLAUDE_CMD \"\$(cat $PROMPT_FILE)\""
   unset VIWO_PROMPT

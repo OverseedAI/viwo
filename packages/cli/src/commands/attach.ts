@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { select, confirm, Separator } from '@inquirer/prompts';
-import { existsSync } from 'node:fs';
+import { select, Separator } from '@inquirer/prompts';
 import { viwo, SessionStatus, DockerManager } from '@viwo/core';
 import { getCompositeStatusBadge, formatDate } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
@@ -72,51 +71,14 @@ export const attachCommand = new Command('attach')
                 DockerManager.generateContainerName(parseInt(targetSessionId, 10));
 
             // Check if container exists and is running
-            let exists = await DockerManager.containerExists({
+            const exists = await DockerManager.containerExists({
                 containerId: containerName,
             });
 
             if (!exists) {
-                // Check if worktree still exists on disk
-                const worktreeExists = existsSync(session.worktreePath);
-
-                if (!worktreeExists) {
-                    console.error(chalk.red(`Container ${containerName} does not exist.`));
-                    console.log(
-                        chalk.gray(
-                            'The worktree has also been removed. This session cannot be recreated.'
-                        )
-                    );
-                    process.exit(1);
-                }
-
-                // Offer to recreate the container
-                console.log();
-                console.log(
-                    chalk.yellow(
-                        `Container ${containerName} no longer exists, but the session and worktree are intact.`
-                    )
-                );
-
-                const shouldRecreate = await confirm({
-                    message:
-                        'Recreate the container? (starts tmux + bash; run "claude --continue" inside to resume)',
-                    default: true,
-                });
-
-                if (!shouldRecreate) {
-                    process.exit(0);
-                }
-
-                console.log(chalk.dim('Recreating container...'));
-
-                await viwo.recreateContainer({
-                    sessionId: parseInt(targetSessionId, 10),
-                    worktreePath: session.worktreePath,
-                });
-
-                console.log(chalk.green(`Container ${containerName} recreated.`));
-                exists = true;
+                console.error(chalk.red(`Container ${containerName} does not exist.`));
+                console.log(chalk.gray('Run "viwo clean" to remove this session.'));
+                process.exit(1);
             }
 
             const containerInfo = await DockerManager.inspectContainer({
@@ -124,9 +86,11 @@ export const attachCommand = new Command('attach')
             });
 
             if (!containerInfo.running) {
-                console.error(chalk.red(`Container ${containerName} is not running.`));
-                console.log(chalk.gray(`Container status: ${containerInfo.status}`));
-                process.exit(1);
+                console.log(chalk.dim(`Container ${containerName} is stopped. Restarting...`));
+                await DockerManager.startContainer({ containerId: containerName });
+                // Wait briefly for tmux to initialize
+                await new Promise((r) => setTimeout(r, 1000));
+                console.log(chalk.green('Container restarted.'));
             }
 
             // Print attach hint and run docker exec
