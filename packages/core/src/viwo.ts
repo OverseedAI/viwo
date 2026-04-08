@@ -140,10 +140,22 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 worktreePath,
             };
         } catch (error) {
+            // Roll back: remove worktree and branch if they were created
+            try {
+                await git.removeWorktree({ repoPath, worktreePath });
+            } catch {
+                // Ignore if worktree didn't get created
+            }
+            try {
+                await git.deleteBranch({ repoPath, branchName, force: true });
+            } catch {
+                // Ignore if branch didn't get created
+            }
+
             updateSession({
                 id: createdSession.id,
                 updates: {
-                    status: SessionStatus.ERROR,
+                    status: SessionStatus.CLEANED,
                     error: error instanceof Error ? error.message : String(error),
                     lastActivity: new Date().toISOString(),
                 },
@@ -233,10 +245,29 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 return worktreeSession;
             } catch (error) {
+                // Roll back: remove worktree and branch created in phase 1
+                try {
+                    await git.removeWorktree({
+                        repoPath: worktreeResult.repoPath,
+                        worktreePath: worktreeResult.worktreePath,
+                    });
+                } catch {
+                    // Ignore cleanup errors
+                }
+                try {
+                    await git.deleteBranch({
+                        repoPath: worktreeResult.repoPath,
+                        branchName: worktreeResult.branchName,
+                        force: true,
+                    });
+                } catch {
+                    // Ignore cleanup errors
+                }
+
                 updateSession({
                     id: worktreeResult.sessionId,
                     updates: {
-                        status: SessionStatus.ERROR,
+                        status: SessionStatus.CLEANED,
                         error: error instanceof Error ? error.message : String(error),
                         lastActivity: new Date().toISOString(),
                     },
