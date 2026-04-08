@@ -135,12 +135,7 @@ export const expandPromptWithIssues = async (prompt: string): Promise<string> =>
     if (issueUrls.length === 0) return prompt;
 
     const token = getGitHubToken();
-    if (!token) {
-        throw new Error(
-            'GitHub issue URL detected in prompt but no GitHub token is configured.\n' +
-                'Run "viwo config github" to set up your GitHub token.'
-        );
-    }
+    if (!token) return prompt;
 
     const issues = await Promise.all(
         issueUrls.map((url) =>
@@ -148,7 +143,6 @@ export const expandPromptWithIssues = async (prompt: string): Promise<string> =>
         )
     );
 
-    // Replace each URL with formatted issue content
     let expandedPrompt = prompt;
     for (let i = 0; i < issueUrls.length; i++) {
         expandedPrompt = expandedPrompt.replace(issueUrls[i]!.fullUrl, formatIssue(issues[i]!));
