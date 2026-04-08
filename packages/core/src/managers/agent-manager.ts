@@ -1,5 +1,4 @@
-import { AgentConfig, AgentType, SessionStatus } from '../schemas';
-import type { Subprocess } from 'bun';
+import { AgentConfig, SessionStatus } from '../schemas';
 import { db } from '../db';
 import { chats, NewChat } from '../db-schemas';
 import { session } from './session-manager';
@@ -11,9 +10,11 @@ import {
     startContainer,
     getContainerLogs,
     pullImage,
+    generateContainerName,
 } from './docker-manager';
 import { getApiKey, getAuthMethod } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
+import { ensureContainerStatePath } from '../utils/paths';
 
 export interface InitializeAgentOptions {
     sessionId: number;
@@ -21,41 +22,49 @@ export interface InitializeAgentOptions {
     config: AgentConfig;
 }
 
-export const initializeAgent = async (options: InitializeAgentOptions): Promise<void> => {
+export interface InitializeAgentResult {
+    containerId: string;
+    containerName: string;
+}
+
+export const initializeAgent = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     switch (options.config.type) {
         case 'claude-code':
-            await initializeClaudeCode(options);
-            break;
+            return initializeClaudeCode(options);
         case 'cline':
-            await initializeCline(options);
-            break;
+            return initializeCline(options);
         case 'cursor':
-            await initializeCursor(options);
-            break;
+            return initializeCursor(options);
         default:
             throw new Error(`Unsupported agent type: ${options.config.type}`);
     }
 };
 
-const initializeClaudeCode = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCode = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     const authMethod = getAuthMethod();
 
     if (authMethod === 'oauth') {
-        await initializeClaudeCodeWithOAuth(options);
+        return initializeClaudeCodeWithOAuth(options);
     } else {
-        await initializeClaudeCodeWithApiKey(options);
+        return initializeClaudeCodeWithApiKey(options);
     }
 };
 
-const buildClaudeCommand = (config: AgentConfig): string[] => {
-    const command = ['claude', '--dangerously-skip-permissions', '--print', '--verbose'];
+const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
+    const env: Record<string, string> = {
+        VIWO_PROMPT: config.initialPrompt,
+        CLAUDE_CODE_SANDBOXED: '1',
+    };
 
     if (config.model) {
-        command.push('--model', config.model);
+        env.VIWO_MODEL = config.model;
     }
 
-    command.push(config.initialPrompt);
-    return command;
+    return env;
 };
 
 const startClaudeContainer = async (options: {
@@ -63,7 +72,7 @@ const startClaudeContainer = async (options: {
     worktreePath: string;
     config: AgentConfig;
     env: Record<string, string>;
-}): Promise<void> => {
+}): Promise<InitializeAgentResult> => {
     const { sessionId, worktreePath, config, env } = options;
 
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
@@ -71,17 +80,19 @@ const startClaudeContainer = async (options: {
         await pullImage({ image: CLAUDE_CODE_IMAGE });
     }
 
-    const containerName = `viwo-claude-${sessionId}-${Date.now()}`;
-    const command = buildClaudeCommand(config);
+    const containerName = generateContainerName(sessionId);
+    const claudeEnv = buildClaudeEnv(config);
+
+    const statePath = await ensureContainerStatePath(sessionId);
 
     const containerInfo = await createContainer({
         name: containerName,
         image: CLAUDE_CODE_IMAGE,
         worktreePath,
-        command,
-        env,
+        env: { ...env, ...claudeEnv },
         tty: true,
         openStdin: true,
+        additionalBinds: [`${statePath}:/tmp/viwo-state`],
     });
 
     const initialChat: NewChat = {
@@ -111,6 +122,7 @@ const startClaudeContainer = async (options: {
             follow: true,
             stdout: true,
             stderr: true,
+            tty: true,
         },
         (logContent: string) => {
             const chatEntry: NewChat = {
@@ -138,9 +150,16 @@ const startClaudeContainer = async (options: {
             },
         });
     });
+
+    return {
+        containerId: containerInfo.id,
+        containerName: containerInfo.name,
+    };
 };
 
-const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCodeWithApiKey = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const apiKey = getApiKey({ provider: 'anthropic' });
@@ -150,7 +169,7 @@ const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): 
         );
     }
 
-    await startClaudeContainer({
+    return startClaudeContainer({
         sessionId: options.sessionId,
         worktreePath: options.worktreePath,
         config: options.config,
@@ -158,7 +177,9 @@ const initializeClaudeCodeWithApiKey = async (options: InitializeAgentOptions): 
     });
 };
 
-const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): Promise<void> => {
+const initializeClaudeCodeWithOAuth = async (
+    options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     await docker.checkDockerRunningOrThrow();
 
     const credentials = await extractOAuthCredentials();
@@ -174,65 +195,31 @@ const initializeClaudeCodeWithOAuth = async (options: InitializeAgentOptions): P
     const claudeConfig = JSON.stringify({
         hasCompletedOnboarding: true,
         hasCompletedProjectOnboarding: true,
-        hasTrustDialogAccepted: true,
-        bypassPermissionsAccepted: true,
+        bypassPermissionsModeAccepted: true,
         ...(accountInfo ? { oauthAccount: accountInfo } : {}),
     });
     const credentialsFile = JSON.stringify({ claudeAiOauth: credentials });
 
-    await startClaudeContainer({
+    return startClaudeContainer({
         sessionId: options.sessionId,
         worktreePath: options.worktreePath,
         config: options.config,
         env: {
-            CLAUDE_CODE_OAUTH_TOKEN: credentials.accessToken,
             VIWO_OAUTH_CREDENTIALS: credentialsFile,
             VIWO_OAUTH_CONFIG: claudeConfig,
         },
     });
 };
 
-const initializeCline = async (_options: InitializeAgentOptions): Promise<void> => {
-    // Placeholder for Cline initialization
-    // This would set up Cline-specific configuration
+const initializeCline = async (
+    _options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     throw new Error('Cline support not yet implemented');
 };
 
-const initializeCursor = async (_options: InitializeAgentOptions): Promise<void> => {
-    // Placeholder for Cursor initialization
-    // This would set up Cursor-specific configuration
+const initializeCursor = async (
+    _options: InitializeAgentOptions
+): Promise<InitializeAgentResult> => {
     throw new Error('Cursor support not yet implemented');
 };
 
-export interface LaunchAgentOptions {
-    worktreePath: string;
-    agentType: AgentType;
-}
-
-export const launchAgent = async (options: LaunchAgentOptions): Promise<Subprocess | null> => {
-    switch (options.agentType) {
-        case 'claude-code':
-            return launchClaudeCode(options.worktreePath);
-        case 'cline':
-            return launchCline(options.worktreePath);
-        case 'cursor':
-            return launchCursor(options.worktreePath);
-        default:
-            throw new Error(`Unsupported agent type: ${options.agentType}`);
-    }
-};
-
-const launchClaudeCode = (_worktreePath: string): Subprocess | null => {
-    // For now, we'll just prepare the environment
-    // The user will need to manually run claude-code
-    // In the future, we could spawn a process here using Bun.spawn()
-    return null;
-};
-
-const launchCline = (_worktreePath: string): Subprocess | null => {
-    throw new Error('Cline support not yet implemented');
-};
-
-const launchCursor = (_worktreePath: string): Subprocess | null => {
-    throw new Error('Cursor support not yet implemented');
-};

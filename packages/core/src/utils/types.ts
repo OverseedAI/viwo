@@ -71,5 +71,6 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
         lastActivity: parseSqliteTimestamp(dbSession.lastActivity),
         error: dbSession.error || undefined,
         containerOutput: dbSession.containerOutput || undefined,
+        containerName: dbSession.containerName || undefined,
     };
 };

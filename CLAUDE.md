@@ -254,6 +254,12 @@ Commands in `packages/cli/src/commands/`:
     - View current worktrees storage location (custom or default)
     - Set custom location (absolute or relative to app data directory)
     - Reset to default location (app data directory)
+- `attach` - Attach to a running Claude Code session via tmux
+    - With no args, shows interactive list of running sessions to choose from
+    - With `<session-id>`, attaches directly to the specified session
+    - Runs `docker exec -it viwo-{identifier} tmux attach -t viwo`
+    - Prints detach hint (Ctrl+B, D) before attaching
+    - Errors if container doesn't exist or isn't running
 
 ### Preflight Checks & Version Checking
 

@@ -108,16 +108,22 @@ export const startCommand = new Command('start')
             console.log();
             console.log(chalk.bold('Session Details'));
             console.log();
-            console.log(`  ${chalk.cyan('ID:')}        ${session.id}`);
-            console.log(`  ${chalk.cyan('Branch:')}    ${session.branchName}`);
-            console.log(`  ${chalk.cyan('Worktree:')}  ${session.worktreePath}`);
-            console.log(`  ${chalk.cyan('Agent:')}     ${session.agent.type}`);
-            console.log(`  ${chalk.cyan('Status:')}    ${getStatusBadge(session.status)}`);
+            console.log(`  ${chalk.cyan('ID:')}         ${session.id}`);
+            console.log(`  ${chalk.cyan('Branch:')}     ${session.branchName}`);
+            console.log(`  ${chalk.cyan('Worktree:')}   ${session.worktreePath}`);
+            console.log(`  ${chalk.cyan('Agent:')}      ${session.agent.type}`);
+            console.log(`  ${chalk.cyan('Status:')}     ${getStatusBadge(session.status)}`);
+            if (session.containerName) {
+                console.log(`  ${chalk.cyan('Container:')}  ${session.containerName}`);
+            }
 
             console.log();
-            console.log(chalk.dim(`Container is running in the background`));
+            console.log(chalk.dim('Container is running in the background.'));
             console.log();
-            clack.outro(`Next: ${chalk.cyan(`cd "${session.worktreePath}"`)} to view results!`);
+            console.log(`  Attach:  ${chalk.cyan(`viwo attach ${session.id}`)}`);
+            console.log(`  Detach:  ${chalk.dim('Ctrl+B, D (inside tmux)')}`);
+            console.log();
+            clack.outro('Session ready!');
             process.exit(0);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));

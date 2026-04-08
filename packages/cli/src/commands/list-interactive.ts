@@ -1,7 +1,7 @@
 import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
-import { getStatusBadge, formatDate } from '../utils/formatters';
+import { getCompositeStatusBadge, formatDate } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { selectAndOpenIDE } from '../utils/ide-selector';
 
@@ -13,9 +13,12 @@ const displaySessionDetails = async (session: WorktreeSession) => {
     console.log();
     console.log(chalk.bold('General'));
     console.log(chalk.gray('  ID:              '), session.id);
-    console.log(chalk.gray('  Status:          '), getStatusBadge(session.status));
+    console.log(chalk.gray('  Status:          '), getCompositeStatusBadge(session));
     console.log(chalk.gray('  Created:         '), formatDate(session.createdAt));
     console.log(chalk.gray('  Last Activity:   '), formatDate(session.lastActivity));
+    if (session.agentStateTimestamp) {
+        console.log(chalk.gray('  Agent Updated:   '), formatDate(session.agentStateTimestamp));
+    }
     console.log();
     console.log(chalk.bold('Repository'));
     console.log(chalk.gray('  Path:            '), session.repoPath);
@@ -226,7 +229,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             console.log();
 
             const sessionChoices = sessions.map((session) => ({
-                name: `${getStatusBadge(session.status)} ${session.branchName.padEnd(40)} ${chalk.gray(formatDate(session.createdAt))}`,
+                name: `${getCompositeStatusBadge(session)} ${session.branchName.padEnd(40)} ${chalk.gray(formatDate(session.createdAt))}`,
                 value: session.id,
                 description: `${session.agent.type} | ${session.id.substring(0, 12)}`,
             }));
