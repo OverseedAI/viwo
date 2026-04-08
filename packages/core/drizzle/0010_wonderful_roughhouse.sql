@@ -1,0 +1,1 @@
+ALTER TABLE `configurations` ADD `github_token` text;

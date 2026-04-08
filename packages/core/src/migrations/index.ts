@@ -144,4 +144,11 @@ export const migrations: Migration[] = [
             ALTER TABLE \`sessions\` ADD \`claudeCodeVersion\` text;
         `,
     },
+    {
+        version: 11,
+        name: 'wonderful_roughhouse',
+        up: `
+            ALTER TABLE \`configurations\` ADD \`github_token\` text;
+        `,
+    },
 ];

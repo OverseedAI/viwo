@@ -13,7 +13,7 @@ import {
     pullImage,
     generateContainerName,
 } from './docker-manager';
-import { getApiKey, getAuthMethod } from './config-manager';
+import { getApiKey, getAuthMethod, getGitHubToken } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
 import { ensureContainerStatePath } from '../utils/paths';
 
@@ -63,6 +63,11 @@ const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
 
     if (config.model) {
         env.VIWO_MODEL = config.model;
+    }
+
+    const githubToken = getGitHubToken();
+    if (githubToken) {
+        env.GITHUB_TOKEN = githubToken;
     }
 
     return env;

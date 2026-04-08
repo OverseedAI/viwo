@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import {
     IDEManager,
     ConfigManager,
+    GitHubManager,
     type IDEType,
     type IDEInfo,
     type ModelType,
@@ -33,6 +34,11 @@ const MODEL_INFO: Record<ModelType, { name: string; hint: string }> = {
     opus: { name: 'Claude Opus', hint: 'Most capable, slowest' },
     sonnet: { name: 'Claude Sonnet', hint: 'Balanced speed and intelligence' },
     haiku: { name: 'Claude Haiku', hint: 'Fastest, least capable' },
+};
+
+const getCurrentGitHubSummary = (): string => {
+    const hasToken = ConfigManager.hasGitHubToken();
+    return hasToken ? chalk.green('configured') : chalk.gray('not set');
 };
 
 const getCurrentModelSummary = (): string => {
@@ -360,6 +366,142 @@ const runModelConfig = async (): Promise<void> => {
     console.log();
 };
 
+// ─── GitHub token configuration flow ────────────────────────────────────────
+
+const runGitHubConfig = async (): Promise<void> => {
+    console.clear();
+    console.log();
+    console.log(chalk.bold.cyan('GitHub Integration'));
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log();
+
+    const hasToken = ConfigManager.hasGitHubToken();
+
+    console.log(chalk.bold('GitHub Token'));
+    if (hasToken) {
+        console.log(chalk.gray('  ') + chalk.green('Configured'));
+    } else {
+        console.log(chalk.gray('  Not set'));
+    }
+    console.log();
+
+    const action = await select<string>({
+        message: 'What would you like to do?',
+        choices: [
+            {
+                name: chalk.cyan('Auto-detect token'),
+                value: 'auto',
+                description: 'Try gh CLI, then GITHUB_TOKEN env var',
+            },
+            {
+                name: chalk.cyan('Enter token manually'),
+                value: 'manual',
+                description: 'Paste a personal access token',
+            },
+            ...(hasToken
+                ? [
+                      {
+                          name: chalk.yellow('Remove token'),
+                          value: 'remove',
+                          description: 'Delete stored GitHub token',
+                      },
+                  ]
+                : []),
+            {
+                name: chalk.gray('Cancel'),
+                value: 'cancel',
+                description: 'Go back without changes',
+            },
+        ],
+        pageSize: 10,
+    });
+
+    if (action === 'cancel') {
+        console.log(chalk.gray('No changes made'));
+        console.log();
+        return;
+    }
+
+    if (action === 'remove') {
+        ConfigManager.deleteGitHubToken();
+        console.log(chalk.green('✓ GitHub token removed'));
+        console.log();
+        return;
+    }
+
+    if (action === 'auto') {
+        console.log();
+        console.log(chalk.gray('Checking gh CLI...'));
+
+        const ghToken = await GitHubManager.resolveGitHubTokenFromGhCli();
+        if (ghToken) {
+            const confirm = await select<boolean>({
+                message: 'Found token from gh CLI. Use it?',
+                choices: [
+                    { name: 'Yes, save it', value: true },
+                    { name: 'No, cancel', value: false },
+                ],
+            });
+
+            if (confirm) {
+                ConfigManager.setGitHubToken(ghToken);
+                console.log(chalk.green('✓ GitHub token saved from gh CLI'));
+                console.log();
+                return;
+            }
+
+            console.log(chalk.gray('No changes made'));
+            console.log();
+            return;
+        }
+
+        console.log(chalk.gray('Checking GITHUB_TOKEN env var...'));
+        const envToken = GitHubManager.resolveGitHubTokenFromEnv();
+        if (envToken) {
+            const confirm = await select<boolean>({
+                message: 'Found GITHUB_TOKEN in environment. Use it?',
+                choices: [
+                    { name: 'Yes, save it', value: true },
+                    { name: 'No, cancel', value: false },
+                ],
+            });
+
+            if (confirm) {
+                ConfigManager.setGitHubToken(envToken);
+                console.log(chalk.green('✓ GitHub token saved from environment'));
+                console.log();
+                return;
+            }
+
+            console.log(chalk.gray('No changes made'));
+            console.log();
+            return;
+        }
+
+        console.log(chalk.yellow('No GitHub token found automatically.'));
+        console.log(chalk.gray('Install the gh CLI (gh auth login) or set GITHUB_TOKEN env var.'));
+        console.log(chalk.gray('You can also enter a token manually.'));
+        console.log();
+        return;
+    }
+
+    if (action === 'manual') {
+        const token = await password({
+            message: 'Enter your GitHub personal access token',
+            validate: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Token cannot be empty';
+                }
+                return true;
+            },
+        });
+
+        ConfigManager.setGitHubToken(token.trim());
+        console.log(chalk.green('✓ GitHub token saved'));
+        console.log();
+    }
+};
+
 // ─── Authentication configuration flow ──────────────────────────────────────
 
 const PROVIDERS = [
@@ -453,6 +595,10 @@ const runConfigMenu = async (): Promise<void> => {
                     value: 'model',
                 },
                 {
+                    name: `GitHub integration      ${chalk.gray(`(${getCurrentGitHubSummary()})`)}`,
+                    value: 'github',
+                },
+                {
                     name: `Authentication          ${chalk.gray(`(${getCurrentAuthSummary()})`)}`,
                     value: 'auth',
                 },
@@ -472,6 +618,9 @@ const runConfigMenu = async (): Promise<void> => {
                 break;
             case 'model':
                 await runModelConfig();
+                break;
+            case 'github':
+                await runGitHubConfig();
                 break;
             case 'auth':
                 await runAuthConfig();
@@ -540,6 +689,25 @@ const modelCommand = new Command('model')
         }
     });
 
+const githubCommand = new Command('github')
+    .description('Configure GitHub integration')
+    .action(async () => {
+        try {
+            await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+            await runGitHubConfig();
+        } catch (error) {
+            if ((error as any).name === 'ExitPromptError') {
+                console.log(chalk.gray('Operation cancelled'));
+                process.exit(0);
+            }
+            console.error(
+                chalk.red('Configuration failed:'),
+                error instanceof Error ? error.message : String(error)
+            );
+            process.exit(1);
+        }
+    });
+
 const authConfigCommand = new Command('auth')
     .description('Configure API key authentication')
     .action(async () => {
@@ -564,6 +732,7 @@ export const configCommand = new Command('config')
     .addCommand(ideCommand)
     .addCommand(worktreesCommand)
     .addCommand(modelCommand)
+    .addCommand(githubCommand)
     .addCommand(authConfigCommand)
     .action(async () => {
         try {

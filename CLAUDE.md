@@ -89,9 +89,10 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD and default branch management
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, auth method, IDE preferences, model preference, worktrees storage location)
+- `config-manager.ts` - Configuration management (API keys, GitHub token, auth method, IDE preferences, model preference, worktrees storage location)
 - `credential-manager.ts` - OAuth credential extraction from host system (macOS Keychain, Linux credential files)
 - `ide-manager.ts` - IDE detection and launching
+- `github-manager.ts` - GitHub issue URL detection, fetching via REST API, prompt expansion; token resolution from gh CLI/env
 - `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
@@ -112,6 +113,7 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
     - Auth method (`'api-key'` or `'oauth'`)
     - Preferred IDE
     - Preferred Claude model (`'sonnet'`, `'opus'`, or `'haiku'` — defaults to Sonnet)
+    - GitHub token (encrypted) for issue fetching and container forwarding
     - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
     - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
@@ -195,6 +197,27 @@ VIWO supports two authentication methods, configured via `viwo auth`:
 
 The `credential-manager.ts` handles host credential extraction, and `config-manager.ts` stores the auth method preference.
 
+### GitHub Integration
+
+When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owner}/{repo}/issues/{number}`), VIWO automatically:
+
+1. **Detects** issue URLs in the prompt via regex in `github-manager.ts`
+2. **Fetches** issue content (title, body, labels, comments) using the GitHub REST API
+3. **Expands** the prompt by replacing each URL with formatted issue content (markdown)
+4. **Forwards** the stored GitHub token as `GITHUB_TOKEN` env var to the container
+
+**Token management** (configured via `viwo config github`):
+- Stored encrypted in the `configurations` table (`githubToken` field)
+- Auto-detection: tries `gh auth token` CLI first, then `GITHUB_TOKEN`/`GH_TOKEN` env vars
+- Manual entry also supported
+- Token is required when issue URLs are detected in a prompt; errors if missing
+
+**Implementation**:
+- `github-manager.ts` handles URL parsing, API fetching, and prompt expansion
+- `config-manager.ts` handles encrypted token CRUD
+- `viwo.ts` calls `expandPromptWithIssues()` before starting the container
+- `agent-manager.ts` injects `GITHUB_TOKEN` into the container env via `buildClaudeEnv()`
+
 ### Container Lifecycle Management
 
 The `agent-manager.ts` implements automatic container cleanup:
@@ -254,6 +277,10 @@ Commands in `packages/cli/src/commands/`:
     - View current worktrees storage location (custom or default)
     - Set custom location (absolute or relative to app data directory)
     - Reset to default location (app data directory)
+- `config github` - Configure GitHub integration
+    - Auto-detect token from `gh` CLI or `GITHUB_TOKEN` env var
+    - Manual token entry
+    - View status and remove stored token
 - `attach` - Attach to a running Claude Code session via tmux
     - With no args, shows interactive list of running sessions to choose from
     - With `<session-id>`, attaches directly to the specified session

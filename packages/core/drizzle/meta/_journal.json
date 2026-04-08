@@ -71,6 +71,13 @@
       "when": 1775683176205,
       "tag": "0009_careful_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1775684060731,
+      "tag": "0010_wonderful_roughhouse",
+      "breakpoints": true
     }
   ]
 }

@@ -241,6 +241,55 @@ export const getWorktreesStorageLocation = (): string | null => {
     return config[0]!.worktreesStorageLocation || null;
 };
 
+// ─── GitHub Token Management ───────────────────────────────────────────────
+
+export const setGitHubToken = (token: string): void => {
+    const encryptedToken = encrypt(token);
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({ githubToken: encryptedToken, updatedAt: now })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({ githubToken: encryptedToken, createdAt: now, updatedAt: now })
+            .run();
+    }
+};
+
+export const getGitHubToken = (): string | null => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) return null;
+
+    const encryptedToken = config[0]!.githubToken;
+    if (!encryptedToken) return null;
+
+    try {
+        return decrypt(encryptedToken);
+    } catch (e) {
+        console.log('Error decrypting GitHub token:', e);
+        return null;
+    }
+};
+
+export const hasGitHubToken = (): boolean => {
+    return getGitHubToken() !== null;
+};
+
+export const deleteGitHubToken = (): void => {
+    const config = db.select().from(configurations).limit(1).get();
+    if (!config) return;
+
+    db.update(configurations)
+        .set({ githubToken: null, updatedAt: new Date().toISOString() })
+        .where(eq(configurations.id, config.id))
+        .run();
+};
+
 export const deleteWorktreesStorageLocation = (): void => {
     const config = db.select().from(configurations).limit(1).get();
 
@@ -356,4 +405,8 @@ export const config = {
     setWorktreesStorageLocation,
     getWorktreesStorageLocation,
     deleteWorktreesStorageLocation,
+    setGitHubToken,
+    getGitHubToken,
+    hasGitHubToken,
+    deleteGitHubToken,
 };
