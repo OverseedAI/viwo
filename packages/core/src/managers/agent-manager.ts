@@ -1,5 +1,4 @@
-import { AgentConfig, AgentType, SessionStatus } from '../schemas';
-import type { Subprocess } from 'bun';
+import { AgentConfig, SessionStatus } from '../schemas';
 import { db } from '../db';
 import { chats, NewChat } from '../db-schemas';
 import { session } from './session-manager';
@@ -122,6 +121,7 @@ const startClaudeContainer = async (options: {
             follow: true,
             stdout: true,
             stderr: true,
+            tty: true,
         },
         (logContent: string) => {
             const chatEntry: NewChat = {
@@ -304,35 +304,3 @@ const initializeCursor = async (
     throw new Error('Cursor support not yet implemented');
 };
 
-export interface LaunchAgentOptions {
-    worktreePath: string;
-    agentType: AgentType;
-}
-
-export const launchAgent = async (options: LaunchAgentOptions): Promise<Subprocess | null> => {
-    switch (options.agentType) {
-        case 'claude-code':
-            return launchClaudeCode(options.worktreePath);
-        case 'cline':
-            return launchCline(options.worktreePath);
-        case 'cursor':
-            return launchCursor(options.worktreePath);
-        default:
-            throw new Error(`Unsupported agent type: ${options.agentType}`);
-    }
-};
-
-const launchClaudeCode = (_worktreePath: string): Subprocess | null => {
-    // For now, we'll just prepare the environment
-    // The user will need to manually run claude-code
-    // In the future, we could spawn a process here using Bun.spawn()
-    return null;
-};
-
-const launchCline = (_worktreePath: string): Subprocess | null => {
-    throw new Error('Cline support not yet implemented');
-};
-
-const launchCursor = (_worktreePath: string): Subprocess | null => {
-    throw new Error('Cursor support not yet implemented');
-};

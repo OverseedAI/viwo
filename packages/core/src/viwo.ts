@@ -6,8 +6,6 @@ import {
     CreateWorktreeResult,
     InitOptions,
     InitOptionsSchema,
-    LaunchAgentOptions,
-    LaunchAgentOptionsSchema,
     ListOptions,
     SessionStatus,
     StartContainerOptions,
@@ -59,13 +57,10 @@ export interface Viwo {
     /** Phase 2: Create and start Docker container with agent configuration */
     startContainer: (options: StartContainerOptions) => Promise<StartContainerResult>;
 
-    /** Phase 3: Finalize agent launch and update session status to running */
-    launchAgent: (options: LaunchAgentOptions) => Promise<void>;
-
     /** Recreate a container for an existing session (tmux + bash, no auto-launched Claude) */
     recreateContainer: (options: RecreateContainerOptions) => Promise<StartContainerResult>;
 
-    /** Orchestrated flow: createWorktree → startContainer → launchAgent */
+    /** Orchestrated flow: createWorktree → startContainer */
     start: (options: InitOptions) => Promise<WorktreeSession>;
 
     list: (options?: ListOptions) => Promise<WorktreeSession[]>;
@@ -183,18 +178,6 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         };
     };
 
-    const launchAgentPhase = async (options: LaunchAgentOptions): Promise<void> => {
-        const validated = LaunchAgentOptionsSchema.parse(options);
-
-        updateSession({
-            id: validated.sessionId,
-            updates: {
-                status: SessionStatus.RUNNING,
-                lastActivity: new Date().toISOString(),
-            },
-        });
-    };
-
     return {
         repo,
         session,
@@ -203,7 +186,6 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
         createWorktree: createWorktreePhase,
         startContainer: startContainerPhase,
-        launchAgent: launchAgentPhase,
 
         async recreateContainer(options: RecreateContainerOptions): Promise<StartContainerResult> {
             const result = await agent.recreateContainer(options);
@@ -214,7 +196,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
         },
 
         /**
-         * Orchestrated flow: createWorktree → startContainer → launchAgent
+         * Orchestrated flow: createWorktree → startContainer
          */
         async start(options: InitOptions): Promise<WorktreeSession> {
             const validatedOptions = InitOptionsSchema.parse(options);
@@ -254,12 +236,6 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 });
 
                 worktreeSession.containerName = containerResult.containerName;
-
-                // Phase 3: Launch agent (update status)
-                await launchAgentPhase({
-                    sessionId: worktreeResult.sessionId,
-                });
-
                 worktreeSession.status = SessionStatus.RUNNING;
                 worktreeSession.lastActivity = new Date();
 

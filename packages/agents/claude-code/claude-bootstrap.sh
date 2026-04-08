@@ -110,7 +110,11 @@ if [ -n "${VIWO_MODEL:-}" ]; then
 fi
 
 if [ -n "${VIWO_PROMPT:-}" ]; then
-  CLAUDE_CMD="$CLAUDE_CMD \"$VIWO_PROMPT\""
+  # Write prompt to file to avoid shell escaping issues with quotes/special chars
+  PROMPT_FILE="/tmp/viwo-state/prompt.txt"
+  printf '%s' "$VIWO_PROMPT" > "$PROMPT_FILE"
+  CLAUDE_CMD="$CLAUDE_CMD \"\$(cat $PROMPT_FILE)\""
+  unset VIWO_PROMPT
 fi
 
 # --- Launch Claude Code inside tmux ---

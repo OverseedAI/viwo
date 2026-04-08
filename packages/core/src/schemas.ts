@@ -110,11 +110,6 @@ export const StartContainerResultSchema = z.object({
 });
 export type StartContainerResult = z.infer<typeof StartContainerResultSchema>;
 
-export const LaunchAgentOptionsSchema = z.object({
-    sessionId: z.number(),
-});
-export type LaunchAgentOptions = z.infer<typeof LaunchAgentOptionsSchema>;
-
 /**
  * Init command options
  */

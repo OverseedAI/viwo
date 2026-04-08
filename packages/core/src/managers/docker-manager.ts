@@ -205,6 +205,8 @@ export interface GetContainerLogsOptions {
     stderr?: boolean;
     since?: number;
     tail?: number;
+    /** Whether the container was created with tty: true (changes log format) */
+    tty?: boolean;
 }
 
 export interface LogStreamCallback {
@@ -233,11 +235,18 @@ export const getContainerLogs = async (
     }
 
     // Stream is a NodeJS.ReadableStream
+    // TTY containers send raw data; non-TTY containers use multiplexed 8-byte frame headers
     stream.on('data', (chunk: Buffer) => {
-        // Docker multiplexes stdout/stderr in the stream
-        // Each frame has an 8-byte header
-        // First byte: stream type (1=stdout, 2=stderr)
-        // Bytes 4-7: frame size (big endian)
+        if (options.tty) {
+            const content = chunk.toString('utf8');
+            if (content.trim()) {
+                callback(content);
+            }
+            return;
+        }
+
+        // Non-TTY: Docker multiplexes stdout/stderr with 8-byte headers
+        // First byte: stream type (1=stdout, 2=stderr), bytes 4-7: frame size (big endian)
         let offset = 0;
         while (offset < chunk.length) {
             if (offset + 8 > chunk.length) break;
@@ -247,7 +256,7 @@ export const getContainerLogs = async (
 
             if (frameEnd > chunk.length) break;
 
-            const content = chunk.slice(offset + 8, frameEnd).toString('utf8');
+            const content = chunk.subarray(offset + 8, frameEnd).toString('utf8');
             if (content.trim()) {
                 callback(content);
             }
@@ -265,8 +274,9 @@ export const getContainerLogs = async (
  * Get container logs since a specific timestamp (non-streaming)
  * Returns all logs as a single string
  *
- * Note: When follow=false, Docker returns raw log content as a Buffer without multiplexing.
- * The multiplexed format (with 8-byte headers) is only used with follow=true.
+ * Note: TTY containers always return raw log content (no multiplexed 8-byte headers).
+ * Non-TTY containers use multiplexed format regardless of follow mode.
+ * Since viwo containers use tty: true, this returns raw content directly.
  */
 export const getContainerLogsSince = async (
     options: Omit<GetContainerLogsOptions, 'follow'>
@@ -495,33 +505,41 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
                 console.warn(`Failed to capture logs for session ${session.id}:`, logError);
             }
 
-            // Determine new session status based on container state
+            // Determine new session status based on container + agent state
+            // Container exit code reflects bash (tmux fallthrough), not Claude itself.
+            // The agent's actual exit code is in viwo-state.json.
             let newStatus: SessionStatus | null = null;
             let reason = '';
 
             if (containerInfo.running) {
-                // Container is running - session should be running
                 if (session.status !== SessionStatus.RUNNING) {
                     newStatus = SessionStatus.RUNNING;
                     reason = 'Container is running';
                 }
-            } else {
-                // Container is not running (exited, dead, etc.)
-                if (containerInfo.status === 'exited') {
-                    if (containerInfo.exitCode === 0) {
+            } else if (containerInfo.status === 'exited') {
+                const agentState = await readAgentState(session.id);
+
+                if (agentState.status === 'exited' && agentState.exitCode !== undefined) {
+                    if (agentState.exitCode === 0) {
                         newStatus = SessionStatus.COMPLETED;
-                        reason = `Container exited with code 0`;
+                        reason = 'Claude exited with code 0';
                     } else {
                         newStatus = SessionStatus.ERROR;
-                        reason = `Container exited with code ${containerInfo.exitCode}`;
+                        reason = `Claude exited with code ${agentState.exitCode}`;
                     }
-                } else if (containerInfo.status === 'error') {
-                    newStatus = SessionStatus.ERROR;
-                    reason = 'Container is in error state';
                 } else {
-                    newStatus = SessionStatus.STOPPED;
-                    reason = `Container status: ${containerInfo.status}`;
+                    // No agent state — fall back to container exit code
+                    newStatus = containerInfo.exitCode === 0
+                        ? SessionStatus.COMPLETED
+                        : SessionStatus.ERROR;
+                    reason = `Container exited with code ${containerInfo.exitCode}`;
                 }
+            } else if (containerInfo.status === 'error') {
+                newStatus = SessionStatus.ERROR;
+                reason = 'Container is in error state';
+            } else {
+                newStatus = SessionStatus.STOPPED;
+                reason = `Container status: ${containerInfo.status}`;
             }
 
             // Update session if status changed or we have new logs
