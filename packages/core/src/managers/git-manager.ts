@@ -1,6 +1,6 @@
 import { simpleGit } from 'simple-git';
 import path from 'path';
-import { mkdir, exists, rm } from 'node:fs/promises';
+import { mkdir, exists, rm, readFile } from 'node:fs/promises';
 import { nanoid } from 'nanoid';
 
 export interface RepoPathOptions {
@@ -178,6 +178,33 @@ export const deleteBranch = async (options: DeleteBranchOptions): Promise<void> 
     }
 };
 
+export interface WorktreeGitInfo {
+    /** The full gitdir path (e.g., /path/to/repo/.git/worktrees/viwo-xxx) */
+    gitDir: string;
+    /** The parent repo's .git/ directory (e.g., /path/to/repo/.git) */
+    repoGitDir: string;
+    /** The worktree name inside .git/worktrees/ */
+    worktreeName: string;
+}
+
+export const getWorktreeGitInfo = async (worktreePath: string): Promise<WorktreeGitInfo> => {
+    const gitFilePath = path.join(worktreePath, '.git');
+    const content = await readFile(gitFilePath, 'utf-8');
+    const match = content.match(/^gitdir:\s*(.+)$/m);
+
+    if (!match?.[1]) {
+        throw new Error(`Could not parse gitdir from ${gitFilePath}`);
+    }
+
+    const gitDir = match[1].trim();
+    // gitDir is like /path/to/repo/.git/worktrees/viwo-xxx
+    const worktreesDir = path.dirname(gitDir);
+    const repoGitDir = path.dirname(worktreesDir);
+    const worktreeName = path.basename(gitDir);
+
+    return { gitDir, repoGitDir, worktreeName };
+};
+
 export const git = {
     isValidRepository,
     checkValidRepositoryOrThrow,
@@ -191,4 +218,5 @@ export const git = {
     pruneWorktrees,
     deleteBranch,
     getBranches,
+    getWorktreeGitInfo,
 };

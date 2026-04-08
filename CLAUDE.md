@@ -230,6 +230,16 @@ The `agent-manager.ts` implements automatic container cleanup:
     - Logs the cleanup operation
 - This ensures containers don't linger after the Claude Code process completes
 
+### Git Inside Containers
+
+Containers need working git for commits, pushes, and PR creation. VIWO achieves this by:
+
+1. **Mounting the repo's `.git/` directory** at `/repo-git` inside the container (only git internals, not the repo's working tree)
+2. **Rewriting the worktree's `.git` file** in `claude-bootstrap.sh` to point to `/repo-git/worktrees/<branch>` so git commands resolve correctly
+3. **Configuring `GITHUB_TOKEN` as a git credential helper** so pushes authenticate via the stored token
+
+The parent repo's working tree is never mounted — the container only sees the worktree at `/workspace` and the git metadata at `/repo-git`. The `getWorktreeGitInfo()` function in `git-manager.ts` parses the worktree's `.git` file to extract the gitdir path and derive mount paths.
+
 ### Docker Integration
 
 VIWO uses platform-specific Docker socket configuration:
