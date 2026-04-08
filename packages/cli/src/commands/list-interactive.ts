@@ -1,9 +1,10 @@
 import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { SessionStatus, viwo, type WorktreeSession } from '@viwo/core';
+import { SessionStatus, viwo, DockerManager, type WorktreeSession } from '@viwo/core';
 import { getCompositeStatusBadge, formatDate } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { selectAndOpenIDE } from '../utils/ide-selector';
+import { execSync } from 'child_process';
 
 const displaySessionDetails = async (session: WorktreeSession) => {
     console.clear();
@@ -48,6 +49,15 @@ const displaySessionDetails = async (session: WorktreeSession) => {
         console.log();
     }
 
+    if (session.status === SessionStatus.RUNNING) {
+        console.log(chalk.bold('Attach'));
+        console.log(
+            chalk.gray('  Command:         '),
+            chalk.cyan(`viwo attach ${session.id}`)
+        );
+        console.log();
+    }
+
     if (session.error) {
         console.log(chalk.bold.red('Error'));
         console.log(chalk.gray('  '), session.error);
@@ -79,6 +89,11 @@ const displaySessionDetails = async (session: WorktreeSession) => {
 const handleSessionAction = async (session: WorktreeSession): Promise<'back' | 'exit'> => {
     const actions = [
         {
+            name: '🔗 Attach to container',
+            value: 'attach',
+            disabled: session.status !== SessionStatus.RUNNING,
+        },
+        {
             name: '💻 Open in IDE',
             value: 'open-ide',
             disabled: !session.worktreePath,
@@ -108,6 +123,22 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
     });
 
     switch (action) {
+        case 'attach': {
+            const containerName =
+                session.containerName ||
+                DockerManager.generateContainerName(parseInt(session.id, 10));
+            console.log();
+            console.log(
+                chalk.dim(`Attaching to session ${session.id} (${containerName})...`)
+            );
+            console.log(chalk.yellow('Detach with: Ctrl+B, D'));
+            console.log();
+            execSync(`docker exec -it ${containerName} tmux attach -t viwo`, {
+                stdio: 'inherit',
+            });
+            return 'back';
+        }
+
         case 'open-ide':
             await selectAndOpenIDE(session.worktreePath);
             console.log(chalk.gray('Press Enter to continue...'));
