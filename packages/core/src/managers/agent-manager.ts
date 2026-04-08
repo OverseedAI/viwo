@@ -13,8 +13,9 @@ import {
     pullImage,
     generateContainerName,
 } from './docker-manager';
-import { getApiKey, getAuthMethod } from './config-manager';
+import { getApiKey, getAuthMethod, getGitHubToken } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
+import { getWorktreeGitInfo } from './git-manager';
 import { ensureContainerStatePath } from '../utils/paths';
 
 export interface InitializeAgentOptions {
@@ -65,6 +66,11 @@ const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
         env.VIWO_MODEL = config.model;
     }
 
+    const githubToken = getGitHubToken();
+    if (githubToken) {
+        env.GITHUB_TOKEN = githubToken;
+    }
+
     return env;
 };
 
@@ -86,6 +92,10 @@ const startClaudeContainer = async (options: {
 
     const statePath = await ensureContainerStatePath(sessionId);
 
+    // Mount the parent repo's .git/ so git operations work inside the container
+    const gitInfo = await getWorktreeGitInfo(worktreePath);
+    claudeEnv.VIWO_WORKTREE_NAME = gitInfo.worktreeName;
+
     const containerInfo = await createContainer({
         name: containerName,
         image: CLAUDE_CODE_IMAGE,
@@ -93,7 +103,10 @@ const startClaudeContainer = async (options: {
         env: { ...env, ...claudeEnv },
         tty: true,
         openStdin: true,
-        additionalBinds: [`${statePath}:/tmp/viwo-state`],
+        additionalBinds: [
+            `${statePath}:/tmp/viwo-state`,
+            `${gitInfo.repoGitDir}:/repo-git`,
+        ],
     });
 
     const initialChat: NewChat = {

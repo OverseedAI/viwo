@@ -7,6 +7,7 @@ export const configurations = sqliteTable('configurations', {
     preferredIde: text('preferred_ide'),
     worktreesStorageLocation: text('worktrees_storage_location'),
     preferredModel: text('preferred_model'),
+    githubToken: text('github_token'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });

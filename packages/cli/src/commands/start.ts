@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
-import { viwo } from '@viwo/core';
+import { viwo, ConfigManager, GitHubManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { multilineInput } from '../utils/multiline-input';
@@ -88,6 +88,56 @@ export const startCommand = new Command('start')
             const prompt = await multilineInput({
                 message: 'Enter your prompt for the AI agent:',
             });
+
+            // If prompt contains GitHub issue URLs and no token is stored, offer setup
+            const issueUrls = GitHubManager.parseIssueUrls(prompt);
+            if (issueUrls.length > 0 && !ConfigManager.hasGitHubToken()) {
+                clack.log.info(
+                    `Detected ${issueUrls.length} GitHub issue URL(s). A GitHub token is needed to fetch issue context.`
+                );
+
+                const setupChoice = await clack.select({
+                    message: 'Set up GitHub token now?',
+                    options: [
+                        { label: 'Auto-detect (gh CLI / env var)', value: 'auto' },
+                        { label: 'Enter token manually', value: 'manual' },
+                        { label: 'Skip — continue without issue context', value: 'skip' },
+                    ],
+                });
+
+                if (clack.isCancel(setupChoice)) {
+                    clack.cancel('Operation cancelled.');
+                    process.exit(0);
+                }
+
+                if (setupChoice === 'auto') {
+                    let resolved = await GitHubManager.resolveGitHubTokenFromGhCli();
+                    if (!resolved) resolved = GitHubManager.resolveGitHubTokenFromEnv();
+
+                    if (resolved) {
+                        ConfigManager.setGitHubToken(resolved);
+                        clack.log.success('GitHub token saved.');
+                    } else {
+                        clack.log.warn(
+                            'No token found. Install gh CLI (gh auth login) or set GITHUB_TOKEN env var.'
+                        );
+                    }
+                } else if (setupChoice === 'manual') {
+                    const tokenInput = await clack.password({
+                        message: 'Enter your GitHub personal access token:',
+                    });
+
+                    if (clack.isCancel(tokenInput)) {
+                        clack.cancel('Operation cancelled.');
+                        process.exit(0);
+                    }
+
+                    if (tokenInput && tokenInput.trim()) {
+                        ConfigManager.setGitHubToken(tokenInput.trim());
+                        clack.log.success('GitHub token saved.');
+                    }
+                }
+            }
 
             // Create session
             const spinner = clack.spinner();

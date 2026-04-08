@@ -39,6 +39,7 @@ import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
 import { loadProjectConfig } from './managers/project-config-manager';
 import { getPreferredModel } from './managers/config-manager';
+import { expandPromptWithIssues } from './managers/github-manager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -139,10 +140,22 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 worktreePath,
             };
         } catch (error) {
+            // Roll back: remove worktree and branch if they were created
+            try {
+                await git.removeWorktree({ repoPath, worktreePath });
+            } catch {
+                // Ignore if worktree didn't get created
+            }
+            try {
+                await git.deleteBranch({ repoPath, branchName, force: true });
+            } catch {
+                // Ignore if branch didn't get created
+            }
+
             updateSession({
                 id: createdSession.id,
                 updates: {
-                    status: SessionStatus.ERROR,
+                    status: SessionStatus.CLEANED,
                     error: error instanceof Error ? error.message : String(error),
                     lastActivity: new Date().toISOString(),
                 },
@@ -214,11 +227,14 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             };
 
             try {
+                // Expand GitHub issue URLs in prompt
+                const expandedPrompt = await expandPromptWithIssues(validatedOptions.prompt);
+
                 // Phase 2: Start container
                 const containerResult = await startContainerPhase({
                     sessionId: worktreeResult.sessionId,
                     worktreePath: worktreeResult.worktreePath,
-                    prompt: validatedOptions.prompt,
+                    prompt: expandedPrompt,
                     agent: validatedOptions.agent,
                     model: getPreferredModel() ?? 'sonnet',
                 });
@@ -229,10 +245,29 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                 return worktreeSession;
             } catch (error) {
+                // Roll back: remove worktree and branch created in phase 1
+                try {
+                    await git.removeWorktree({
+                        repoPath: worktreeResult.repoPath,
+                        worktreePath: worktreeResult.worktreePath,
+                    });
+                } catch {
+                    // Ignore cleanup errors
+                }
+                try {
+                    await git.deleteBranch({
+                        repoPath: worktreeResult.repoPath,
+                        branchName: worktreeResult.branchName,
+                        force: true,
+                    });
+                } catch {
+                    // Ignore cleanup errors
+                }
+
                 updateSession({
                     id: worktreeResult.sessionId,
                     updates: {
-                        status: SessionStatus.ERROR,
+                        status: SessionStatus.CLEANED,
                         error: error instanceof Error ? error.message : String(error),
                         lastActivity: new Date().toISOString(),
                     },

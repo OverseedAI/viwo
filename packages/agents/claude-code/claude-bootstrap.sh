@@ -41,6 +41,22 @@ else
   exit 1
 fi
 
+# --- Git worktree setup ---
+
+if [ -n "${VIWO_WORKTREE_NAME:-}" ] && [ -d "/repo-git" ]; then
+  # Rewrite .git file to point to the mounted repo-git directory
+  echo "gitdir: /repo-git/worktrees/$VIWO_WORKTREE_NAME" > /workspace/.git
+
+  # Configure git user (use defaults if not set via git config in repo)
+  git config --global --add safe.directory /workspace
+
+  # Use GITHUB_TOKEN for push auth if available
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git config --global credential.helper '!f() { echo "password=$GITHUB_TOKEN"; }; f'
+    git config --global credential.username 'x-access-token'
+  fi
+fi
+
 # --- Configure Claude Code hooks for state reporting ---
 
 cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
