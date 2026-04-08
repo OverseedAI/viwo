@@ -39,6 +39,7 @@ describe('sessionToWorktreeSession', () => {
             createdAt: '2025-11-24 10:30:45',
             lastActivity: '2025-11-24 12:15:30',
             containerOutput: null,
+            claudeCodeVersion: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -79,6 +80,7 @@ describe('sessionToWorktreeSession', () => {
             createdAt: null,
             lastActivity: null,
             containerOutput: null,
+            claudeCodeVersion: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -117,6 +119,7 @@ describe('sessionToWorktreeSession', () => {
             createdAt: 'invalid-date',
             lastActivity: 'not-a-date',
             containerOutput: null,
+            claudeCodeVersion: null,
         };
 
         const result = sessionToWorktreeSession(dbSession);
@@ -168,6 +171,7 @@ describe('sessionToWorktreeSession', () => {
                 createdAt: '2025-11-24 10:30:45',
                 lastActivity: '2025-11-24 12:15:30',
                 containerOutput: null,
+                claudeCodeVersion: null,
             };
 
             const result = sessionToWorktreeSession(dbSession);

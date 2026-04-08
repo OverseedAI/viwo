@@ -27,6 +27,9 @@ const displaySessionDetails = async (session: WorktreeSession) => {
     console.log();
     console.log(chalk.bold('Agent'));
     console.log(chalk.gray('  Type:            '), session.agent.type);
+    if (session.claudeCodeVersion) {
+        console.log(chalk.gray('  Version:         '), session.claudeCodeVersion);
+    }
     console.log(chalk.gray('  Prompt:          '), session.agent.initialPrompt);
     console.log();
 

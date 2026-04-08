@@ -72,6 +72,7 @@ export const WorktreeSessionSchema = z.object({
     error: z.string().optional(),
     containerOutput: z.string().optional(),
     containerName: z.string().optional(),
+    claudeCodeVersion: z.string().optional(),
     agentStatus: AgentStatusSchema.optional(),
     agentStateTimestamp: z.date().optional(),
 });

@@ -64,6 +64,13 @@
       "when": 1775254281347,
       "tag": "0008_youthful_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1775683176205,
+      "tag": "0009_careful_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }
