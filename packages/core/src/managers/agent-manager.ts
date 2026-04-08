@@ -5,6 +5,7 @@ import { session } from './session-manager';
 import {
     docker,
     CLAUDE_CODE_IMAGE,
+    CLAUDE_CODE_VERSION,
     checkImageExists,
     createContainer,
     startContainer,
@@ -111,6 +112,7 @@ const startClaudeContainer = async (options: {
             containerId: containerInfo.id,
             containerName: containerInfo.name,
             containerImage: CLAUDE_CODE_IMAGE,
+            claudeCodeVersion: CLAUDE_CODE_VERSION,
             status: SessionStatus.RUNNING,
             lastActivity: new Date().toISOString(),
         },
@@ -222,4 +224,3 @@ const initializeCursor = async (
 ): Promise<InitializeAgentResult> => {
     throw new Error('Cursor support not yet implemented');
 };
-

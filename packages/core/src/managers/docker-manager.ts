@@ -41,6 +41,9 @@ const dockerSdk = new Docker(getDockerConfig());
 // Default Claude Code image name
 export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:1.2.0';
 
+// Claude Code CLI version installed in the image
+export const CLAUDE_CODE_VERSION = '2.1.96';
+
 export const isDockerRunning = async (): Promise<boolean> => {
     try {
         await dockerSdk.ping();
@@ -529,9 +532,10 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
                     }
                 } else {
                     // No agent state — fall back to container exit code
-                    newStatus = containerInfo.exitCode === 0
-                        ? SessionStatus.COMPLETED
-                        : SessionStatus.ERROR;
+                    newStatus =
+                        containerInfo.exitCode === 0
+                            ? SessionStatus.COMPLETED
+                            : SessionStatus.ERROR;
                     reason = `Container exited with code ${containerInfo.exitCode}`;
                 }
             } else if (containerInfo.status === 'error') {
@@ -674,4 +678,5 @@ export const docker = {
     generateContainerName,
     readAgentState,
     CLAUDE_CODE_IMAGE,
+    CLAUDE_CODE_VERSION,
 };

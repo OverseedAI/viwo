@@ -15,6 +15,7 @@ export const sessions = sqliteTable('sessions', {
     status: text('status').default('initializing'),
     error: text('error'),
     containerOutput: text('containerOutput'),
+    claudeCodeVersion: text('claudeCodeVersion'),
     createdAt: text('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
     lastActivity: text('lastActivity').default(sql`(CURRENT_TIMESTAMP)`),
 });

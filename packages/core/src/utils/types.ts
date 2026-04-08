@@ -72,5 +72,6 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
         error: dbSession.error || undefined,
         containerOutput: dbSession.containerOutput || undefined,
         containerName: dbSession.containerName || undefined,
+        claudeCodeVersion: dbSession.claudeCodeVersion || undefined,
     };
 };

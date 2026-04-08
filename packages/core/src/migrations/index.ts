@@ -137,4 +137,11 @@ export const migrations: Migration[] = [
             ALTER TABLE \`configurations\` ADD \`preferred_model\` text;
         `,
     },
+    {
+        version: 10,
+        name: 'careful_rumiko_fujikawa',
+        up: `
+            ALTER TABLE \`sessions\` ADD \`claudeCodeVersion\` text;
+        `,
+    },
 ];

@@ -361,10 +361,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     const statePath = getContainerStatePath(id);
                     rmSync(statePath, { recursive: true, force: true });
                 } catch (error) {
-                    console.warn(
-                        `Failed to remove state directory for session ${id}:`,
-                        error
-                    );
+                    console.warn(`Failed to remove state directory for session ${id}:`, error);
                 }
 
                 // Remove worktree
