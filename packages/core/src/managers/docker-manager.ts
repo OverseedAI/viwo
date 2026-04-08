@@ -39,7 +39,7 @@ const getDockerConfig = (): Docker.DockerOptions => {
 const dockerSdk = new Docker(getDockerConfig());
 
 // Default Claude Code image name
-export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:1.1.0';
+export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:1.2.0';
 
 export const isDockerRunning = async (): Promise<boolean> => {
     try {
