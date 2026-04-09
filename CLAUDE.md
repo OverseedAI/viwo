@@ -172,7 +172,8 @@ Git worktrees storage location is configurable through the `config-manager.ts`:
     - Relative paths are resolved relative to the app data directory
 - **Implementation**:
     - The `paths.ts` utility provides `expandTilde()` to expand `~` to the user's home directory
-    - `getWorktreesPath()` and `joinWorktreesPath()` check the configuration database first, then fall back to the default location
+    - `getWorktreesPath()` and `joinWorktreesPath()` check the configuration database first, then fall back to `~/.viwo/worktrees`
+    - Existing installations may continue using a legacy data directory for the database/config, but the worktrees reset/default location is still `~/.viwo/worktrees`
     - Tilde expansion happens automatically when setting the worktrees storage location
 - **Configuration methods**:
     - `setWorktreesStorageLocation(location)` - Set custom location (automatically expands tilde)
@@ -285,7 +286,7 @@ Commands in `packages/cli/src/commands/`:
 - `config worktrees` - Configure worktrees storage location
     - View current worktrees storage location (custom or default)
     - Set custom location (absolute or relative to app data directory)
-    - Reset to default location (app data directory)
+    - Reset to default location (`~/.viwo/worktrees`)
 - `config github` - Configure GitHub integration
     - Auto-detect token from `gh` CLI or `GITHUB_TOKEN` env var
     - Manual token entry

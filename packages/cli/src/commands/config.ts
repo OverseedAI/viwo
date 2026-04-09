@@ -172,7 +172,7 @@ const runWorktreesLocationConfig = async (): Promise<void> => {
     console.log();
 
     const currentLocation = ConfigManager.getWorktreesStorageLocation();
-    const defaultLocation = AppPaths.joinDataPath('worktrees');
+    const defaultLocation = AppPaths.getDefaultWorktreesPath();
 
     console.log(chalk.bold('Current Worktrees Location'));
     if (currentLocation) {

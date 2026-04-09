@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { expandTilde, getLegacyDataPath, getDataPath } from '../paths';
+import { expandTilde, getLegacyDataPath, getDataPath, getDefaultWorktreesPath } from '../paths';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -66,5 +66,11 @@ describe('getDataPath', () => {
         const dataPath = getDataPath();
         expect(typeof dataPath).toBe('string');
         expect(dataPath.length).toBeGreaterThan(0);
+    });
+});
+
+describe('getDefaultWorktreesPath', () => {
+    it('should always point to ~/.viwo/worktrees', () => {
+        expect(getDefaultWorktreesPath()).toBe(join(homedir(), '.viwo', 'worktrees'));
     });
 });
