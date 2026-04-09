@@ -360,6 +360,10 @@ viwo list --json --status running
 viwo auth --method oauth
 viwo auth --api-key sk-ant-...
 
+# Configure auth via config subcommand
+viwo config auth --method oauth
+viwo config auth --set sk-ant-...
+
 # Configure model, IDE, worktrees
 viwo config model --set opus
 viwo config model --reset
