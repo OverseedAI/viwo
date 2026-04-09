@@ -24,15 +24,15 @@ const extractFromMacKeychain = async (): Promise<OAuthCredentials | null> => {
         return null;
     }
 
-    const parsed = JSON.parse(output.trim());
-    const oauthData = parsed.claudeAiOauth;
-
-    if (!oauthData) {
+    try {
+        const parsed = JSON.parse(output.trim());
+        const oauthData = parsed.claudeAiOauth;
+        if (!oauthData) return null;
+        const result = OAuthCredentialsSchema.safeParse(oauthData);
+        return result.success ? result.data : null;
+    } catch {
         return null;
     }
-
-    const result = OAuthCredentialsSchema.safeParse(oauthData);
-    return result.success ? result.data : null;
 };
 
 export const extractOAuthCredentials = async (): Promise<OAuthCredentials | null> => {
