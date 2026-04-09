@@ -19,6 +19,7 @@ if [ -n "${VIWO_OAUTH_CREDENTIALS:-}" ]; then
 
   unset VIWO_OAUTH_CREDENTIALS
   unset VIWO_OAUTH_CONFIG
+  unset CLAUDE_CODE_OAUTH_TOKEN
 
 elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   # API key mode
