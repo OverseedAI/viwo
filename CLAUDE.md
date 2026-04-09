@@ -378,6 +378,66 @@ viwo config github --status
 viwo repo list --json
 ```
 
+## End-to-End Verification
+
+After making changes to the codebase, verify the full session lifecycle using the development CLI (`bun packages/cli/src/cli.ts` or alias as `bun viwo`). This ensures Docker, git worktrees, and the agent pipeline work together correctly.
+
+### Verification Steps
+
+1. **List available repos** to get a repo ID:
+
+    ```bash
+    bun packages/cli/src/cli.ts repo list --json
+    ```
+
+2. **Start a test session non-interactively** (all flags required to skip prompts):
+
+    ```bash
+    bun packages/cli/src/cli.ts start \
+      --repo <id> \
+      --branch test-verify \
+      --prompt "Say hello and then exit. Do not make any changes to the codebase."
+    ```
+
+    Confirm the CLI prints session details (ID, branch, worktree path, container name) and reports status as `running`.
+
+3. **Verify container is running** via Docker directly:
+
+    ```bash
+    docker ps --filter "name=viwo-<container-name>"
+    ```
+
+4. **Cross-check with viwo list** to confirm the CLI's view matches Docker state:
+
+    ```bash
+    bun packages/cli/src/cli.ts list --json --status running
+    ```
+
+    Verify `status` is `"running"` and container info matches the `docker ps` output.
+
+5. **Verify the Claude Code session received the prompt** inside the container:
+
+    ```bash
+    docker exec <container-name> tmux capture-pane -t viwo -p
+    ```
+
+    Confirm the prompt text appears and Claude Code has responded.
+
+6. **Clean up** after verification:
+
+    ```bash
+    # Stop the container first
+    docker stop <container-name>
+    # Then clean the session
+    bun packages/cli/src/cli.ts clean
+    ```
+
+### Key Points
+
+- Always use `bun packages/cli/src/cli.ts` (not the globally installed `viwo`) to test development changes.
+- Verify each layer independently: CLI output, Docker state (`docker ps`), and in-container state (`tmux capture-pane`). Don't assume one layer is correct because another looks fine.
+- The `--repo`, `--branch`, and `--prompt` flags are all required for fully non-interactive `start`.
+
 ## Known Limitations
 
 - Only Claude Code agent is implemented (Cline, Cursor throw "not yet implemented")
