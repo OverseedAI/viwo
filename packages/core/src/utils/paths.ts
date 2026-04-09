@@ -1,16 +1,19 @@
 /**
  * Application paths utility
  *
- * All viwo data is stored in ~/.viwo/ on all platforms.
+ * New installations store data in ~/.viwo/ on all platforms.
+ * Existing installations that used the legacy platform-specific directory
+ * (via env-paths) continue using that location until the user explicitly
+ * reconfigures.
  */
 
 import { join, isAbsolute } from 'node:path';
 import { mkdir } from 'node:fs/promises';
-import { existsSync, mkdirSync, cpSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { getWorktreesStorageLocation } from '../managers/config-manager.js';
 
-const DATA_DIR = join(homedir(), '.viwo');
+const DEFAULT_DATA_DIR = join(homedir(), '.viwo');
 
 /**
  * Get the legacy platform-specific data directory path.
@@ -19,7 +22,7 @@ const DATA_DIR = join(homedir(), '.viwo');
  * - Linux: ~/.local/share/viwo
  * - Windows: %APPDATA%/viwo
  */
-const getLegacyDataPath = (): string | null => {
+export const getLegacyDataPath = (): string | null => {
     const home = homedir();
     switch (process.platform) {
         case 'darwin':
@@ -34,48 +37,19 @@ const getLegacyDataPath = (): string | null => {
 };
 
 /**
- * Copy contents from a legacy data directory to a new data directory.
- * Only copies if the legacy directory has a sqlite.db and the new directory does not.
- * Files are copied (not moved) so users can verify before deleting the old directory.
- *
- * Exported for testing; prefer calling migrateLegacyDataDir() directly.
+ * Resolve the data directory to use.
+ * If a legacy directory exists with a sqlite.db, keep using it so existing
+ * users are not disrupted. Otherwise, use the new default (~/.viwo).
  */
-export const migrateDataDir = (legacyPath: string, newPath: string): boolean => {
-    // Skip if legacy directory doesn't exist
-    if (!existsSync(legacyPath)) return false;
-
-    // Skip if legacy directory has no sqlite.db (nothing meaningful to migrate)
-    if (!existsSync(join(legacyPath, 'sqlite.db'))) return false;
-
-    // Skip if new directory already has a database (migration already done or fresh install)
-    if (existsSync(join(newPath, 'sqlite.db'))) return false;
-
-    // Perform migration
-    mkdirSync(newPath, { recursive: true });
-
-    const entries = readdirSync(legacyPath, { withFileTypes: true });
-    for (const entry of entries) {
-        const src = join(legacyPath, entry.name);
-        const dest = join(newPath, entry.name);
-        // Don't overwrite anything that already exists in the new location
-        if (existsSync(dest)) continue;
-        cpSync(src, dest, { recursive: true });
-    }
-
-    console.log(`Migrated VIWO data from ${legacyPath} to ${newPath}`);
-    console.log(`You may remove the old directory once verified: ${legacyPath}`);
-    return true;
-};
-
-/**
- * Migrate data from the legacy platform-specific directory to ~/.viwo/.
- * This is a one-time, non-destructive operation called automatically on startup.
- */
-export const migrateLegacyDataDir = (): void => {
+const resolveDataDir = (): string => {
     const legacyPath = getLegacyDataPath();
-    if (!legacyPath || legacyPath === DATA_DIR) return;
-    migrateDataDir(legacyPath, DATA_DIR);
+    if (legacyPath && legacyPath !== DEFAULT_DATA_DIR && existsSync(join(legacyPath, 'sqlite.db'))) {
+        return legacyPath;
+    }
+    return DEFAULT_DATA_DIR;
 };
+
+const DATA_DIR = resolveDataDir();
 
 /**
  * Expands tilde (~) in a path to the user's home directory

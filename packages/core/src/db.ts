@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { Database } from 'bun:sqlite';
 import { initializeDatabase } from './db-init';
-import { joinDataPath, migrateLegacyDataDir } from './utils/paths';
+import { joinDataPath } from './utils/paths';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -20,9 +20,8 @@ const getDbPath = (): string => {
 
 const dbPath = getDbPath();
 
-// Only create directory and migrate if not using in-memory database
+// Only create directory if not using in-memory database
 if (dbPath !== ':memory:') {
-    migrateLegacyDataDir();
     mkdirSync(dirname(dbPath), { recursive: true });
 }
 
