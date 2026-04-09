@@ -408,11 +408,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
                     // Delete the associated local branch
                     if (dbSession.branchName) {
-                        await git.deleteBranch({
-                            repoPath: worktreeSession.repoPath,
-                            branchName: dbSession.branchName,
-                            force: true, // Use force to delete unmerged branches
-                        });
+                        try {
+                            await git.deleteBranch({
+                                repoPath: worktreeSession.repoPath,
+                                branchName: dbSession.branchName,
+                                force: true, // Use force to delete unmerged branches
+                            });
+                        } catch (error) {
+                            console.warn(`Failed to delete branch ${dbSession.branchName}:`, error);
+                        }
                     }
                 }
 

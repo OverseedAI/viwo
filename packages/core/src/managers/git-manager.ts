@@ -120,6 +120,8 @@ export const removeWorktree = async (options: RemoveWorktreeOptions): Promise<vo
         if (await exists(options.worktreePath)) {
             await rm(options.worktreePath, { recursive: true, force: true });
         }
+        // Prune stale worktree references so git no longer considers the branch in use
+        await pruneWorktrees({ repoPath: options.repoPath });
     }
 };
 
