@@ -101,8 +101,58 @@ const configureApiKey = async (): Promise<void> => {
 
 export const authCommand = new Command('auth')
     .description('Configure authentication for AI providers')
-    .action(async () => {
+    .option('--method <method>', 'Auth method: api-key or oauth')
+    .option('--api-key <key>', 'Anthropic API key (implies --method api-key)')
+    .action(async (options) => {
         try {
+            // Non-interactive path: --api-key flag
+            if (options.apiKey) {
+                const key = options.apiKey;
+                if (!key.startsWith('sk-ant-')) {
+                    console.error(chalk.red('Anthropic API keys should start with "sk-ant-"'));
+                    process.exit(1);
+                }
+
+                await ConfigManager.setApiKey({ provider: 'anthropic', key });
+                ConfigManager.setAuthMethod('api-key');
+                console.log(chalk.green('API key saved and auth method set to api-key.'));
+                return;
+            }
+
+            // Non-interactive path: --method flag
+            if (options.method) {
+                const method = options.method;
+                if (method !== 'api-key' && method !== 'oauth') {
+                    console.error(chalk.red('Invalid method. Use "api-key" or "oauth".'));
+                    process.exit(1);
+                }
+
+                if (method === 'oauth') {
+                    if (process.platform === 'win32') {
+                        console.error(chalk.red('OAuth is not supported on Windows.'));
+                        process.exit(1);
+                    }
+
+                    const summary = await CredentialManager.getCredentialSummary();
+                    if (!summary) {
+                        console.error(
+                            chalk.red(
+                                'No Claude Code OAuth credentials found. Run "claude" on your host to authenticate first.'
+                            )
+                        );
+                        process.exit(1);
+                    }
+
+                    ConfigManager.setAuthMethod('oauth');
+                    console.log(chalk.green(`Auth method set to oauth (${summary.emailAddress}).`));
+                } else {
+                    ConfigManager.setAuthMethod('api-key');
+                    console.log(chalk.green('Auth method set to api-key.'));
+                }
+                return;
+            }
+
+            // Interactive path
             clack.intro(chalk.bgCyan(' viwo auth '));
 
             const currentMethod = ConfigManager.getAuthMethod();

@@ -123,10 +123,7 @@ const startClaudeContainer = async (options: {
         env: { ...env, ...claudeEnv },
         tty: true,
         openStdin: true,
-        additionalBinds: [
-            `${statePath}:/tmp/viwo-state`,
-            `${gitInfo.repoGitDir}:/repo-git`,
-        ],
+        additionalBinds: [`${statePath}:/tmp/viwo-state`, `${gitInfo.repoGitDir}:/repo-git`],
     });
 
     const initialChat: NewChat = {

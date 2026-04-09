@@ -204,12 +204,14 @@ When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owne
 4. **Forwards** the stored GitHub token as `GITHUB_TOKEN` env var to the container
 
 **Token management** (configured via `viwo config github`):
+
 - Stored encrypted in the `configurations` table (`githubToken` field)
 - Auto-detection: tries `gh auth token` CLI first, then `GITHUB_TOKEN`/`GH_TOKEN` env vars
 - Manual entry also supported
 - Token is required when issue URLs are detected in a prompt; errors if missing
 
 **Implementation**:
+
 - `github-manager.ts` handles URL parsing, API fetching, and prompt expansion
 - `config-manager.ts` handles encrypted token CRUD
 - `viwo.ts` calls `expandPromptWithIssues()` before starting the container
@@ -340,6 +342,41 @@ Current test coverage focuses on:
 - **commander** - CLI framework
 - **@inquirer/prompts** - Interactive CLI prompts with keyboard navigation
 - **chalk/ora** - CLI UI
+
+## Non-Interactive CLI Usage (Agent Testing)
+
+All CLI commands support fully non-interactive, flag-based execution for agent-driven workflows. When all required flags are provided, no interactive prompt is triggered.
+
+```bash
+# Start a session non-interactively
+viwo start --repo <id> --branch <name> --prompt "Your prompt here"
+viwo start --repo <id> --prompt-file ./prompt.txt
+
+# List sessions as JSON
+viwo list --json
+viwo list --json --status running
+
+# Configure auth
+viwo auth --method oauth
+viwo auth --api-key sk-ant-...
+
+# Configure model, IDE, worktrees
+viwo config model --set opus
+viwo config model --reset
+viwo config ide --set vscode
+viwo config ide --reset
+viwo config worktrees --set /path/to/worktrees
+viwo config worktrees --reset
+
+# Configure GitHub token
+viwo config github --auto
+viwo config github --set <token>
+viwo config github --remove
+viwo config github --status
+
+# List repos as JSON
+viwo repo list --json
+```
 
 ## Known Limitations
 
