@@ -32,6 +32,23 @@ export const getCurrentBranch = async (options: RepoPathOptions): Promise<string
     return status.current || 'main';
 };
 
+/**
+ * Validates a branch name for invalid git branch name characters.
+ * Returns an error message if invalid, or undefined if valid.
+ */
+export const validateBranchName = (name: string): string | undefined => {
+    if (/\s/.test(name)) return 'Branch name cannot contain spaces';
+    // eslint-disable-next-line no-useless-escape
+    if (/[~^:?*\[\\]/.test(name)) return 'Branch name cannot contain ~ ^ : ? * [ or \\';
+    if (/\.\./.test(name)) return 'Branch name cannot contain consecutive dots (..)';
+    if (/\.$/.test(name)) return 'Branch name cannot end with a dot';
+    if (/\.lock$/.test(name)) return 'Branch name cannot end with .lock';
+    if (/^\/|\/\/|\/$/g.test(name)) return 'Branch name cannot start/end with / or contain //';
+    if (/^-/.test(name)) return 'Branch name cannot start with a hyphen';
+    if (name.includes('@{')) return 'Branch name cannot contain @{';
+    return undefined;
+};
+
 export interface GenerateBranchNameOptions {
     baseName?: string;
 }

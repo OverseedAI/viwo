@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
 import { readFileSync } from 'fs';
-import { viwo, ConfigManager, GitHubManager } from '@viwo/core';
+import { viwo, ConfigManager, GitHubManager, GitManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { multilineInput } from '../utils/multiline-input';
@@ -82,10 +82,20 @@ export const startCommand = new Command('start')
             // Step 2: Get branch name
             let branchName: string | undefined = options.branch;
 
-            if (!branchName) {
+            if (branchName) {
+                const validationError = GitManager.validateBranchName(branchName);
+                if (validationError) {
+                    clack.log.error(chalk.red(validationError));
+                    process.exit(1);
+                }
+            } else {
                 const branchInput = await clack.text({
                     message: 'Branch name',
                     placeholder: 'Leave empty for auto-generated',
+                    validate: (value) => {
+                        if (!value || !value.trim()) return undefined;
+                        return GitManager.validateBranchName(value.trim());
+                    },
                 });
 
                 if (clack.isCancel(branchInput)) {
