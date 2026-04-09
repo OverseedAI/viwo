@@ -1,5 +1,7 @@
 // Helper to convert database Session to WorktreeSession
-import { Session } from '../db-schemas';
+import { eq, and } from 'drizzle-orm';
+import { db } from '../db';
+import { Session, chats } from '../db-schemas';
 import { SessionStatus, WorktreeSession } from '../schemas';
 import { getRepositoryById } from '../managers/repository-manager';
 
@@ -38,6 +40,15 @@ const deriveContainerStatus = (
     }
 };
 
+const getInitialPrompt = (sessionId: string): string => {
+    const firstChat = db
+        .select()
+        .from(chats)
+        .where(and(eq(chats.sessionId, sessionId), eq(chats.type, 'user')))
+        .get();
+    return firstChat?.content || '';
+};
+
 export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | null => {
     const repository = getRepositoryById({ id: dbSession.repoId });
     if (!repository) {
@@ -64,7 +75,7 @@ export const sessionToWorktreeSession = (dbSession: Session): WorktreeSession | 
         ports: [],
         agent: {
             type: (dbSession.agent as 'claude-code' | 'cline' | 'cursor') || 'claude-code',
-            initialPrompt: '', // Not stored in db
+            initialPrompt: getInitialPrompt(String(dbSession.id)),
         },
         status: (dbSession.status as SessionStatus) || 'initializing',
         createdAt: parseSqliteTimestamp(dbSession.createdAt),
