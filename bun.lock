@@ -20,7 +20,7 @@
     },
     "packages/cli": {
       "name": "@viwo/cli",
-      "version": "0.3.2",
+      "version": "0.6.0",
       "bin": {
         "viwo": "./dist/cli.js",
       },
@@ -41,11 +41,10 @@
     },
     "packages/core": {
       "name": "@viwo/core",
-      "version": "0.3.2",
+      "version": "0.6.0",
       "dependencies": {
         "dockerode": "^4.0.2",
         "drizzle-orm": "^0.44.7",
-        "env-paths": "^3.0.0",
         "get-port": "^7.0.0",
         "nanoid": "^5.1.6",
         "simple-git": "^3.21.0",
@@ -353,8 +352,6 @@
     "emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
 
     "end-of-stream": ["end-of-stream@1.4.5", "", { "dependencies": { "once": "^1.4.0" } }, "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg=="],
-
-    "env-paths": ["env-paths@3.0.0", "", {}, "sha512-dtJUTepzMW3Lm/NPxRf3wP4642UWhjL2sQxc+ym2YMj1m/H2zDNQOlezafzkHwn6sMstjHTwG6iQQsctDW/b1A=="],
 
     "environment": ["environment@1.1.0", "", {}, "sha512-xUtoPkMggbz0MPyPiIWr1Kp4aeWJjDZ6SMvURhimjdZgsRuDplF5/s9hcgGhyXMhs+6vpnuoiZ2kFiu3FMnS8Q=="],
 

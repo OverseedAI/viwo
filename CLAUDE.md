@@ -204,12 +204,14 @@ When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owne
 4. **Forwards** the stored GitHub token as `GITHUB_TOKEN` env var to the container
 
 **Token management** (configured via `viwo config github`):
+
 - Stored encrypted in the `configurations` table (`githubToken` field)
 - Auto-detection: tries `gh auth token` CLI first, then `GITHUB_TOKEN`/`GH_TOKEN` env vars
 - Manual entry also supported
 - Token is required when issue URLs are detected in a prompt; errors if missing
 
 **Implementation**:
+
 - `github-manager.ts` handles URL parsing, API fetching, and prompt expansion
 - `config-manager.ts` handles encrypted token CRUD
 - `viwo.ts` calls `expandPromptWithIssues()` before starting the container
