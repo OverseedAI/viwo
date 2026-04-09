@@ -5,12 +5,15 @@ import { viwo, ConfigManager, GitHubManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { multilineInput } from '../utils/multiline-input';
+import { readFileSync } from 'node:fs';
 
 export const startCommand = new Command('start')
     .description('Initialize a new worktree session with an AI agent')
     .option('-r, --repo <id>', 'Repository ID to use')
     .option('-a, --agent <agent>', 'AI agent to use', 'claude-code')
     .option('-b, --branch <branch>', 'Custom branch name')
+    .option('-p, --prompt <text>', 'Prompt text for the AI agent (skips interactive input)')
+    .option('--prompt-file <path>', 'Path to file containing prompt text')
     .option('-c, --compose <path>', 'Path to docker-compose.yml')
     .option('-e, --env <path>', 'Path to .env file to copy')
     .option('-s, --setup <commands...>', 'Setup commands to run')
@@ -85,9 +88,27 @@ export const startCommand = new Command('start')
             }
 
             // Step 3: Get prompt
-            const prompt = await multilineInput({
-                message: 'Enter your prompt for the AI agent:',
-            });
+            let prompt: string;
+
+            if (options.promptFile) {
+                try {
+                    prompt = readFileSync(options.promptFile, 'utf-8').trim();
+                } catch (err) {
+                    clack.cancel(`Failed to read prompt file: ${options.promptFile}`);
+                    process.exit(1);
+                }
+
+                if (!prompt) {
+                    clack.cancel('Prompt file is empty.');
+                    process.exit(1);
+                }
+            } else if (options.prompt) {
+                prompt = options.prompt;
+            } else {
+                prompt = await multilineInput({
+                    message: 'Enter your prompt for the AI agent:',
+                });
+            }
 
             // If prompt contains GitHub issue URLs and no token is stored, offer setup
             const issueUrls = GitHubManager.parseIssueUrls(prompt);

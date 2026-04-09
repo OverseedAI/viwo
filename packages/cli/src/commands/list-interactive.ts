@@ -51,10 +51,7 @@ const displaySessionDetails = async (session: WorktreeSession) => {
 
     if (session.status !== SessionStatus.CLEANED) {
         console.log(chalk.bold('Attach'));
-        console.log(
-            chalk.gray('  Command:         '),
-            chalk.cyan(`viwo attach ${session.id}`)
-        );
+        console.log(chalk.gray('  Command:         '), chalk.cyan(`viwo attach ${session.id}`));
         console.log();
     }
 
@@ -155,9 +152,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             }
 
             console.log();
-            console.log(
-                chalk.dim(`Attaching to session ${session.id} (${containerName})...`)
-            );
+            console.log(chalk.dim(`Attaching to session ${session.id} (${containerName})...`));
             console.log(chalk.yellow('Detach with: Ctrl+B, D'));
             console.log();
             execSync(`docker exec -it ${containerName} tmux attach -t viwo`, {

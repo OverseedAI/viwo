@@ -101,8 +101,52 @@ const configureApiKey = async (): Promise<void> => {
 
 export const authCommand = new Command('auth')
     .description('Configure authentication for AI providers')
-    .action(async () => {
+    .option('-m, --method <method>', 'Auth method: api-key or oauth')
+    .option('-k, --api-key <key>', 'Anthropic API key (requires --method api-key)')
+    .action(async (options) => {
         try {
+            // Non-interactive path: flags provided
+            if (options.method) {
+                if (options.method !== 'api-key' && options.method !== 'oauth') {
+                    console.error(chalk.red('Invalid method. Must be "api-key" or "oauth".'));
+                    process.exit(1);
+                }
+
+                if (options.method === 'oauth') {
+                    if (process.platform === 'win32') {
+                        console.error(chalk.red('OAuth is not supported on Windows.'));
+                        process.exit(1);
+                    }
+
+                    const summary = await CredentialManager.getCredentialSummary();
+                    if (!summary) {
+                        console.error(chalk.red('No Claude subscription credentials found.'));
+                        process.exit(1);
+                    }
+
+                    ConfigManager.setAuthMethod('oauth');
+                    console.log(chalk.green('Authentication method set to Claude subscription.'));
+                    return;
+                }
+
+                // api-key method
+                if (!options.apiKey) {
+                    console.error(chalk.red('--api-key is required when method is api-key.'));
+                    process.exit(1);
+                }
+
+                if (!options.apiKey.startsWith('sk-ant-')) {
+                    console.error(chalk.red('Anthropic API keys should start with "sk-ant-".'));
+                    process.exit(1);
+                }
+
+                await ConfigManager.setApiKey({ provider: 'anthropic', key: options.apiKey });
+                ConfigManager.setAuthMethod('api-key');
+                console.log(chalk.green('API key saved successfully.'));
+                return;
+            }
+
+            // Interactive path
             clack.intro(chalk.bgCyan(' viwo auth '));
 
             const currentMethod = ConfigManager.getAuthMethod();

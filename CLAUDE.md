@@ -204,12 +204,14 @@ When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owne
 4. **Forwards** the stored GitHub token as `GITHUB_TOKEN` env var to the container
 
 **Token management** (configured via `viwo config github`):
+
 - Stored encrypted in the `configurations` table (`githubToken` field)
 - Auto-detection: tries `gh auth token` CLI first, then `GITHUB_TOKEN`/`GH_TOKEN` env vars
 - Manual entry also supported
 - Token is required when issue URLs are detected in a prompt; errors if missing
 
 **Implementation**:
+
 - `github-manager.ts` handles URL parsing, API fetching, and prompt expansion
 - `config-manager.ts` handles encrypted token CRUD
 - `viwo.ts` calls `expandPromptWithIssues()` before starting the container
@@ -294,6 +296,58 @@ Commands in `packages/cli/src/commands/`:
     - Runs `docker exec -it viwo-{identifier} tmux attach -t viwo`
     - Prints detach hint (Ctrl+B, D) before attaching
     - Errors if container doesn't exist or isn't running
+
+### Non-Interactive CLI Usage (for Agents)
+
+All CLI commands that use interactive prompts also support equivalent flags for fully non-interactive execution. When all required flags are provided, no interactive prompt is triggered.
+
+**Auth**:
+
+```bash
+viwo auth --method oauth                          # Set OAuth auth
+viwo auth --method api-key --api-key sk-ant-...   # Set API key auth
+```
+
+**Config**:
+
+```bash
+viwo config ide --set vscode         # Set default IDE
+viwo config ide --reset              # Remove default IDE
+viwo config model --set opus         # Set preferred model (opus, sonnet, haiku)
+viwo config model --reset            # Reset to default (Sonnet)
+viwo config worktrees --set /path    # Set worktrees location
+viwo config worktrees --reset        # Reset to default location
+```
+
+**Start** (prompt via flag):
+
+```bash
+viwo start -r 1 --prompt "Implement feature X"           # Inline prompt
+viwo start -r 1 --prompt-file ./prompt.txt -b my-branch   # Prompt from file
+```
+
+**List** (non-interactive output):
+
+```bash
+viwo list --json                     # JSON output
+viwo list --plain                    # Tab-separated plain text
+viwo list --json -s running          # Filter + JSON
+```
+
+**Repo list** (non-interactive output):
+
+```bash
+viwo repo list --json                # JSON output
+viwo repo list --plain               # Tab-separated plain text
+```
+
+**Testing viwo commands as an agent**: To validate changes end-to-end, agents should use the flag-based paths above. Example feedback loop:
+
+1. Make code changes
+2. Run `viwo repo list --json` to verify repos exist
+3. Run `viwo start -r <id> --prompt "test task" -b test-branch` to create a session
+4. Run `viwo list --json` to verify session was created
+5. Run `viwo clean` to clean up
 
 ### Preflight Checks & Version Checking
 

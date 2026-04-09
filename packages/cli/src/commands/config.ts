@@ -634,28 +634,84 @@ const runConfigMenu = async (): Promise<void> => {
 
 // ─── Command definitions ────────────────────────────────────────────────────
 
-const ideCommand = new Command('ide').description('Configure default IDE').action(async () => {
-    try {
-        await preflightChecksOrExit({ requireGit: false, requireDocker: false });
-        await runIDEConfig();
-    } catch (error) {
-        if ((error as any).name === 'ExitPromptError') {
-            console.log(chalk.gray('Operation cancelled'));
-            process.exit(0);
+const ideCommand = new Command('ide')
+    .description('Configure default IDE')
+    .option('--set <ide>', 'Set default IDE by type name')
+    .option('--reset', 'Remove default IDE preference')
+    .action(async (options) => {
+        try {
+            await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            // Non-interactive: --reset
+            if (options.reset) {
+                ConfigManager.deletePreferredIDE();
+                console.log(chalk.green('Default IDE preference removed.'));
+                return;
+            }
+
+            // Non-interactive: --set
+            if (options.set) {
+                const availableIDEs = await IDEManager.detectAvailableIDEs();
+                const match = availableIDEs.find((ide: IDEInfo) => ide.type === options.set);
+
+                if (!match) {
+                    console.error(
+                        chalk.red(
+                            `IDE "${options.set}" not found. Available: ${availableIDEs.map((i: IDEInfo) => i.type).join(', ')}`
+                        )
+                    );
+                    process.exit(1);
+                }
+
+                ConfigManager.setPreferredIDE(match.type);
+                console.log(chalk.green(`Default IDE set to ${match.name}.`));
+                return;
+            }
+
+            // Interactive path
+            await runIDEConfig();
+        } catch (error) {
+            if ((error as any).name === 'ExitPromptError') {
+                console.log(chalk.gray('Operation cancelled'));
+                process.exit(0);
+            }
+            console.error(
+                chalk.red('Configuration failed:'),
+                error instanceof Error ? error.message : String(error)
+            );
+            process.exit(1);
         }
-        console.error(
-            chalk.red('Configuration failed:'),
-            error instanceof Error ? error.message : String(error)
-        );
-        process.exit(1);
-    }
-});
+    });
 
 const worktreesCommand = new Command('worktrees')
     .description('Configure worktrees storage location')
-    .action(async () => {
+    .option('--set <path>', 'Set custom worktrees storage location')
+    .option('--reset', 'Reset to default worktrees location')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            // Non-interactive: --reset
+            if (options.reset) {
+                ConfigManager.deleteWorktreesStorageLocation();
+                console.log(chalk.green('Worktrees location reset to default.'));
+                return;
+            }
+
+            // Non-interactive: --set
+            if (options.set) {
+                const trimmed = options.set.trim();
+                if (!trimmed) {
+                    console.error(chalk.red('Location cannot be empty.'));
+                    process.exit(1);
+                }
+
+                ConfigManager.setWorktreesStorageLocation(trimmed);
+                console.log(chalk.green(`Worktrees location set to: ${trimmed}`));
+                return;
+            }
+
+            // Interactive path
             await runWorktreesLocationConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
@@ -672,9 +728,41 @@ const worktreesCommand = new Command('worktrees')
 
 const modelCommand = new Command('model')
     .description('Configure preferred Claude model')
-    .action(async () => {
+    .option('--set <model>', 'Set preferred model (opus, sonnet, haiku)')
+    .option('--reset', 'Reset to default model (Sonnet)')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            // Non-interactive: --reset
+            if (options.reset) {
+                ConfigManager.deletePreferredModel();
+                console.log(chalk.green('Model preference reset to default (Sonnet).'));
+                return;
+            }
+
+            // Non-interactive: --set
+            if (options.set) {
+                const validModels: ModelType[] = ['opus', 'sonnet', 'haiku'];
+                if (!validModels.includes(options.set as ModelType)) {
+                    console.error(
+                        chalk.red(
+                            `Invalid model "${options.set}". Must be one of: ${validModels.join(', ')}`
+                        )
+                    );
+                    process.exit(1);
+                }
+
+                ConfigManager.setPreferredModel(options.set as ModelType);
+                console.log(
+                    chalk.green(
+                        `Preferred model set to ${MODEL_INFO[options.set as ModelType].name}.`
+                    )
+                );
+                return;
+            }
+
+            // Interactive path
             await runModelConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
