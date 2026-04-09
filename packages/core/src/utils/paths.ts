@@ -14,6 +14,7 @@ import { homedir } from 'node:os';
 import { getWorktreesStorageLocation } from '../managers/config-manager.js';
 
 const DEFAULT_DATA_DIR = join(homedir(), '.viwo');
+const DEFAULT_WORKTREES_DIR = join(DEFAULT_DATA_DIR, 'worktrees');
 
 /**
  * Get the legacy platform-specific data directory path.
@@ -91,8 +92,15 @@ export const ensureDataPath = async (...segments: string[]): Promise<string> => 
 };
 
 /**
- * Get the worktrees directory path
- * Uses configured location if set, otherwise defaults to app data directory
+ * Get the default worktrees directory path.
+ * This always points to ~/.viwo/worktrees, even when an existing installation
+ * continues using a legacy data directory for its database/config.
+ */
+export const getDefaultWorktreesPath = (): string => DEFAULT_WORKTREES_DIR;
+
+/**
+ * Get the worktrees directory path.
+ * Uses configured location if set, otherwise defaults to ~/.viwo/worktrees.
  */
 export const getWorktreesPath = (): string => {
     const configuredLocation = getWorktreesStorageLocation();
@@ -102,12 +110,12 @@ export const getWorktreesPath = (): string => {
         if (isAbsolute(configuredLocation)) {
             return configuredLocation;
         }
-        // Otherwise, treat it as relative to app data directory
+        // Otherwise, treat it as relative to the active data directory
         return joinDataPath(configuredLocation);
     }
 
-    // Default to app data directory
-    return joinDataPath('worktrees');
+    // Reset/default always points to the new global default location
+    return getDefaultWorktreesPath();
 };
 
 /**
@@ -152,6 +160,7 @@ export const AppPaths = {
     getDataPath,
     joinDataPath,
     ensureDataPath,
+    getDefaultWorktreesPath,
     getWorktreesPath,
     joinWorktreesPath,
     ensureWorktreesPath,
