@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { generateBranchName, isValidRepository } from '../git-manager';
+import { generateBranchName, isValidRepository, validateBranchName } from '../git-manager';
 
 describe('git-manager', () => {
     describe('initializing the repository', () => {
@@ -41,6 +41,55 @@ describe('git-manager', () => {
             const branchName = await generateBranchName({ baseName: 'test   multiple   spaces' });
 
             expect(branchName).toMatch(/^test-multiple-spaces-\d{4}-\d{2}-\d{2}-[a-zA-Z0-9_-]{6}$/);
+        });
+    });
+
+    describe('validateBranchName', () => {
+        test('accepts valid branch names', () => {
+            expect(validateBranchName('feature/add-login')).toBeUndefined();
+            expect(validateBranchName('fix-123')).toBeUndefined();
+            expect(validateBranchName('release/v1.0.0')).toBeUndefined();
+            expect(validateBranchName('my.branch')).toBeUndefined();
+        });
+
+        test('rejects names with spaces', () => {
+            expect(validateBranchName('my branch')).toBe('Branch name cannot contain spaces');
+        });
+
+        test('rejects names with invalid characters', () => {
+            expect(validateBranchName('branch~1')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch^2')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch:name')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch?')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch*')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch[0]')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch\\name')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+        });
+
+        test('rejects names with consecutive dots', () => {
+            expect(validateBranchName('branch..name')).toBe('Branch name cannot contain consecutive dots (..)');
+        });
+
+        test('rejects names ending with a dot', () => {
+            expect(validateBranchName('branch.')).toBe('Branch name cannot end with a dot');
+        });
+
+        test('rejects names ending with .lock', () => {
+            expect(validateBranchName('branch.lock')).toBe('Branch name cannot end with .lock');
+        });
+
+        test('rejects names starting with a hyphen', () => {
+            expect(validateBranchName('-branch')).toBe('Branch name cannot start with a hyphen');
+        });
+
+        test('rejects names containing @{', () => {
+            expect(validateBranchName('branch@{0}')).toBe('Branch name cannot contain @{');
+        });
+
+        test('rejects names with slash issues', () => {
+            expect(validateBranchName('/branch')).toBe('Branch name cannot start/end with / or contain //');
+            expect(validateBranchName('branch/')).toBe('Branch name cannot start/end with / or contain //');
+            expect(validateBranchName('branch//name')).toBe('Branch name cannot start/end with / or contain //');
         });
     });
 });
