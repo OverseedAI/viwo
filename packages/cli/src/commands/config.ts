@@ -655,13 +655,13 @@ const runGitLabConfig = async (): Promise<void> => {
                 ConfigManager.setGitLabToken(glabToken);
                 console.log(chalk.green('✓ GitLab token saved from glab CLI'));
                 console.log();
-                await waitForEnter();
+                await waitForEnter('Press Enter to go back to GitLab settings...');
                 return;
             }
 
             console.log(chalk.gray('No changes made'));
             console.log();
-            await waitForEnter();
+            await waitForEnter('Press Enter to go back to GitLab settings...');
             return;
         }
 
@@ -680,13 +680,13 @@ const runGitLabConfig = async (): Promise<void> => {
                 ConfigManager.setGitLabToken(envToken);
                 console.log(chalk.green('✓ GitLab token saved from environment'));
                 console.log();
-                await waitForEnter();
+                await waitForEnter('Press Enter to go back to GitLab settings...');
                 return;
             }
 
             console.log(chalk.gray('No changes made'));
             console.log();
-            await waitForEnter();
+            await waitForEnter('Press Enter to go back to GitLab settings...');
             return;
         }
 
@@ -694,7 +694,7 @@ const runGitLabConfig = async (): Promise<void> => {
         console.log(chalk.gray('Install the glab CLI (glab auth login) or set GITLAB_TOKEN env var.'));
         console.log(chalk.gray('You can also enter a token manually.'));
         console.log();
-        await waitForEnter();
+        await waitForEnter('Press Enter to go back to GitLab settings...');
         return;
     }
 
