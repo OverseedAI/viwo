@@ -71,6 +71,13 @@ const getCurrentModelSummary = (): string => {
     return pref ? MODEL_INFO[pref].name : chalk.gray('default (Sonnet)');
 };
 
+const waitForEnter = async (message = 'Press Enter to continue...'): Promise<void> => {
+    console.log(chalk.gray(message));
+    await new Promise((resolve) => {
+        process.stdin.once('data', resolve);
+    });
+};
+
 // ─── IDE configuration flow ─────────────────────────────────────────────────
 
 const runIDEConfig = async (): Promise<void> => {
@@ -648,11 +655,13 @@ const runGitLabConfig = async (): Promise<void> => {
                 ConfigManager.setGitLabToken(glabToken);
                 console.log(chalk.green('✓ GitLab token saved from glab CLI'));
                 console.log();
+                await waitForEnter();
                 return;
             }
 
             console.log(chalk.gray('No changes made'));
             console.log();
+            await waitForEnter();
             return;
         }
 
@@ -671,11 +680,13 @@ const runGitLabConfig = async (): Promise<void> => {
                 ConfigManager.setGitLabToken(envToken);
                 console.log(chalk.green('✓ GitLab token saved from environment'));
                 console.log();
+                await waitForEnter();
                 return;
             }
 
             console.log(chalk.gray('No changes made'));
             console.log();
+            await waitForEnter();
             return;
         }
 
@@ -683,6 +694,7 @@ const runGitLabConfig = async (): Promise<void> => {
         console.log(chalk.gray('Install the glab CLI (glab auth login) or set GITLAB_TOKEN env var.'));
         console.log(chalk.gray('You can also enter a token manually.'));
         console.log();
+        await waitForEnter();
         return;
     }
 
