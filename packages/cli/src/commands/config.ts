@@ -1,9 +1,10 @@
 import { Command } from 'commander';
-import { select, input, password } from '@inquirer/prompts';
+import { select, input, password, confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import {
     IDEManager,
     ConfigManager,
+    CredentialManager,
     GitHubManager,
     type IDEType,
     type IDEInfo,
@@ -26,8 +27,12 @@ const getCurrentWorktreesSummary = (): string => {
 };
 
 const getCurrentAuthSummary = (): string => {
+    const method = ConfigManager.getAuthMethod();
+    if (method === 'oauth') {
+        return chalk.green('OAuth');
+    }
     const hasKey = ConfigManager.hasApiKey({ provider: 'anthropic' });
-    return hasKey ? chalk.green('configured') : chalk.gray('not set');
+    return hasKey ? chalk.green('API key') : chalk.gray('not set');
 };
 
 const MODEL_INFO: Record<ModelType, { name: string; hint: string }> = {
@@ -504,14 +509,6 @@ const runGitHubConfig = async (): Promise<void> => {
 
 // ─── Authentication configuration flow ──────────────────────────────────────
 
-const PROVIDERS = [
-    {
-        value: 'anthropic' as const,
-        label: 'Anthropic',
-        hint: 'Claude API key',
-    },
-];
-
 const runAuthConfig = async (): Promise<void> => {
     console.clear();
     console.log();
@@ -519,50 +516,109 @@ const runAuthConfig = async (): Promise<void> => {
     console.log(chalk.gray('─'.repeat(50)));
     console.log();
 
-    const selectedProvider = await select({
-        message: 'Select an API provider to configure',
-        choices: [
-            ...PROVIDERS.map((provider) => ({
-                name: `${provider.label} ${ConfigManager.hasApiKey({ provider: provider.value }) ? chalk.green('(configured)') : chalk.gray('(not set)')}`,
-                value: provider.value,
-                description: provider.hint,
-            })),
-            {
-                name: chalk.gray('Cancel'),
-                value: '__cancel__' as const,
-                description: 'Go back without changes',
-            },
-        ],
+    const currentMethod = ConfigManager.getAuthMethod();
+    console.log(chalk.gray(`Current method: ${currentMethod}`));
+    console.log();
+
+    const authChoices: { name: string; value: string; description: string }[] = [];
+
+    // OAuth is only supported on macOS and Linux
+    if (process.platform !== 'win32') {
+        authChoices.push({
+            name: `Use Claude subscription ${currentMethod === 'oauth' ? chalk.green('(active)') : ''}`,
+            value: 'oauth',
+            description: 'Auto-detect from Claude Code login (Max, Pro, Teams)',
+        });
+    }
+
+    authChoices.push({
+        name: `Use Anthropic API key ${currentMethod === 'api-key' && ConfigManager.hasApiKey({ provider: 'anthropic' }) ? chalk.green('(configured)') : ''}`,
+        value: 'api-key',
+        description: 'Enter an sk-ant-... key manually',
     });
 
-    if (selectedProvider === '__cancel__') {
+    authChoices.push({
+        name: chalk.gray('Cancel'),
+        value: '__cancel__',
+        description: 'Go back without changes',
+    });
+
+    const selectedMethod = await select({
+        message: 'Select authentication method',
+        choices: authChoices,
+    });
+
+    if (selectedMethod === '__cancel__') {
         console.log(chalk.gray('No changes made'));
         console.log();
         return;
     }
 
-    const providerLabel = PROVIDERS.find((p) => p.value === selectedProvider)?.label;
+    if (selectedMethod === 'oauth') {
+        console.log();
+        console.log(chalk.gray('Detecting Claude subscription credentials...'));
 
-    const apiKey = await password({
-        message: `Enter your ${providerLabel} API key`,
-        validate: (value) => {
-            if (!value || !value.trim()) {
-                return 'API key cannot be empty';
-            }
-            if (selectedProvider === 'anthropic' && !value.startsWith('sk-ant-')) {
-                return 'Anthropic API keys should start with "sk-ant-"';
-            }
-            return true;
-        },
-    });
+        const summary = await CredentialManager.getCredentialSummary();
 
-    await ConfigManager.setApiKey({
-        provider: selectedProvider,
-        key: apiKey,
-    });
+        if (!summary) {
+            console.log(
+                chalk.red(
+                    'Could not find Claude Code OAuth credentials.\n' +
+                        '  Make sure you have Claude Code installed and logged in.\n' +
+                        '  Run "claude" on your host to authenticate first.'
+                )
+            );
+            console.log();
+            return;
+        }
 
-    console.log(chalk.green(`✓ ${providerLabel} API key saved`));
-    console.log();
+        console.log(chalk.green('Claude subscription detected!'));
+        console.log();
+        console.log(`  Email: ${chalk.cyan(summary.emailAddress)}`);
+        if (summary.organizationName) {
+            console.log(`  Organization: ${chalk.cyan(summary.organizationName)}`);
+        }
+        if (summary.subscriptionType) {
+            console.log(`  Subscription: ${chalk.cyan(summary.subscriptionType)}`);
+        }
+        console.log(
+            `  Token expires: ${chalk.cyan(summary.expiresAt.toLocaleString())}${summary.tokenExpired ? chalk.yellow(' (expired - will refresh automatically)') : ''}`
+        );
+        console.log();
+
+        const confirmed = await confirm({
+            message: 'Use this subscription for VIWO sessions?',
+        });
+
+        if (!confirmed) {
+            console.log(chalk.gray('No changes made'));
+            console.log();
+            return;
+        }
+
+        ConfigManager.setAuthMethod('oauth');
+        console.log(chalk.green('✓ Authentication method set to Claude subscription'));
+        console.log(chalk.gray('  Credentials will be read from your Claude Code login at each session start.'));
+        console.log();
+    } else {
+        const apiKey = await password({
+            message: 'Enter your Anthropic API key',
+            validate: (value) => {
+                if (!value || !value.trim()) {
+                    return 'API key cannot be empty';
+                }
+                if (!value.startsWith('sk-ant-')) {
+                    return 'Anthropic API keys should start with "sk-ant-"';
+                }
+                return true;
+            },
+        });
+
+        await ConfigManager.setApiKey({ provider: 'anthropic', key: apiKey });
+        ConfigManager.setAuthMethod('api-key');
+        console.log(chalk.green('✓ API key saved'));
+        console.log();
+    }
 };
 
 // ─── Main interactive config menu ───────────────────────────────────────────
@@ -808,8 +864,9 @@ const githubCommand = new Command('github')
     });
 
 const authConfigCommand = new Command('auth')
-    .description('Configure API key authentication')
+    .description('Configure authentication method (API key or OAuth)')
     .option('--set <key>', 'Set Anthropic API key directly')
+    .option('--method <method>', 'Set auth method: api-key or oauth')
     .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
@@ -822,7 +879,40 @@ const authConfigCommand = new Command('auth')
                 }
 
                 await ConfigManager.setApiKey({ provider: 'anthropic', key });
+                ConfigManager.setAuthMethod('api-key');
                 console.log(chalk.green('Anthropic API key saved.'));
+                return;
+            }
+
+            if (options.method) {
+                const method = options.method;
+                if (method !== 'api-key' && method !== 'oauth') {
+                    console.error(chalk.red('Invalid method. Use "api-key" or "oauth".'));
+                    process.exit(1);
+                }
+
+                if (method === 'oauth') {
+                    if (process.platform === 'win32') {
+                        console.error(chalk.red('OAuth is not supported on Windows.'));
+                        process.exit(1);
+                    }
+
+                    const summary = await CredentialManager.getCredentialSummary();
+                    if (!summary) {
+                        console.error(
+                            chalk.red(
+                                'No Claude Code OAuth credentials found. Run "claude" on your host to authenticate first.'
+                            )
+                        );
+                        process.exit(1);
+                    }
+
+                    ConfigManager.setAuthMethod('oauth');
+                    console.log(chalk.green(`Auth method set to oauth (${summary.emailAddress}).`));
+                } else {
+                    ConfigManager.setAuthMethod('api-key');
+                    console.log(chalk.green('Auth method set to api-key.'));
+                }
                 return;
             }
 
