@@ -237,7 +237,7 @@ const runWorktreesLocationConfig = async (): Promise<void> => {
         console.log(chalk.gray('You can use:'));
         console.log(chalk.gray('  • Absolute path (e.g., /home/user/viwo-worktrees)'));
         console.log(chalk.gray('  • Tilde expansion (e.g., ~/.config/viwo)'));
-        console.log(chalk.gray('  • Relative path (relative to app data directory)'));
+        console.log(chalk.gray('  • Relative path (relative to ~/.viwo/)'));
         console.log();
 
         const newLocation = await input({

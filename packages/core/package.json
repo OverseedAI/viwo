@@ -24,8 +24,7 @@
   "dependencies": {
     "dockerode": "^4.0.2",
     "drizzle-orm": "^0.44.7",
-    "env-paths": "^3.0.0",
-    "get-port": "^7.0.0",
+"get-port": "^7.0.0",
     "nanoid": "^5.1.6",
     "simple-git": "^3.21.0",
     "yaml": "^2.6.1",

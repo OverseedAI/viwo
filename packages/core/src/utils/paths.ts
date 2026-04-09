@@ -1,19 +1,15 @@
 /**
- * Cross-platform application paths utility
+ * Application paths utility
  *
- * Provides standard locations for app data across all operating systems:
- * - macOS: ~/Library/Application Support/viwo
- * - Windows: %APPDATA%/viwo
- * - Linux: ~/.local/share/viwo (XDG)
+ * All viwo data is stored in ~/.viwo/ on all platforms.
  */
 
-import envPaths from 'env-paths';
 import { join, isAbsolute } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { getWorktreesStorageLocation } from '../managers/config-manager.js';
 
-const paths = envPaths('viwo', { suffix: '' });
+const DATA_DIR = join(homedir(), '.viwo');
 
 /**
  * Expands tilde (~) in a path to the user's home directory
@@ -28,55 +24,19 @@ export const expandTilde = (filepath: string): string => {
 };
 
 /**
- * Get the app data directory path
+ * Get the app data directory path (~/.viwo)
  */
-export const getDataPath = (): string => paths.data;
+export const getDataPath = (): string => DATA_DIR;
 
 /**
- * Get the app config directory path
- */
-export const getConfigPath = (): string => paths.config;
-
-/**
- * Get the app cache directory path
- */
-export const getCachePath = (): string => paths.cache;
-
-/**
- * Get the app log directory path
- */
-export const getLogPath = (): string => paths.log;
-
-/**
- * Get the app temp directory path
- */
-export const getTempPath = (): string => paths.temp;
-
-/**
- * Join path segments to the app data directory
+ * Join path segments to the app data directory (~/.viwo)
  *
  * @example
  * joinDataPath('worktrees', 'my-session')
- * // macOS: ~/Library/Application Support/viwo/worktrees/my-session
- * // Windows: %APPDATA%/viwo/worktrees/my-session
- * // Linux: ~/.local/share/viwo/worktrees/my-session
+ * // ~/.viwo/worktrees/my-session
  */
 export const joinDataPath = (...segments: string[]): string => {
-    return join(paths.data, ...segments);
-};
-
-/**
- * Join path segments to the app config directory
- */
-export const joinConfigPath = (...segments: string[]): string => {
-    return join(paths.config, ...segments);
-};
-
-/**
- * Join path segments to the app cache directory
- */
-export const joinCachePath = (...segments: string[]): string => {
-    return join(paths.cache, ...segments);
+    return join(DATA_DIR, ...segments);
 };
 
 /**
@@ -150,13 +110,7 @@ export const ensureContainerStatePath = async (sessionId: number): Promise<strin
 
 export const AppPaths = {
     getDataPath,
-    getConfigPath,
-    getCachePath,
-    getLogPath,
-    getTempPath,
     joinDataPath,
-    joinConfigPath,
-    joinCachePath,
     ensureDataPath,
     getWorktreesPath,
     joinWorktreesPath,
