@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { isVersionOutdated } from '../prerequisites';
+import { isVersionOutdated, formatReleaseNotes } from '../prerequisites';
 
 describe('isVersionOutdated', () => {
     it('should detect when current version is older (patch)', () => {
@@ -43,5 +43,35 @@ describe('isVersionOutdated', () => {
     it('should handle versions with only major number', () => {
         expect(isVersionOutdated('1', '2')).toBe(true);
         expect(isVersionOutdated('2', '1')).toBe(false);
+    });
+});
+
+describe('formatReleaseNotes', () => {
+    it('should return all lines when under the limit', () => {
+        const body = '- Fix bug A\n- Add feature B';
+        expect(formatReleaseNotes(body)).toBe('- Fix bug A\n- Add feature B');
+    });
+
+    it('should filter out empty lines', () => {
+        const body = '- Fix bug A\n\n\n- Add feature B\n';
+        expect(formatReleaseNotes(body)).toBe('- Fix bug A\n- Add feature B');
+    });
+
+    it('should truncate and add ellipsis when over the limit', () => {
+        const lines = Array.from({ length: 15 }, (_, i) => `- Item ${i + 1}`);
+        const body = lines.join('\n');
+        const result = formatReleaseNotes(body, 5);
+        const resultLines = result.split('\n');
+        expect(resultLines).toHaveLength(6); // 5 lines + ellipsis
+        expect(resultLines[0]).toBe('- Item 1');
+        expect(resultLines[4]).toBe('- Item 5');
+        expect(resultLines[5]).toBe('  ...');
+    });
+
+    it('should not add ellipsis when exactly at the limit', () => {
+        const lines = Array.from({ length: 3 }, (_, i) => `- Item ${i + 1}`);
+        const body = lines.join('\n');
+        const result = formatReleaseNotes(body, 3);
+        expect(result).toBe('- Item 1\n- Item 2\n- Item 3');
     });
 });
