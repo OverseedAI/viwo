@@ -44,10 +44,28 @@ export const isVersionOutdated = (current: string, latest: string): boolean => {
     return currentParts.patch < latestParts.patch;
 };
 
+export interface ReleaseInfo {
+    version: string;
+    releaseNotes: string | null;
+}
+
 /**
- * Fetch the latest version from GitHub releases
+ * Truncate release notes to a brief summary for display
  */
-const getLatestVersion = async (): Promise<string | null> => {
+export const formatReleaseNotes = (body: string, maxLines = 10): string => {
+    const lines = body.split('\n').filter((line) => line.trim() !== '');
+    const truncated = lines.slice(0, maxLines);
+    let summary = truncated.join('\n');
+    if (lines.length > maxLines) {
+        summary += '\n  ...';
+    }
+    return summary;
+};
+
+/**
+ * Fetch the latest release info from GitHub releases
+ */
+const getLatestRelease = async (): Promise<ReleaseInfo | null> => {
     try {
         const response = await fetch(
             'https://api.github.com/repos/OverseedAI/viwo/releases/latest'
@@ -55,10 +73,15 @@ const getLatestVersion = async (): Promise<string | null> => {
         if (!response.ok) {
             return null;
         }
-        const data = (await response.json()) as { tag_name?: string };
-        // tag_name is in format "v0.1.2", remove the 'v' prefix
+        const data = (await response.json()) as { tag_name?: string; body?: string };
         const tagName = data.tag_name || null;
-        return tagName ? tagName.replace(/^v/, '') : null;
+        if (!tagName) {
+            return null;
+        }
+        return {
+            version: tagName.replace(/^v/, ''),
+            releaseNotes: data.body || null,
+        };
     } catch {
         return null;
     }
@@ -66,18 +89,18 @@ const getLatestVersion = async (): Promise<string | null> => {
 
 /**
  * Check if the current viwo CLI version is outdated
- * Returns the latest version if outdated, null otherwise
+ * Returns release info if outdated, null otherwise
  */
-export const checkVersion = async (): Promise<string | null> => {
+export const checkVersion = async (): Promise<ReleaseInfo | null> => {
     const currentVersion = packageJson.version;
-    const latestVersion = await getLatestVersion();
+    const release = await getLatestRelease();
 
-    if (!latestVersion) {
+    if (!release) {
         return null;
     }
 
-    if (isVersionOutdated(currentVersion, latestVersion)) {
-        return latestVersion;
+    if (isVersionOutdated(currentVersion, release.version)) {
+        return release;
     }
 
     return null;
@@ -86,20 +109,20 @@ export const checkVersion = async (): Promise<string | null> => {
 export interface PreflightCheckResult {
     gitInstalled: boolean;
     dockerRunning: boolean;
-    latestVersion: string | null;
+    latestRelease: ReleaseInfo | null;
 }
 
 /**
  * Check all preflight requirements (git, Docker, and version)
  */
 export const preflightChecks = async (): Promise<PreflightCheckResult> => {
-    const [gitInstalled, dockerRunning, latestVersion] = await Promise.all([
+    const [gitInstalled, dockerRunning, latestRelease] = await Promise.all([
         isGitInstalled(),
         isDockerRunning(),
         checkVersion(),
     ]);
 
-    return { gitInstalled, dockerRunning, latestVersion };
+    return { gitInstalled, dockerRunning, latestRelease };
 };
 
 export interface PrerequisiteOptions {
@@ -127,7 +150,7 @@ export const preflightChecksOrExit = async (options: PrerequisiteOptions = {}): 
         process.exit(1);
     }
 
-    const { gitInstalled, dockerRunning, latestVersion } = await preflightChecks();
+    const { gitInstalled, dockerRunning, latestRelease } = await preflightChecks();
 
     const missing: string[] = [];
 
@@ -140,15 +163,26 @@ export const preflightChecksOrExit = async (options: PrerequisiteOptions = {}): 
     }
 
     // Show version update warning if available (non-blocking)
-    if (latestVersion) {
+    if (latestRelease) {
         console.log();
         console.log(chalk.yellow('⚠ Update Available'));
         console.log();
         console.log(
             chalk.gray(
-                `  A new version of VIWO is available: ${chalk.cyan(`v${latestVersion}`)} (current: ${chalk.gray(`v${packageJson.version}`)})`
+                `  A new version of VIWO is available: ${chalk.cyan(`v${latestRelease.version}`)} (current: ${chalk.gray(`v${packageJson.version}`)})`
             )
         );
+
+        // Show changelog summary if release notes are available
+        if (latestRelease.releaseNotes) {
+            console.log();
+            console.log(chalk.gray('  Changelog:'));
+            const summary = formatReleaseNotes(latestRelease.releaseNotes);
+            for (const line of summary.split('\n')) {
+                console.log(chalk.gray(`  ${line}`));
+            }
+        }
+
         console.log();
         console.log(chalk.gray('  Update by running the install script:'));
 
