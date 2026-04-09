@@ -6,6 +6,7 @@ import {
     ConfigManager,
     CredentialManager,
     GitHubManager,
+    GitLabManager,
     type IDEType,
     type IDEInfo,
     type ModelType,
@@ -44,6 +45,25 @@ const MODEL_INFO: Record<ModelType, { name: string; hint: string }> = {
 const getCurrentGitHubSummary = (): string => {
     const hasToken = ConfigManager.hasGitHubToken();
     return hasToken ? chalk.green('configured') : chalk.gray('not set');
+};
+
+const getCurrentGitLabSummary = (): string => {
+    const hasToken = ConfigManager.hasGitLabToken();
+    const instanceUrl = ConfigManager.getGitLabInstanceUrl();
+
+    if (hasToken && instanceUrl) {
+        return chalk.green(`configured @ ${instanceUrl}`);
+    }
+
+    if (hasToken) {
+        return chalk.green('configured');
+    }
+
+    if (instanceUrl) {
+        return chalk.yellow(`instance set @ ${instanceUrl}`);
+    }
+
+    return chalk.gray('not set');
 };
 
 const getCurrentModelSummary = (): string => {
@@ -507,6 +527,182 @@ const runGitHubConfig = async (): Promise<void> => {
     }
 };
 
+// ─── GitLab configuration flow ───────────────────────────────────────────────
+
+const runGitLabConfig = async (): Promise<void> => {
+    console.clear();
+    console.log();
+    console.log(chalk.bold.cyan('GitLab Integration'));
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log();
+
+    const hasToken = ConfigManager.hasGitLabToken();
+    const instanceUrl = ConfigManager.getGitLabInstanceUrl();
+
+    console.log(chalk.bold('GitLab Token'));
+    console.log(chalk.gray('  ') + (hasToken ? chalk.green('Configured') : 'Not set'));
+    console.log();
+
+    console.log(chalk.bold('GitLab Instance'));
+    console.log(chalk.gray('  ') + (instanceUrl ? chalk.green(instanceUrl) : 'https://gitlab.com'));
+    console.log();
+
+    const action = await select<string>({
+        message: 'What would you like to do?',
+        choices: [
+            {
+                name: chalk.cyan('Auto-detect token'),
+                value: 'auto',
+                description: 'Try glab CLI, then GITLAB_TOKEN env var',
+            },
+            {
+                name: chalk.cyan('Enter token manually'),
+                value: 'manual',
+                description: 'Paste a personal access token',
+            },
+            {
+                name: chalk.cyan('Set instance URL'),
+                value: 'instance',
+                description: 'Configure self-hosted GitLab URL',
+            },
+            ...(instanceUrl
+                ? [
+                      {
+                          name: chalk.yellow('Reset instance URL'),
+                          value: 'reset-instance',
+                          description: 'Use https://gitlab.com',
+                      },
+                  ]
+                : []),
+            ...(hasToken
+                ? [
+                      {
+                          name: chalk.yellow('Remove token'),
+                          value: 'remove',
+                          description: 'Delete stored GitLab token',
+                      },
+                  ]
+                : []),
+            {
+                name: chalk.gray('Cancel'),
+                value: 'cancel',
+                description: 'Go back without changes',
+            },
+        ],
+        pageSize: 10,
+    });
+
+    if (action === 'cancel') {
+        console.log(chalk.gray('No changes made'));
+        console.log();
+        return;
+    }
+
+    if (action === 'remove') {
+        ConfigManager.deleteGitLabToken();
+        console.log(chalk.green('✓ GitLab token removed'));
+        console.log();
+        return;
+    }
+
+    if (action === 'reset-instance') {
+        ConfigManager.deleteGitLabInstanceUrl();
+        console.log(chalk.green('✓ GitLab instance URL reset to https://gitlab.com'));
+        console.log();
+        return;
+    }
+
+    if (action === 'instance') {
+        const newInstanceUrl = await input({
+            message: 'Enter your GitLab instance URL',
+            default: instanceUrl ?? 'https://gitlab.com',
+            validate: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Instance URL cannot be empty';
+                }
+                return true;
+            },
+        });
+
+        ConfigManager.setGitLabInstanceUrl(newInstanceUrl.trim());
+        console.log(chalk.green('✓ GitLab instance URL saved'));
+        console.log();
+        return;
+    }
+
+    if (action === 'auto') {
+        console.log();
+        console.log(chalk.gray('Checking glab CLI...'));
+
+        const glabToken = await GitLabManager.resolveGitLabTokenFromGlabCli();
+        if (glabToken) {
+            const confirm = await select<boolean>({
+                message: 'Found token from glab CLI. Use it?',
+                choices: [
+                    { name: 'Yes, save it', value: true },
+                    { name: 'No, cancel', value: false },
+                ],
+            });
+
+            if (confirm) {
+                ConfigManager.setGitLabToken(glabToken);
+                console.log(chalk.green('✓ GitLab token saved from glab CLI'));
+                console.log();
+                return;
+            }
+
+            console.log(chalk.gray('No changes made'));
+            console.log();
+            return;
+        }
+
+        console.log(chalk.gray('Checking GITLAB_TOKEN env var...'));
+        const envToken = GitLabManager.resolveGitLabTokenFromEnv();
+        if (envToken) {
+            const confirm = await select<boolean>({
+                message: 'Found GITLAB_TOKEN in environment. Use it?',
+                choices: [
+                    { name: 'Yes, save it', value: true },
+                    { name: 'No, cancel', value: false },
+                ],
+            });
+
+            if (confirm) {
+                ConfigManager.setGitLabToken(envToken);
+                console.log(chalk.green('✓ GitLab token saved from environment'));
+                console.log();
+                return;
+            }
+
+            console.log(chalk.gray('No changes made'));
+            console.log();
+            return;
+        }
+
+        console.log(chalk.yellow('No GitLab token found automatically.'));
+        console.log(chalk.gray('Install the glab CLI (glab auth login) or set GITLAB_TOKEN env var.'));
+        console.log(chalk.gray('You can also enter a token manually.'));
+        console.log();
+        return;
+    }
+
+    if (action === 'manual') {
+        const token = await password({
+            message: 'Enter your GitLab personal access token',
+            validate: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Token cannot be empty';
+                }
+                return true;
+            },
+        });
+
+        ConfigManager.setGitLabToken(token.trim());
+        console.log(chalk.green('✓ GitLab token saved'));
+        console.log();
+    }
+};
+
 // ─── Authentication configuration flow ──────────────────────────────────────
 
 const runAuthConfig = async (): Promise<void> => {
@@ -655,6 +851,10 @@ const runConfigMenu = async (): Promise<void> => {
                     value: 'github',
                 },
                 {
+                    name: `GitLab integration      ${chalk.gray(`(${getCurrentGitLabSummary()})`)}`,
+                    value: 'gitlab',
+                },
+                {
                     name: `Authentication          ${chalk.gray(`(${getCurrentAuthSummary()})`)}`,
                     value: 'auth',
                 },
@@ -677,6 +877,9 @@ const runConfigMenu = async (): Promise<void> => {
                 break;
             case 'github':
                 await runGitHubConfig();
+                break;
+            case 'gitlab':
+                await runGitLabConfig();
                 break;
             case 'auth':
                 await runAuthConfig();
@@ -863,6 +1066,81 @@ const githubCommand = new Command('github')
         }
     });
 
+const gitlabCommand = new Command('gitlab')
+    .description('Configure GitLab integration')
+    .option('--auto', 'Auto-detect token from glab CLI or GITLAB_TOKEN env var')
+    .option('--set <token>', 'Set GitLab token directly')
+    .option('--remove', 'Remove stored GitLab token')
+    .option('--status', 'Show current GitLab token status')
+    .option('--instance <url>', 'Set GitLab instance URL (for self-hosted GitLab)')
+    .option('--reset-instance', 'Reset GitLab instance URL to https://gitlab.com')
+    .action(async (options) => {
+        try {
+            await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.status) {
+                const hasToken = ConfigManager.hasGitLabToken();
+                const instanceUrl = ConfigManager.getGitLabInstanceUrl() ?? 'https://gitlab.com';
+                console.log(hasToken ? `configured (${instanceUrl})` : `not set (${instanceUrl})`);
+                return;
+            }
+
+            if (options.resetInstance) {
+                ConfigManager.deleteGitLabInstanceUrl();
+                console.log(chalk.green('GitLab instance URL reset to https://gitlab.com.'));
+                return;
+            }
+
+            if (options.instance) {
+                ConfigManager.setGitLabInstanceUrl(options.instance);
+                console.log(chalk.green('GitLab instance URL saved.'));
+                return;
+            }
+
+            if (options.remove) {
+                ConfigManager.deleteGitLabToken();
+                console.log(chalk.green('GitLab token removed.'));
+                return;
+            }
+
+            if (options.set) {
+                ConfigManager.setGitLabToken(options.set);
+                console.log(chalk.green('GitLab token saved.'));
+                return;
+            }
+
+            if (options.auto) {
+                let token = await GitLabManager.resolveGitLabTokenFromGlabCli();
+                if (!token) token = GitLabManager.resolveGitLabTokenFromEnv();
+
+                if (token) {
+                    ConfigManager.setGitLabToken(token);
+                    console.log(chalk.green('GitLab token auto-detected and saved.'));
+                } else {
+                    console.error(
+                        chalk.red(
+                            'No GitLab token found. Install glab CLI or set GITLAB_TOKEN env var.'
+                        )
+                    );
+                    process.exit(1);
+                }
+                return;
+            }
+
+            await runGitLabConfig();
+        } catch (error) {
+            if ((error as any).name === 'ExitPromptError') {
+                console.log(chalk.gray('Operation cancelled'));
+                process.exit(0);
+            }
+            console.error(
+                chalk.red('Configuration failed:'),
+                error instanceof Error ? error.message : String(error)
+            );
+            process.exit(1);
+        }
+    });
+
 const authConfigCommand = new Command('auth')
     .description('Configure authentication method (API key or OAuth)')
     .option('--set <key>', 'Set Anthropic API key directly')
@@ -936,6 +1214,7 @@ export const configCommand = new Command('config')
     .addCommand(worktreesCommand)
     .addCommand(modelCommand)
     .addCommand(githubCommand)
+    .addCommand(gitlabCommand)
     .addCommand(authConfigCommand)
     .action(async () => {
         try {

@@ -40,6 +40,7 @@ import { sessionToWorktreeSession } from './utils/types';
 import { loadProjectConfig } from './managers/project-config-manager';
 import { getPreferredModel } from './managers/config-manager';
 import { expandPromptWithIssues } from './managers/github-manager';
+import { expandPromptWithGitLabResources } from './managers/gitlab-manager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -227,8 +228,11 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             };
 
             try {
-                // Expand GitHub issue URLs in prompt
-                const expandedPrompt = await expandPromptWithIssues(validatedOptions.prompt);
+                // Expand issue/MR URLs in prompt
+                const promptWithGitHubIssues = await expandPromptWithIssues(validatedOptions.prompt);
+                const expandedPrompt = await expandPromptWithGitLabResources(
+                    promptWithGitHubIssues
+                );
 
                 // Phase 2: Start container
                 const containerResult = await startContainerPhase({
