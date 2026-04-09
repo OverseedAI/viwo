@@ -31,7 +31,12 @@ import {
     updateSession,
 } from './managers/session-manager';
 import { getRepositoryById, repo } from './managers/repository-manager';
-import { getContainerStatePath, joinDataPath, joinWorktreesPath } from './utils/paths';
+import {
+    getContainerStatePath,
+    joinDataPath,
+    joinWorktreesPath,
+    migrateLegacyDataDir,
+} from './utils/paths';
 import { initializeDatabase } from './db-init';
 import { Database } from 'bun:sqlite';
 import { mkdirSync, rmSync } from 'node:fs';
@@ -453,6 +458,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             if (verbose) {
                 console.log('Running database migrations...');
             }
+            migrateLegacyDataDir();
             const dbPath = joinDataPath('sqlite.db');
             mkdirSync(dirname(dbPath), { recursive: true });
             const sqlite = new Database(dbPath);
