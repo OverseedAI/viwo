@@ -14,7 +14,7 @@ import {
     generateContainerName,
 } from './docker-manager';
 import { getApiKey, getAuthMethod, getGitHubToken } from './config-manager';
-import { extractOAuthCredentials, extractOAuthAccountInfo } from './credential-manager';
+import { extractOAuthCredentials, extractOAuthAccountInfo, isOAuthTokenExpired } from './credential-manager';
 import { getWorktreeGitInfo } from './git-manager';
 import { ensureContainerStatePath } from '../utils/paths';
 
@@ -219,6 +219,14 @@ const initializeClaudeCodeWithOAuth = async (
         throw new Error(
             'No Claude subscription credentials found. ' +
                 'Please log in with Claude Code first (run "claude" on your host), ' +
+                'or switch to API key auth with "viwo auth".'
+        );
+    }
+
+    if (isOAuthTokenExpired(credentials)) {
+        throw new Error(
+            'OAuth token has expired. ' +
+                'Please re-authenticate by running "claude" on your host to refresh your credentials, ' +
                 'or switch to API key auth with "viwo auth".'
         );
     }

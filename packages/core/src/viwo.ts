@@ -415,7 +415,10 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                                 force: true, // Use force to delete unmerged branches
                             });
                         } catch (error) {
-                            console.warn(`Failed to delete branch ${dbSession.branchName}:`, error);
+                            console.warn(
+                                `Failed to delete branch ${dbSession.branchName}:`,
+                                error
+                            );
                         }
                     }
                 }

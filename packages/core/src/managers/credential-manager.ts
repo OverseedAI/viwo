@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { userInfo, homedir } from 'node:os';
+import { homedir } from 'node:os';
 import path from 'path';
 import { OAuthCredentialsSchema, OAuthAccountInfoSchema } from '../schemas';
 import type { OAuthCredentials, OAuthAccountInfo } from '../types';
@@ -7,10 +7,8 @@ import type { OAuthCredentials, OAuthAccountInfo } from '../types';
 const KEYCHAIN_SERVICE = 'Claude Code-credentials';
 
 const extractFromMacKeychain = async (): Promise<OAuthCredentials | null> => {
-    const account = userInfo().username;
-
     const proc = Bun.spawn(
-        ['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-a', account, '-w'],
+        ['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'],
         {
             stdout: 'pipe',
             stderr: 'pipe',
@@ -24,15 +22,15 @@ const extractFromMacKeychain = async (): Promise<OAuthCredentials | null> => {
         return null;
     }
 
-    const parsed = JSON.parse(output.trim());
-    const oauthData = parsed.claudeAiOauth;
-
-    if (!oauthData) {
+    try {
+        const parsed = JSON.parse(output.trim());
+        const oauthData = parsed.claudeAiOauth;
+        if (!oauthData) return null;
+        const result = OAuthCredentialsSchema.safeParse(oauthData);
+        return result.success ? result.data : null;
+    } catch {
         return null;
     }
-
-    const result = OAuthCredentialsSchema.safeParse(oauthData);
-    return result.success ? result.data : null;
 };
 
 export const extractOAuthCredentials = async (): Promise<OAuthCredentials | null> => {
