@@ -23,6 +23,17 @@ export const startCommand = new Command('start')
             // Run preflight checks before proceeding
             await preflightChecksOrExit();
 
+            // Ensure authentication is configured before proceeding
+            if (!ConfigManager.isAuthConfigured()) {
+                console.log();
+                console.log(chalk.red('Authentication is not configured.'));
+                console.log();
+                console.log(chalk.yellow('Run the following command to set up authentication:'));
+                console.log(chalk.cyan('  viwo auth'));
+                console.log();
+                process.exit(1);
+            }
+
             // Sync Docker state with database before starting
             if (options.sync !== false) {
                 await viwo.sync();

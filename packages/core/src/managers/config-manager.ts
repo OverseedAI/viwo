@@ -388,6 +388,16 @@ export const getAuthMethod = (): AuthMethod => {
     return (config[0]!.authMethod as AuthMethod) || 'api-key';
 };
 
+export const isAuthConfigured = (): boolean => {
+    const method = getAuthMethod();
+
+    if (method === 'oauth') {
+        return true;
+    }
+
+    return hasApiKey({ provider: 'anthropic' });
+};
+
 // Namespace export for consistency with other managers
 export const config = {
     setApiKey,
@@ -396,6 +406,7 @@ export const config = {
     deleteApiKey,
     setAuthMethod,
     getAuthMethod,
+    isAuthConfigured,
     setPreferredIDE,
     getPreferredIDE,
     deletePreferredIDE,
