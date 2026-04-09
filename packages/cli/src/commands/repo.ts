@@ -14,8 +14,16 @@ export const repoCommand = new Command('repo').description('Manage repositories'
 repoCommand
     .command('list')
     .description('List all repositories')
-    .action(async () => {
+    .option('--json', 'Output as JSON (non-interactive)')
+    .action(async (options) => {
         try {
+            if (options.json) {
+                await preflightChecksOrExit({ requireDocker: false });
+                const repositories = viwo.repo.list({});
+                console.log(JSON.stringify(repositories, null, 2));
+                return;
+            }
+
             await runInteractiveRepoList();
         } catch (error) {
             console.error(chalk.red(error instanceof Error ? error.message : String(error)));

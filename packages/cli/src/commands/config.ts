@@ -634,28 +634,63 @@ const runConfigMenu = async (): Promise<void> => {
 
 // ─── Command definitions ────────────────────────────────────────────────────
 
-const ideCommand = new Command('ide').description('Configure default IDE').action(async () => {
-    try {
-        await preflightChecksOrExit({ requireGit: false, requireDocker: false });
-        await runIDEConfig();
-    } catch (error) {
-        if ((error as any).name === 'ExitPromptError') {
-            console.log(chalk.gray('Operation cancelled'));
-            process.exit(0);
+const ideCommand = new Command('ide')
+    .description('Configure default IDE')
+    .option('--set <ide>', 'Set default IDE (e.g. vscode, cursor, webstorm)')
+    .option('--reset', 'Remove default IDE preference')
+    .action(async (options) => {
+        try {
+            await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.reset) {
+                ConfigManager.deletePreferredIDE();
+                console.log(chalk.green('Default IDE preference removed.'));
+                return;
+            }
+
+            if (options.set) {
+                const ide = options.set as IDEType;
+                ConfigManager.setPreferredIDE(ide);
+                console.log(
+                    chalk.green(`Default IDE set to ${IDEManager.getIDEDisplayName(ide)}.`)
+                );
+                return;
+            }
+
+            await runIDEConfig();
+        } catch (error) {
+            if ((error as any).name === 'ExitPromptError') {
+                console.log(chalk.gray('Operation cancelled'));
+                process.exit(0);
+            }
+            console.error(
+                chalk.red('Configuration failed:'),
+                error instanceof Error ? error.message : String(error)
+            );
+            process.exit(1);
         }
-        console.error(
-            chalk.red('Configuration failed:'),
-            error instanceof Error ? error.message : String(error)
-        );
-        process.exit(1);
-    }
-});
+    });
 
 const worktreesCommand = new Command('worktrees')
     .description('Configure worktrees storage location')
-    .action(async () => {
+    .option('--set <path>', 'Set worktrees storage location')
+    .option('--reset', 'Reset to default location')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.reset) {
+                ConfigManager.deleteWorktreesStorageLocation();
+                console.log(chalk.green('Worktrees location reset to default.'));
+                return;
+            }
+
+            if (options.set) {
+                ConfigManager.setWorktreesStorageLocation(options.set);
+                console.log(chalk.green(`Worktrees location set to ${options.set}.`));
+                return;
+            }
+
             await runWorktreesLocationConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
@@ -672,9 +707,32 @@ const worktreesCommand = new Command('worktrees')
 
 const modelCommand = new Command('model')
     .description('Configure preferred Claude model')
-    .action(async () => {
+    .option('--set <model>', 'Set preferred model (opus, sonnet, haiku)')
+    .option('--reset', 'Reset to default (Sonnet)')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.reset) {
+                ConfigManager.deletePreferredModel();
+                console.log(chalk.green('Model preference reset to default (Sonnet).'));
+                return;
+            }
+
+            if (options.set) {
+                const model = options.set as ModelType;
+                if (!MODEL_CHOICES.includes(model)) {
+                    console.error(
+                        chalk.red(`Invalid model. Choose from: ${MODEL_CHOICES.join(', ')}`)
+                    );
+                    process.exit(1);
+                }
+
+                ConfigManager.setPreferredModel(model);
+                console.log(chalk.green(`Preferred model set to ${MODEL_INFO[model].name}.`));
+                return;
+            }
+
             await runModelConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
@@ -691,9 +749,50 @@ const modelCommand = new Command('model')
 
 const githubCommand = new Command('github')
     .description('Configure GitHub integration')
-    .action(async () => {
+    .option('--auto', 'Auto-detect token from gh CLI or GITHUB_TOKEN env var')
+    .option('--set <token>', 'Set GitHub token directly')
+    .option('--remove', 'Remove stored GitHub token')
+    .option('--status', 'Show current GitHub token status')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.status) {
+                const hasToken = ConfigManager.hasGitHubToken();
+                console.log(hasToken ? 'configured' : 'not set');
+                return;
+            }
+
+            if (options.remove) {
+                ConfigManager.deleteGitHubToken();
+                console.log(chalk.green('GitHub token removed.'));
+                return;
+            }
+
+            if (options.set) {
+                ConfigManager.setGitHubToken(options.set);
+                console.log(chalk.green('GitHub token saved.'));
+                return;
+            }
+
+            if (options.auto) {
+                let token = await GitHubManager.resolveGitHubTokenFromGhCli();
+                if (!token) token = GitHubManager.resolveGitHubTokenFromEnv();
+
+                if (token) {
+                    ConfigManager.setGitHubToken(token);
+                    console.log(chalk.green('GitHub token auto-detected and saved.'));
+                } else {
+                    console.error(
+                        chalk.red(
+                            'No GitHub token found. Install gh CLI or set GITHUB_TOKEN env var.'
+                        )
+                    );
+                    process.exit(1);
+                }
+                return;
+            }
+
             await runGitHubConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
@@ -710,9 +809,23 @@ const githubCommand = new Command('github')
 
 const authConfigCommand = new Command('auth')
     .description('Configure API key authentication')
-    .action(async () => {
+    .option('--set <key>', 'Set Anthropic API key directly')
+    .action(async (options) => {
         try {
             await preflightChecksOrExit({ requireGit: false, requireDocker: false });
+
+            if (options.set) {
+                const key = options.set;
+                if (!key.startsWith('sk-ant-')) {
+                    console.error(chalk.red('Anthropic API keys should start with "sk-ant-"'));
+                    process.exit(1);
+                }
+
+                await ConfigManager.setApiKey({ provider: 'anthropic', key });
+                console.log(chalk.green('Anthropic API key saved.'));
+                return;
+            }
+
             await runAuthConfig();
         } catch (error) {
             if ((error as any).name === 'ExitPromptError') {
