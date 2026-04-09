@@ -49,7 +49,7 @@ const displaySessionDetails = async (session: WorktreeSession) => {
         console.log();
     }
 
-    if (session.status === SessionStatus.RUNNING) {
+    if (session.status !== SessionStatus.CLEANED) {
         console.log(chalk.bold('Attach'));
         console.log(
             chalk.gray('  Command:         '),
@@ -91,7 +91,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
         {
             name: '🔗 Attach to container',
             value: 'attach',
-            disabled: session.status !== SessionStatus.RUNNING,
+            disabled: session.status === SessionStatus.CLEANED,
         },
         {
             name: '💻 Open in IDE',
@@ -127,6 +127,33 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             const containerName =
                 session.containerName ||
                 DockerManager.generateContainerName(parseInt(session.id, 10));
+
+            const exists = await DockerManager.containerExists({
+                containerId: containerName,
+            });
+
+            if (!exists) {
+                console.log(chalk.red(`Container ${containerName} no longer exists.`));
+                console.log(chalk.gray('Run "viwo clean" to remove this session.'));
+                console.log();
+                console.log(chalk.gray('Press Enter to continue...'));
+                await new Promise((resolve) => {
+                    process.stdin.once('data', resolve);
+                });
+                return 'back';
+            }
+
+            const containerInfo = await DockerManager.inspectContainer({
+                containerId: containerName,
+            });
+
+            if (!containerInfo.running) {
+                console.log(chalk.dim(`Container ${containerName} is stopped. Restarting...`));
+                await DockerManager.startContainer({ containerId: containerName });
+                await new Promise((r) => setTimeout(r, 1000));
+                console.log(chalk.green('Container restarted.'));
+            }
+
             console.log();
             console.log(
                 chalk.dim(`Attaching to session ${session.id} (${containerName})...`)
