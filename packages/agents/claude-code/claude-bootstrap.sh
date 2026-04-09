@@ -120,6 +120,9 @@ fi
 
 EXIT_CODE_FILE="/tmp/viwo-state/claude-exit-code"
 
+# Enable mouse scrolling in tmux so users can scroll through output
+echo "set -g mouse on" >> ~/.tmux.conf
+
 # Launch Claude Code inside tmux, drop to bash when it exits
 # This keeps the tmux session alive so users can always attach
 tmux new-session -d -s viwo \
