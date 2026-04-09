@@ -72,9 +72,9 @@ const getCurrentModelSummary = (): string => {
 };
 
 const waitForEnter = async (message = 'Press Enter to continue...'): Promise<void> => {
-    console.log(chalk.gray(message));
-    await new Promise((resolve) => {
-        process.stdin.once('data', resolve);
+    await input({
+        message,
+        default: '',
     });
 };
 
