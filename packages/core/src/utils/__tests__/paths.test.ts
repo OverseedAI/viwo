@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'bun:test';
-import { expandTilde } from '../paths';
+import { expandTilde, getLegacyDataPath, getDataPath } from '../paths';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 describe('expandTilde', () => {
     it('should expand ~ to home directory', () => {
@@ -26,5 +27,44 @@ describe('expandTilde', () => {
     it('should not expand tilde in the middle of a path', () => {
         const result = expandTilde('/some/path/~/file');
         expect(result).toBe('/some/path/~/file');
+    });
+});
+
+describe('getLegacyDataPath', () => {
+    it('should return a platform-specific path', () => {
+        const legacyPath = getLegacyDataPath();
+        const home = homedir();
+
+        // Should return a valid path on supported platforms
+        if (process.platform === 'darwin') {
+            expect(legacyPath).toBe(join(home, 'Library', 'Application Support', 'viwo'));
+        } else if (process.platform === 'linux') {
+            const expected = join(
+                process.env.XDG_DATA_HOME || join(home, '.local', 'share'),
+                'viwo'
+            );
+            expect(legacyPath).toBe(expected);
+        } else if (process.platform === 'win32') {
+            const expected = join(
+                process.env.APPDATA || join(home, 'AppData', 'Roaming'),
+                'viwo'
+            );
+            expect(legacyPath).toBe(expected);
+        }
+    });
+
+    it('should return a path different from ~/.viwo', () => {
+        const legacyPath = getLegacyDataPath();
+        if (legacyPath) {
+            expect(legacyPath).not.toBe(join(homedir(), '.viwo'));
+        }
+    });
+});
+
+describe('getDataPath', () => {
+    it('should return a valid directory path', () => {
+        const dataPath = getDataPath();
+        expect(typeof dataPath).toBe('string');
+        expect(dataPath.length).toBeGreaterThan(0);
     });
 });

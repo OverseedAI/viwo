@@ -1,15 +1,55 @@
 /**
  * Application paths utility
  *
- * All viwo data is stored in ~/.viwo/ on all platforms.
+ * New installations store data in ~/.viwo/ on all platforms.
+ * Existing installations that used the legacy platform-specific directory
+ * (via env-paths) continue using that location until the user explicitly
+ * reconfigures.
  */
 
 import { join, isAbsolute } from 'node:path';
 import { mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { getWorktreesStorageLocation } from '../managers/config-manager.js';
 
-const DATA_DIR = join(homedir(), '.viwo');
+const DEFAULT_DATA_DIR = join(homedir(), '.viwo');
+
+/**
+ * Get the legacy platform-specific data directory path.
+ * Before v0.7, viwo used env-paths which stored data in:
+ * - macOS: ~/Library/Application Support/viwo
+ * - Linux: ~/.local/share/viwo
+ * - Windows: %APPDATA%/viwo
+ */
+export const getLegacyDataPath = (): string | null => {
+    const home = homedir();
+    switch (process.platform) {
+        case 'darwin':
+            return join(home, 'Library', 'Application Support', 'viwo');
+        case 'win32':
+            return join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'viwo');
+        case 'linux':
+            return join(process.env.XDG_DATA_HOME || join(home, '.local', 'share'), 'viwo');
+        default:
+            return null;
+    }
+};
+
+/**
+ * Resolve the data directory to use.
+ * If a legacy directory exists with a sqlite.db, keep using it so existing
+ * users are not disrupted. Otherwise, use the new default (~/.viwo).
+ */
+const resolveDataDir = (): string => {
+    const legacyPath = getLegacyDataPath();
+    if (legacyPath && legacyPath !== DEFAULT_DATA_DIR && existsSync(join(legacyPath, 'sqlite.db'))) {
+        return legacyPath;
+    }
+    return DEFAULT_DATA_DIR;
+};
+
+const DATA_DIR = resolveDataDir();
 
 /**
  * Expands tilde (~) in a path to the user's home directory
