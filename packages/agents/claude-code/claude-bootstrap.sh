@@ -75,6 +75,7 @@ fi
 
 cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 {
+  "autoUpdates": false,
   "hooks": {
     "PostToolUse": [
       {
