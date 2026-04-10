@@ -795,7 +795,7 @@ const runAuthConfig = async (): Promise<void> => {
         console.log();
 
         const confirmed = await confirm({
-            message: 'Use this subscription for VIWO sessions?',
+            message: 'Use this subscription for VIWO workspaces?',
         });
 
         if (!confirmed) {
@@ -806,7 +806,7 @@ const runAuthConfig = async (): Promise<void> => {
 
         ConfigManager.setAuthMethod('oauth');
         console.log(chalk.green('✓ Authentication method set to Claude subscription'));
-        console.log(chalk.gray('  Credentials will be read from your Claude Code login at each session start.'));
+        console.log(chalk.gray('  Credentials will be read from your Claude Code login each time an agent is started.'));
         console.log();
     } else {
         const apiKey = await password({

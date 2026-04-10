@@ -1,20 +1,48 @@
 import { select, Separator } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { SessionStatus, viwo, DockerManager, type WorktreeSession } from '@viwo/core';
-import { getCompositeStatusBadge, formatDate } from '../utils/formatters';
+import {
+    getAgentStatusBadge,
+    getCompositeStatusBadge,
+    getStatusBadge,
+    formatDate,
+} from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { selectAndOpenIDE } from '../utils/ide-selector';
+import { launchAgentForSession } from '../utils/agent-launch';
 import { execSync } from 'child_process';
+
+const getContainerName = (session: WorktreeSession): string =>
+    session.containerName || DockerManager.generateContainerName(parseInt(session.id, 10));
+
+const hasAttachableContainer = async (session: WorktreeSession): Promise<boolean> => {
+    if (!session.containerName && session.containers.length === 0) {
+        return false;
+    }
+
+    try {
+        return await DockerManager.containerExists({
+            containerId: getContainerName(session),
+        });
+    } catch {
+        return false;
+    }
+};
 
 const displaySessionDetails = async (session: WorktreeSession) => {
     console.clear();
     console.log();
-    console.log(chalk.bold.cyan('Session Details'));
+    console.log(chalk.bold.cyan('Workspace Details'));
     console.log(chalk.gray('═'.repeat(70)));
     console.log();
     console.log(chalk.bold('General'));
     console.log(chalk.gray('  ID:              '), session.id);
-    console.log(chalk.gray('  Status:          '), getCompositeStatusBadge(session));
+    console.log(chalk.gray('  Runtime Status:  '), getStatusBadge(session.status));
+    console.log(
+        chalk.gray('  Agent Status:    '),
+        getAgentStatusBadge(session.agentStatus ?? 'unknown')
+    );
+    console.log(chalk.gray('  Combined:        '), getCompositeStatusBadge(session));
     console.log(chalk.gray('  Created:         '), formatDate(session.createdAt));
     console.log(chalk.gray('  Last Activity:   '), formatDate(session.lastActivity));
     if (session.agentStateTimestamp) {
@@ -49,9 +77,16 @@ const displaySessionDetails = async (session: WorktreeSession) => {
         console.log();
     }
 
-    if (session.status !== SessionStatus.CLEANED) {
+    const attachableContainer = await hasAttachableContainer(session);
+    if (session.status !== SessionStatus.CLEANED && attachableContainer) {
         console.log(chalk.bold('Attach'));
         console.log(chalk.gray('  Command:         '), chalk.cyan(`viwo attach ${session.id}`));
+        console.log();
+    }
+
+    if (!attachableContainer && session.status !== SessionStatus.CLEANED) {
+        console.log(chalk.bold('Launch Agent'));
+        console.log(chalk.gray('  Action:          '), chalk.cyan('Start agent from this workspace'));
         console.log();
     }
 
@@ -84,11 +119,18 @@ const displaySessionDetails = async (session: WorktreeSession) => {
 };
 
 const handleSessionAction = async (session: WorktreeSession): Promise<'back' | 'exit'> => {
+    const attachableContainer = await hasAttachableContainer(session);
+
     const actions = [
+        {
+            name: '▶️  Start agent',
+            value: 'start-agent',
+            disabled: session.status === SessionStatus.CLEANED || attachableContainer,
+        },
         {
             name: '🔗 Attach to container',
             value: 'attach',
-            disabled: session.status === SessionStatus.CLEANED,
+            disabled: session.status === SessionStatus.CLEANED || !attachableContainer,
         },
         {
             name: '💻 Open in IDE',
@@ -101,7 +143,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             disabled: !session.containerOutput,
         },
         {
-            name: '🗑️  Delete session',
+            name: '🗑️  Delete workspace',
             value: 'delete',
         },
         {
@@ -120,10 +162,31 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
     });
 
     switch (action) {
+        case 'start-agent': {
+            try {
+                await launchAgentForSession({
+                    sessionId: session.id,
+                    worktreePath: session.worktreePath,
+                    repoPath: session.repoPath,
+                    agent: session.agent.type,
+                });
+                console.log(chalk.green('✓ Agent started successfully'));
+            } catch (error) {
+                console.error(
+                    chalk.red('Failed to start agent:'),
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+            console.log();
+            console.log(chalk.gray('Press Enter to continue...'));
+            await new Promise((resolve) => {
+                process.stdin.once('data', resolve);
+            });
+            return 'back';
+        }
+
         case 'attach': {
-            const containerName =
-                session.containerName ||
-                DockerManager.generateContainerName(parseInt(session.id, 10));
+            const containerName = getContainerName(session);
 
             const exists = await DockerManager.containerExists({
                 containerId: containerName,
@@ -131,7 +194,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
 
             if (!exists) {
                 console.log(chalk.red(`Container ${containerName} no longer exists.`));
-                console.log(chalk.gray('Run "viwo clean" to remove this session.'));
+                console.log(chalk.gray('Run "viwo clean" to remove this workspace.'));
                 console.log();
                 console.log(chalk.gray('Press Enter to continue...'));
                 await new Promise((resolve) => {
@@ -152,7 +215,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             }
 
             console.log();
-            console.log(chalk.dim(`Attaching to session ${session.id} (${containerName})...`));
+            console.log(chalk.dim(`Attaching to workspace ${session.id} (${containerName})...`));
             console.log(chalk.yellow('Detach with: Ctrl+B, D'));
             console.log();
             execSync(`docker exec -it ${containerName} tmux attach -t viwo`, {
@@ -201,7 +264,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             console.log();
             const confirmDelete = await select({
                 message: chalk.red(
-                    `Are you sure you want to delete session ${session.id.substring(0, 12)}?`
+                    `Are you sure you want to delete workspace ${session.id.substring(0, 12)}?`
                 ),
                 choices: [
                     { name: 'No, cancel', value: false },
@@ -217,10 +280,15 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
                         stopContainers: true,
                         removeContainers: true,
                     });
-                    console.log(chalk.green('✓ Session deleted successfully'));
+                    console.log(chalk.green('✓ Workspace deleted successfully'));
+                    console.log();
+                    console.log(chalk.gray('Press Enter to continue...'));
+                    await new Promise((resolve) => {
+                        process.stdin.once('data', resolve);
+                    });
                 } catch (error) {
                     console.error(
-                        chalk.red('Failed to delete session:'),
+                        chalk.red('Failed to delete workspace:'),
                         error instanceof Error ? error.message : String(error)
                     );
                     console.log();
@@ -267,16 +335,19 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             if (sessions.length === 0) {
                 console.clear();
                 console.log();
-                console.log(chalk.yellow('No sessions found.'));
-                console.log(chalk.gray('Create a new session with: ') + chalk.cyan('viwo start'));
+                console.log(chalk.yellow('No workspaces found.'));
+                console.log(
+                    chalk.gray('Create a new workspace with: ') + chalk.cyan('viwo create')
+                );
                 console.log();
                 break;
             }
 
             console.clear();
             console.log();
-            console.log(chalk.bold.cyan('VIWO Sessions'));
+            console.log(chalk.bold.cyan('VIWO Workspaces'));
             console.log(chalk.gray('Use arrow keys to navigate, Enter to select'));
+            console.log(chalk.gray('Left status = container/runtime, right status = coding agent'));
             console.log();
 
             const sessionChoices = sessions.map((session) => ({
@@ -286,7 +357,7 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
             }));
 
             const selectedId = await select({
-                message: `Select a session (${sessions.length} total):`,
+                message: `Select a workspace (${sessions.length} total):`,
                 choices: [
                     ...sessionChoices,
                     new Separator(chalk.gray('─'.repeat(70))),
@@ -303,15 +374,15 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
                 break;
             }
 
-            // Fetch the full session details
+            // Fetch the full workspace details
             const session = await viwo.get(selectedId);
 
             if (!session) {
-                console.log(chalk.red('Session not found'));
+                console.log(chalk.red('Workspace not found'));
                 continue;
             }
 
-            // Display session details
+            // Display workspace details
             await displaySessionDetails(session);
 
             // Show action options

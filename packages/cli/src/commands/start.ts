@@ -1,15 +1,14 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
-import { readFileSync } from 'fs';
-import { viwo, ConfigManager, GitHubManager, GitLabManager, GitManager } from '@viwo/core';
+import { viwo, GitManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
-import { multilineInput } from '../utils/multiline-input';
+import { preparePromptForLaunch } from '../utils/agent-launch';
 import { branchNameInput } from '../utils/branch-input';
 
 export const startCommand = new Command('start')
-    .description('Initialize a new worktree session with an AI agent')
+    .description('Create a workspace and start an AI agent')
     .option('-r, --repo <id>', 'Repository ID to use')
     .option('-a, --agent <agent>', 'AI agent to use', 'claude-code')
     .option('-b, --branch <branch>', 'Custom branch name')
@@ -23,17 +22,6 @@ export const startCommand = new Command('start')
         try {
             // Run preflight checks before proceeding
             await preflightChecksOrExit();
-
-            // Ensure authentication is configured before proceeding
-            if (!ConfigManager.isAuthConfigured()) {
-                console.log();
-                console.log(chalk.red('Authentication is not configured.'));
-                console.log();
-                console.log(chalk.yellow('Run the following command to set up authentication:'));
-                console.log(chalk.cyan('  viwo auth'));
-                console.log();
-                process.exit(1);
-            }
 
             // Sync Docker state with database before starting
             if (options.sync !== false) {
@@ -109,133 +97,17 @@ export const startCommand = new Command('start')
                 }
             }
 
-            // Step 3: Get prompt
-            let prompt: string;
+            // Step 3: Get prompt and prepare agent launch
+            const prompt = await preparePromptForLaunch({
+                prompt: options.prompt,
+                promptFile: options.promptFile,
+            });
 
-            if (options.prompt) {
-                prompt = options.prompt;
-            } else if (options.promptFile) {
-                try {
-                    prompt = readFileSync(options.promptFile, 'utf-8').trim();
-                } catch {
-                    clack.cancel(`Failed to read prompt file: ${options.promptFile}`);
-                    process.exit(1);
-                }
-
-                if (!prompt) {
-                    clack.cancel('Prompt file is empty');
-                    process.exit(1);
-                }
-            } else {
-                prompt = await multilineInput({
-                    message: 'Enter your prompt for the AI agent:',
-                });
-            }
-
-            // If prompt contains GitHub issue URLs and no token is stored, offer setup
-            const issueUrls = GitHubManager.parseIssueUrls(prompt);
-            if (issueUrls.length > 0 && !ConfigManager.hasGitHubToken()) {
-                clack.log.info(
-                    `Detected ${issueUrls.length} GitHub issue URL(s). A GitHub token is needed to fetch issue context.`
-                );
-
-                const setupChoice = await clack.select({
-                    message: 'Set up GitHub token now?',
-                    options: [
-                        { label: 'Auto-detect (gh CLI / env var)', value: 'auto' },
-                        { label: 'Enter token manually', value: 'manual' },
-                        { label: 'Skip — continue without issue context', value: 'skip' },
-                    ],
-                });
-
-                if (clack.isCancel(setupChoice)) {
-                    clack.cancel('Operation cancelled.');
-                    process.exit(0);
-                }
-
-                if (setupChoice === 'auto') {
-                    let resolved = await GitHubManager.resolveGitHubTokenFromGhCli();
-                    if (!resolved) resolved = GitHubManager.resolveGitHubTokenFromEnv();
-
-                    if (resolved) {
-                        ConfigManager.setGitHubToken(resolved);
-                        clack.log.success('GitHub token saved.');
-                    } else {
-                        clack.log.warn(
-                            'No token found. Install gh CLI (gh auth login) or set GITHUB_TOKEN env var.'
-                        );
-                    }
-                } else if (setupChoice === 'manual') {
-                    const tokenInput = await clack.password({
-                        message: 'Enter your GitHub personal access token:',
-                    });
-
-                    if (clack.isCancel(tokenInput)) {
-                        clack.cancel('Operation cancelled.');
-                        process.exit(0);
-                    }
-
-                    if (tokenInput && tokenInput.trim()) {
-                        ConfigManager.setGitHubToken(tokenInput.trim());
-                        clack.log.success('GitHub token saved.');
-                    }
-                }
-            }
-
-            const gitlabUrls = GitLabManager.parseGitLabResourceUrls(prompt);
-            if (gitlabUrls.length > 0 && !ConfigManager.hasGitLabToken()) {
-                clack.log.info(
-                    `Detected ${gitlabUrls.length} GitLab issue/MR URL(s). A GitLab token is needed to fetch context.`
-                );
-
-                const setupChoice = await clack.select({
-                    message: 'Set up GitLab token now?',
-                    options: [
-                        { label: 'Auto-detect (glab CLI / env var)', value: 'auto' },
-                        { label: 'Enter token manually', value: 'manual' },
-                        { label: 'Skip — continue without GitLab context', value: 'skip' },
-                    ],
-                });
-
-                if (clack.isCancel(setupChoice)) {
-                    clack.cancel('Operation cancelled.');
-                    process.exit(0);
-                }
-
-                if (setupChoice === 'auto') {
-                    let resolved = await GitLabManager.resolveGitLabTokenFromGlabCli();
-                    if (!resolved) resolved = GitLabManager.resolveGitLabTokenFromEnv();
-
-                    if (resolved) {
-                        ConfigManager.setGitLabToken(resolved);
-                        clack.log.success('GitLab token saved.');
-                    } else {
-                        clack.log.warn(
-                            'No token found. Install glab CLI (glab auth login) or set GITLAB_TOKEN env var.'
-                        );
-                    }
-                } else if (setupChoice === 'manual') {
-                    const tokenInput = await clack.password({
-                        message: 'Enter your GitLab personal access token:',
-                    });
-
-                    if (clack.isCancel(tokenInput)) {
-                        clack.cancel('Operation cancelled.');
-                        process.exit(0);
-                    }
-
-                    if (tokenInput && tokenInput.trim()) {
-                        ConfigManager.setGitLabToken(tokenInput.trim());
-                        clack.log.success('GitLab token saved.');
-                    }
-                }
-            }
-
-            // Create session
+            // Create workspace and start agent
             const spinner = clack.spinner();
-            spinner.start('Initializing worktree session...');
+            spinner.start('Initializing workspace and agent...');
 
-            const session = await viwo.start({
+            const workspace = await viwo.start({
                 repoId,
                 prompt,
                 agent: options.agent,
@@ -245,27 +117,27 @@ export const startCommand = new Command('start')
                 setupCommands: options.setup,
             });
 
-            spinner.stop('Session created successfully!');
+            spinner.stop('Workspace and agent started successfully!');
 
             console.log();
-            console.log(chalk.bold('Session Details'));
+            console.log(chalk.bold('Workspace Details'));
             console.log();
-            console.log(`  ${chalk.cyan('ID:')}         ${session.id}`);
-            console.log(`  ${chalk.cyan('Branch:')}     ${session.branchName}`);
-            console.log(`  ${chalk.cyan('Worktree:')}   ${session.worktreePath}`);
-            console.log(`  ${chalk.cyan('Agent:')}      ${session.agent.type}`);
-            console.log(`  ${chalk.cyan('Status:')}     ${getStatusBadge(session.status)}`);
-            if (session.containerName) {
-                console.log(`  ${chalk.cyan('Container:')}  ${session.containerName}`);
+            console.log(`  ${chalk.cyan('ID:')}         ${workspace.id}`);
+            console.log(`  ${chalk.cyan('Branch:')}     ${workspace.branchName}`);
+            console.log(`  ${chalk.cyan('Worktree:')}   ${workspace.worktreePath}`);
+            console.log(`  ${chalk.cyan('Agent:')}      ${workspace.agent.type}`);
+            console.log(`  ${chalk.cyan('Status:')}     ${getStatusBadge(workspace.status)}`);
+            if (workspace.containerName) {
+                console.log(`  ${chalk.cyan('Container:')}  ${workspace.containerName}`);
             }
 
             console.log();
             console.log(chalk.dim('Container is running in the background.'));
             console.log();
-            console.log(`  Attach:  ${chalk.cyan(`viwo attach ${session.id}`)}`);
+            console.log(`  Attach:  ${chalk.cyan(`viwo attach ${workspace.id}`)}`);
             console.log(`  Detach:  ${chalk.dim('Ctrl+B, D (inside tmux)')}`);
             console.log();
-            clack.outro('Session ready!');
+            clack.outro('Workspace ready!');
             process.exit(0);
         } catch (error) {
             clack.cancel(error instanceof Error ? error.message : String(error));

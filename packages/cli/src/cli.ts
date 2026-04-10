@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import {
     startCommand,
+    createCommand,
     listCommand,
     cleanCommand,
     repoCommand,
@@ -24,6 +25,7 @@ program
 
 // Register commands
 program.addCommand(startCommand);
+program.addCommand(createCommand);
 program.addCommand(listCommand);
 program.addCommand(cleanCommand);
 program.addCommand(repoCommand);

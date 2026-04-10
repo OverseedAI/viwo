@@ -5,7 +5,7 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 import { runInteractiveList } from './list-interactive';
 
 export const listCommand = new Command('list')
-    .description('List all worktree sessions')
+    .description('List all workspaces')
     .option('-s, --status <status>', 'Filter by status')
     .option('-l, --limit <number>', 'Limit number of results', parseInt)
     .option('--json', 'Output as JSON (non-interactive)')

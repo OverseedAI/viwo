@@ -59,7 +59,7 @@ const configureOAuth = async (): Promise<void> => {
     );
 
     const confirmed = await clack.confirm({
-        message: 'Use this subscription for VIWO sessions?',
+        message: 'Use this subscription for VIWO workspaces?',
     });
 
     if (clack.isCancel(confirmed) || !confirmed) {
@@ -69,7 +69,7 @@ const configureOAuth = async (): Promise<void> => {
 
     ConfigManager.setAuthMethod('oauth');
     clack.log.success('Authentication method set to Claude subscription.');
-    clack.log.info('Credentials will be read from your Claude Code login at each session start.');
+    clack.log.info('Credentials will be read from your Claude Code login each time an agent is started.');
 };
 
 const configureApiKey = async (): Promise<void> => {

@@ -7,8 +7,8 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 import { execSync } from 'child_process';
 
 export const attachCommand = new Command('attach')
-    .description('Attach to a running Claude Code session via tmux')
-    .argument('[session-id]', 'Session ID to attach to')
+    .description('Attach to a running workspace container via tmux')
+    .argument('[workspace-id]', 'Workspace ID to attach to')
     .action(async (sessionId?: string) => {
         try {
             await preflightChecksOrExit({ requireGit: false });
@@ -19,21 +19,21 @@ export const attachCommand = new Command('attach')
             if (sessionId) {
                 targetSessionId = sessionId;
             } else {
-                // Show interactive list of running sessions
+                // Show interactive list of running workspaces
                 const sessions = await viwo.list({ status: SessionStatus.RUNNING });
 
                 if (sessions.length === 0) {
                     console.log();
-                    console.log(chalk.yellow('No running sessions found.'));
+                    console.log(chalk.yellow('No running workspaces found.'));
                     console.log(
-                        chalk.gray('Create a new session with: ') + chalk.cyan('viwo start')
+                        chalk.gray('Create a workspace with: ') + chalk.cyan('viwo create')
                     );
                     console.log();
                     process.exit(0);
                 }
 
                 const selectedId = await select({
-                    message: 'Select a session to attach to:',
+                    message: 'Select a workspace to attach to:',
                     choices: [
                         ...sessions.map((s) => ({
                             name: `${getCompositeStatusBadge(s)} ${s.branchName.padEnd(40)} ${chalk.gray(formatDate(s.createdAt))}`,
@@ -57,17 +57,17 @@ export const attachCommand = new Command('attach')
                 targetSessionId = selectedId;
             }
 
-            // Get the session
-            const session = await viwo.get(targetSessionId);
+            // Get the workspace
+            const workspace = await viwo.get(targetSessionId);
 
-            if (!session) {
-                console.error(chalk.red(`Session not found: ${targetSessionId}`));
+            if (!workspace) {
+                console.error(chalk.red(`Workspace not found: ${targetSessionId}`));
                 process.exit(1);
             }
 
             // Determine container name
             const containerName =
-                session.containerName ||
+                workspace.containerName ||
                 DockerManager.generateContainerName(parseInt(targetSessionId, 10));
 
             // Check if container exists and is running
@@ -77,7 +77,7 @@ export const attachCommand = new Command('attach')
 
             if (!exists) {
                 console.error(chalk.red(`Container ${containerName} does not exist.`));
-                console.log(chalk.gray('Run "viwo clean" to remove this session.'));
+                console.log(chalk.gray('Run "viwo clean" to remove this workspace.'));
                 process.exit(1);
             }
 
@@ -95,7 +95,7 @@ export const attachCommand = new Command('attach')
 
             // Print attach hint and run docker exec
             console.log();
-            console.log(chalk.dim(`Attaching to session ${targetSessionId} (${containerName})...`));
+            console.log(chalk.dim(`Attaching to workspace ${targetSessionId} (${containerName})...`));
             console.log(chalk.yellow('Detach with: Ctrl+B, D'));
             console.log();
 

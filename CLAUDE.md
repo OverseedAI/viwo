@@ -291,14 +291,18 @@ The `docker-manager.ts` provides `syncDockerState()` to keep the database in syn
 
 Commands in `packages/cli/src/commands/`:
 
-- `start` - Initialize new session with prompt and agent
+- `start` - Initialize a workspace and start an agent immediately
     - Interactive multiline prompt that supports pasting multiple lines
     - Press Enter on an empty line or Ctrl+D to finish entering prompt
     - Allows users to paste large blocks of text without triggering execution
     - After initialization, displays session details and exits automatically
     - Container continues running in the background
-- `list` - List all sessions in interactive mode
-    - Keyboard-navigable list using @inquirer/prompts with session details and actions (cd to worktree, delete, go back)
+- `create` - Create a workspace without starting an agent
+    - Runs the workspace creation flow and project `postInstall` hooks only
+    - In interactive mode, offers follow-up actions like starting the agent, opening in an IDE, or deleting the workspace
+    - In non-interactive mode, never launches the agent; use `viwo start` for the all-in-one flow
+- `list` - List all workspaces in interactive mode
+    - Keyboard-navigable list using @inquirer/prompts with workspace details and actions (start agent, attach to container, open in IDE, delete, go back)
 - `clean` - Clean up all completed, errored, stopped, or initializing sessions (marks as 'cleaned', removes worktrees, deletes associated local branches, and runs `git worktree prune` for affected repositories)
 - `auth` - Configure authentication method
     - Choose between Claude subscription (OAuth auto-detect) or Anthropic API key
@@ -382,9 +386,12 @@ Current test coverage focuses on:
 All CLI commands support fully non-interactive, flag-based execution for agent-driven workflows. When all required flags are provided, no interactive prompt is triggered.
 
 ```bash
-# Start a session non-interactively
+# Start a workspace + agent non-interactively
 viwo start --repo <id> --branch <name> --prompt "Your prompt here"
 viwo start --repo <id> --prompt-file ./prompt.txt
+
+# Create a workspace non-interactively (never launches an agent)
+viwo create --repo <id> --branch <name>
 
 # List sessions as JSON
 viwo list --json
