@@ -60,15 +60,11 @@ To release a new version:
     git push origin vX.Y.Z
     ```
 
-3. **GitHub Actions workflow** (`.github/workflows/release.yml`):
-    - Triggered on tag push matching `v*`
-    - Builds binaries for all platforms (Linux, macOS, Windows)
-    - Uses native GitHub runners for platform-specific binaries (macOS binaries are built on macOS runners, Windows on Windows, Linux on Linux)
-    - Pins Bun to a known-good version for release builds
-    - Creates checksums
-    - Creates GitHub release with binaries attached
+3. **GitHub Actions workflows** triggered on tag push matching `v*`:
+    - `.github/workflows/release.yml` — Builds CLI binaries for all platforms (Linux, macOS, Windows) using native GitHub runners, creates checksums, and publishes a GitHub release with binaries attached. Pins Bun to a known-good version.
+    - `.github/workflows/docker-publish.yml` — Builds and publishes the Claude Code runtime image (`packages/agents/claude-code/Dockerfile`) to Docker Hub as `overseedai/viwo-claude-code:<version>` and `overseedai/viwo-claude-code:latest`. Multi-arch (`linux/amd64`, `linux/arm64`). Requires `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repo secrets.
 
-**Important**: Always bump package.json versions before creating git tags to keep them in sync.
+**Important**: Always bump package.json versions before creating git tags to keep them in sync. Also update `CLAUDE_CODE_IMAGE` in `packages/core/src/managers/docker-manager.ts` to reference the new version tag so VIWO pulls the matching image.
 
 ## Architecture Overview
 
