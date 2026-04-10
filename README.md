@@ -32,7 +32,7 @@ Today, the primary runtime is **Claude Code** inside Docker, with VIWO handling 
 - **Project-aware setup**: Configure host-side setup, in-container setup, and custom bind mounts with `viwo.yml`.
 - **Better auth support**: Use either an Anthropic API key or Claude subscription OAuth credentials.
 - **Issue-driven workflows**: Expand GitHub issues and GitLab issues/MRs directly into the prompt.
-- **Attach anytime**: Reconnect to a running session through `tmux` in the container.
+- **Attach anytime**: Reconnect to a running session through `dtach` in the container.
 - **Session visibility**: Sync Docker state, inspect running/completed sessions, and capture container output.
 
 ## Table of Contents

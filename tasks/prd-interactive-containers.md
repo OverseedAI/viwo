@@ -1,5 +1,7 @@
 # PRD: Long-Running Interactive Claude Code Containers
 
+> Note: the original tmux-based design described below was later replaced by dtach to restore native link click-through and host-terminal scroll behavior.
+
 ## Introduction
 
 VIWO currently runs ephemeral Claude Code sessions in headless mode inside Docker containers. This architecture rehaul replaces that with long-running containers running Claude Code in regular interactive mode via tmux. Users can attach to live sessions, provide follow-up prompts, detach, and monitor session state — all without losing context.

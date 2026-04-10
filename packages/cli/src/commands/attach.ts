@@ -7,7 +7,7 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 import { execSync } from 'child_process';
 
 export const attachCommand = new Command('attach')
-    .description('Attach to a running workspace container via tmux')
+    .description('Attach to a running workspace container via dtach')
     .argument('[workspace-id]', 'Workspace ID to attach to')
     .action(async (sessionId?: string) => {
         try {
@@ -88,7 +88,7 @@ export const attachCommand = new Command('attach')
             if (!containerInfo.running) {
                 console.log(chalk.dim(`Container ${containerName} is stopped. Restarting...`));
                 await DockerManager.startContainer({ containerId: containerName });
-                // Wait briefly for tmux to initialize
+                // Wait briefly for dtach to initialize
                 await new Promise((r) => setTimeout(r, 1000));
                 console.log(chalk.green('Container restarted.'));
             }
@@ -96,10 +96,10 @@ export const attachCommand = new Command('attach')
             // Print attach hint and run docker exec
             console.log();
             console.log(chalk.dim(`Attaching to workspace ${targetSessionId} (${containerName})...`));
-            console.log(chalk.yellow('Detach with: Ctrl+B, D'));
+            console.log(chalk.yellow('Detach with: Ctrl+\\'));
             console.log();
 
-            execSync(`docker exec -it ${containerName} tmux attach -t viwo`, {
+            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo-state/viwo.sock -r winch`, {
                 stdio: 'inherit',
             });
         } catch (error) {

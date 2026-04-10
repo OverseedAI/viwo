@@ -135,19 +135,18 @@ elif [ -n "${VIWO_PROMPT:-}" ]; then
   unset VIWO_PROMPT
 fi
 
-# --- Launch Claude Code inside tmux ---
+# --- Launch Claude Code under dtach ---
 
 EXIT_CODE_FILE="/tmp/viwo-state/claude-exit-code"
+VIWO_SOCKET="/tmp/viwo-state/viwo.sock"
 
-# Enable mouse scrolling in tmux so users can scroll through output
-echo "set -g mouse on" >> ~/.tmux.conf
-
-# Launch Claude Code inside tmux, drop to bash when it exits
-# This keeps the tmux session alive so users can always attach
-tmux new-session -d -s viwo \
-  "$CLAUDE_CMD; echo \$? > $EXIT_CODE_FILE; printf '{\"status\":\"exited\",\"timestamp\":\"%s\",\"exitCode\":%s}' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"\$(cat $EXIT_CODE_FILE)\" > $STATE_FILE; exec bash"
-
-# Keep container alive as long as tmux session exists
-while tmux has-session -t viwo 2>/dev/null; do
-  sleep 2
-done
+# dtach -N creates a new session, runs the child in a PTY, and stays in the
+# foreground as PID 1. When the inner bash exits, dtach exits and the
+# container stops.
+exec dtach -N "$VIWO_SOCKET" -r winch bash -c "
+  $CLAUDE_CMD
+  echo \$? > $EXIT_CODE_FILE
+  printf '{\"status\":\"exited\",\"timestamp\":\"%s\",\"exitCode\":%s}' \\
+    \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"\$(cat $EXIT_CODE_FILE)\" > $STATE_FILE
+  exec bash
+"

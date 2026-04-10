@@ -39,7 +39,7 @@ const getDockerConfig = (): Docker.DockerOptions => {
 const dockerSdk = new Docker(getDockerConfig());
 
 // Default Claude Code image name
-export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:0.10.0';
+export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:0.10.1';
 
 // Claude Code CLI version installed in the image
 export const CLAUDE_CODE_VERSION = '2.1.96';
@@ -509,7 +509,7 @@ export const syncDockerState = async (): Promise<SyncDockerStateResult> => {
             }
 
             // Determine new session status based on container + agent state
-            // Container exit code reflects bash (tmux fallthrough), not Claude itself.
+            // Container exit code reflects bash (dtach fallthrough), not Claude itself.
             // The agent's actual exit code is in viwo-state.json.
             let newStatus: SessionStatus | null = null;
             let reason = '';
