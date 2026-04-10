@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
+    extractGitLabTokenFromGlabOutput,
     getGitLabApiBaseUrl,
     getGitLabInstanceBaseUrl,
     parseGitLabResourceUrls,
@@ -80,5 +81,31 @@ describe('gitlab-manager', () => {
         process.env.GITLAB_TOKEN = 'glpat-test-token';
 
         expect(resolveGitLabTokenFromEnv()).toBe('glpat-test-token');
+    });
+
+    test('extracts a plain token from glab output', () => {
+        expect(extractGitLabTokenFromGlabOutput('glpat-test-token\n')).toBe('glpat-test-token');
+    });
+
+    test('extracts token from glab auth status output', () => {
+        const output = [
+            'gitlab.com',
+            '  ✓ Logged in as hal',
+            '  Token: glpat-test-token',
+        ].join('\n');
+
+        expect(extractGitLabTokenFromGlabOutput(output)).toBe('glpat-test-token');
+    });
+
+    test('rejects glab help text as a token', () => {
+        const output = [
+            "Manage glab's authentication state.",
+            '',
+            'USAGE',
+            '',
+            '  glab auth <command> [command] [--flags]',
+        ].join('\n');
+
+        expect(extractGitLabTokenFromGlabOutput(output)).toBeNull();
     });
 });

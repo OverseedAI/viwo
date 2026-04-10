@@ -208,11 +208,60 @@ export const expandPromptWithGitLabResources = async (prompt: string): Promise<s
     return expandedPrompt;
 };
 
+export const extractGitLabTokenFromGlabOutput = (output: string): string | null => {
+    const trimmed = output.trim();
+    if (!trimmed) return null;
+
+    const lower = trimmed.toLowerCase();
+    if (
+        lower.includes("manage glab's authentication state") ||
+        lower.includes('usage') ||
+        lower.includes('commands') ||
+        lower.includes('show help for this command')
+    ) {
+        return null;
+    }
+
+    const lines = trimmed
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (lines.length === 1 && !/\s/.test(lines[0]!)) {
+        return lines[0]!;
+    }
+
+    for (const line of lines) {
+        const tokenMatch = line.match(/(?:token|personal access token)\s*:?\s+([^\s]+)/i);
+        if (tokenMatch?.[1] && !/\s/.test(tokenMatch[1])) {
+            return tokenMatch[1];
+        }
+    }
+
+    for (const line of [...lines].reverse()) {
+        if (!/\s/.test(line)) {
+            return line;
+        }
+    }
+
+    return null;
+};
+
 export const resolveGitLabTokenFromGlabCli = async (): Promise<string | null> => {
     const configuredHost = new URL(getGitLabInstanceBaseUrl()).host;
     const commands = configuredHost === 'gitlab.com'
-        ? [['glab', 'auth', 'token'], ['glab', 'auth', 'token', '--hostname', configuredHost]]
-        : [['glab', 'auth', 'token', '--hostname', configuredHost], ['glab', 'auth', 'token']];
+        ? [
+              ['glab', 'auth', 'token'],
+              ['glab', 'auth', 'token', '--hostname', configuredHost],
+              ['glab', 'auth', 'status', '--show-token'],
+              ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
+          ]
+        : [
+              ['glab', 'auth', 'token', '--hostname', configuredHost],
+              ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
+              ['glab', 'auth', 'token'],
+              ['glab', 'auth', 'status', '--show-token'],
+          ];
 
     for (const command of commands) {
         try {
@@ -220,8 +269,11 @@ export const resolveGitLabTokenFromGlabCli = async (): Promise<string | null> =>
             const output = await new Response(proc.stdout).text();
             const exitCode = await proc.exited;
 
-            if (exitCode === 0 && output.trim()) {
-                return output.trim();
+            if (exitCode === 0) {
+                const token = extractGitLabTokenFromGlabOutput(output);
+                if (token) {
+                    return token;
+                }
             }
         } catch {
             // glab not installed or not authed
@@ -241,6 +293,7 @@ export const gitlab = {
     parseGitLabResourceUrls,
     fetchGitLabResource,
     expandPromptWithGitLabResources,
+    extractGitLabTokenFromGlabOutput,
     resolveGitLabTokenFromGlabCli,
     resolveGitLabTokenFromEnv,
 };
