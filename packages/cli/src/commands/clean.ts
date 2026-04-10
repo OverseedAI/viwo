@@ -6,14 +6,14 @@ import { preflightChecksOrExit } from '../utils/prerequisites';
 
 export const cleanCommand = new Command('clean')
     .description(
-        'Clean up all completed, errored, stopped, or initializing sessions (removes worktrees, branches, and updates status)'
+        'Clean up all completed, errored, stopped, or initializing workspaces (removes worktrees, branches, and updates status)'
     )
     .option('--keep-worktree', 'Keep the worktree directories')
     .option('--keep-containers', 'Keep containers running')
     .option('--no-sync', 'Skip syncing Docker state before cleanup')
     .option(
         '--status <status>',
-        'Only clean sessions with specific status (completed, error, stopped, initializing)',
+        'Only clean workspaces with specific status (completed, error, stopped, initializing)',
         'completed,error,stopped,initializing'
     )
     .action(async (options) => {
@@ -21,7 +21,7 @@ export const cleanCommand = new Command('clean')
             // Run preflight checks before proceeding
             await preflightChecksOrExit();
 
-            const spinner = ora('Finding sessions to clean...').start();
+            const spinner = ora('Finding workspaces to clean...').start();
 
             // Sync Docker state with database before cleanup
             if (options.sync !== false) {
@@ -38,18 +38,18 @@ export const cleanCommand = new Command('clean')
             );
 
             if (sessionsToClean.length === 0) {
-                spinner.info(`No sessions found with status: ${statusFilter.join(', ')}`);
+                spinner.info(`No workspaces found with status: ${statusFilter.join(', ')}`);
                 return;
             }
 
-            spinner.text = `Found ${sessionsToClean.length} session(s) to clean...`;
+            spinner.text = `Found ${sessionsToClean.length} workspace(s) to clean...`;
 
             let successCount = 0;
             let errorCount = 0;
             const affectedRepoIds = new Set<number>();
 
             for (const session of sessionsToClean) {
-                spinner.text = `Cleaning session ${session.id} (${session.branchName})...`;
+                spinner.text = `Cleaning workspace ${session.id} (${session.branchName})...`;
 
                 try {
                     // Track which repositories are affected
@@ -72,7 +72,7 @@ export const cleanCommand = new Command('clean')
                     errorCount++;
                     console.error(
                         chalk.yellow(
-                            `\nWarning: Failed to clean session ${session.id}: ${error instanceof Error ? error.message : String(error)}`
+                            `\nWarning: Failed to clean workspace ${session.id}: ${error instanceof Error ? error.message : String(error)}`
                         )
                     );
                 }
@@ -98,9 +98,9 @@ export const cleanCommand = new Command('clean')
             }
 
             if (errorCount === 0) {
-                spinner.succeed(`Successfully cleaned ${successCount} session(s)!`);
+                spinner.succeed(`Successfully cleaned ${successCount} workspace(s)!`);
             } else {
-                spinner.warn(`Cleaned ${successCount} session(s), ${errorCount} failed`);
+                spinner.warn(`Cleaned ${successCount} workspace(s), ${errorCount} failed`);
             }
         } catch (error) {
             console.error(chalk.red(error instanceof Error ? error.message : String(error)));

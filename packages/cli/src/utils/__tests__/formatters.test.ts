@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'bun:test';
-import { formatDate } from '../formatters';
+import { getAgentStatusBadge, getCompositeStatusBadge, getStatusBadge, formatDate } from '../formatters';
+
+describe('status formatters', () => {
+    it('should render runtime status badges', () => {
+        expect(getStatusBadge('running')).toContain('running');
+        expect(getStatusBadge('completed')).toContain('completed');
+    });
+
+    it('should render agent status badges', () => {
+        expect(getAgentStatusBadge('working')).toContain('working');
+        expect(getAgentStatusBadge('awaiting_input')).toContain('awaiting_input');
+    });
+
+    it('should render combined runtime and agent status badges', () => {
+        const badge = getCompositeStatusBadge({
+            status: 'running',
+            agentStatus: 'working',
+        } as any);
+
+        expect(badge).toContain('running');
+        expect(badge).toContain('working');
+    });
+});
+
 
 describe('formatDate', () => {
     it('should format dates with seconds', () => {

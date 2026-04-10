@@ -1,4 +1,5 @@
 export { startCommand } from './start';
+export { createCommand } from './create';
 export { listCommand } from './list';
 export { cleanCommand } from './clean';
 export { repoCommand } from './repo';
