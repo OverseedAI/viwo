@@ -97,6 +97,18 @@ cat > "${SETTINGS_DIR}/settings.json" <<'SETTINGS_EOF'
 }
 SETTINGS_EOF
 
+# --- Run pre-agent commands ---
+
+if [ -n "${VIWO_PRE_AGENT_COMMANDS:-}" ]; then
+  echo "Running pre-agent setup commands..."
+  cd /workspace
+  while IFS= read -r cmd; do
+    echo "+ $cmd"
+    eval "$cmd"
+  done < <(node -e "JSON.parse(process.env.VIWO_PRE_AGENT_COMMANDS).forEach(c => console.log(c))")
+  unset VIWO_PRE_AGENT_COMMANDS
+fi
+
 # --- Build Claude command ---
 
 CLAUDE_CMD="claude --dangerously-skip-permissions"

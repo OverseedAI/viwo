@@ -139,18 +139,25 @@ VIWO automatically detects and loads project-specific configuration from the rep
 - **Schema validation**: Validated using Zod schemas in `packages/core/src/schemas.ts`
 - **Supported configuration**:
     - `postInstall`: Array of shell commands to run after git worktree creation
-        - Commands execute in the worktree directory
-        - Commands run before agent initialization
+        - Commands execute in the worktree directory (on the host)
+        - Commands run before the container starts
         - If any command fails, session initialization fails and error is reported
-        - Example use cases: dependency installation, environment setup, build steps
+        - Example use cases: host-side setup, env file generation, pre-build steps
+    - `preAgent`: Array of shell commands to run inside the container before Claude Code starts
+        - Commands execute in `/workspace` inside the Docker container
+        - Commands run after credentials and git are configured but before Claude launches
+        - If any command fails, the container exits before Claude starts
+        - Example use cases: installing dependencies (`npm install`, `bun install`), building (`npm run build`), or any other setup Claude needs available during its work
 
 **Example configuration**:
 
 ```yaml
 postInstall:
-    - npm install
-    - npm run build
     - cp .env.example .env
+
+preAgent:
+    - bun install
+    - bun run build
 ```
 
 **Implementation**:

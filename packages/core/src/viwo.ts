@@ -179,6 +179,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 type: validated.agent ?? 'claude-code',
                 model: validated.model,
             },
+            preAgentCommands: validated.preAgentCommands,
         });
 
         return {
@@ -230,6 +231,9 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 // Expand GitHub issue URLs in prompt
                 const expandedPrompt = await expandPromptWithIssues(validatedOptions.prompt);
 
+                // Load pre-agent commands from project config
+                const projectConfig = loadProjectConfig({ repoPath: worktreeResult.repoPath });
+
                 // Phase 2: Start container
                 const containerResult = await startContainerPhase({
                     sessionId: worktreeResult.sessionId,
@@ -237,6 +241,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     prompt: expandedPrompt,
                     agent: validatedOptions.agent,
                     model: getPreferredModel() ?? 'sonnet',
+                    preAgentCommands: projectConfig?.preAgent,
                 });
 
                 worktreeSession.containerName = containerResult.containerName;
