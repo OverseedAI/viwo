@@ -50,6 +50,7 @@ To release a new version:
 
     This will:
     - Update version in `packages/core/package.json` and `packages/cli/package.json`
+    - Update `CLAUDE_CODE_IMAGE` in `packages/core/src/managers/docker-manager.ts` to `overseedai/viwo-claude-code:<version>`
     - Create a git commit: "chore: bump version to X.Y.Z"
     - Create a git tag: vX.Y.Z
 
@@ -64,7 +65,7 @@ To release a new version:
     - `.github/workflows/release.yml` — Builds CLI binaries for all platforms (Linux, macOS, Windows) using native GitHub runners, creates checksums, and publishes a GitHub release with binaries attached. Pins Bun to a known-good version.
     - `.github/workflows/docker-publish.yml` — Builds and publishes the Claude Code runtime image (`packages/agents/claude-code/Dockerfile`) to Docker Hub as `overseedai/viwo-claude-code:<version>` and `overseedai/viwo-claude-code:latest`. Multi-arch (`linux/amd64`, `linux/arm64`). Requires `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repo secrets.
 
-**Important**: Always bump package.json versions before creating git tags to keep them in sync. Also update `CLAUDE_CODE_IMAGE` in `packages/core/src/managers/docker-manager.ts` to reference the new version tag so VIWO pulls the matching image.
+**Important**: Always keep package.json versions and `CLAUDE_CODE_IMAGE` in `packages/core/src/managers/docker-manager.ts` in sync with the release tag so VIWO pulls the matching image. The `bun run release <version>` script now updates all three automatically before creating the commit and tag.
 
 ## Architecture Overview
 

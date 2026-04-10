@@ -39,7 +39,7 @@ const getDockerConfig = (): Docker.DockerOptions => {
 const dockerSdk = new Docker(getDockerConfig());
 
 // Default Claude Code image name
-export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:1.3.0';
+export const CLAUDE_CODE_IMAGE = 'overseedai/viwo-claude-code:0.10.0';
 
 // Claude Code CLI version installed in the image
 export const CLAUDE_CODE_VERSION = '2.1.96';
