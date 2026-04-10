@@ -64,10 +64,24 @@ get_latest_version() {
     info "Fetching latest release version..."
 
     local latest_url="https://api.github.com/repos/${REPO}/releases/latest"
-    VERSION=$(curl -fsSL "$latest_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local response
+
+    if ! response=$(curl -fsSL \
+        -H "Accept: application/vnd.github+json" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        "$latest_url"); then
+        error "Failed to fetch latest version"
+    fi
+
+    VERSION=$(printf '%s' "$response" | tr -d '\n' | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
     if [ -z "$VERSION" ]; then
-        error "Failed to fetch latest version"
+        # Fallback for environments where the latest-release endpoint behaves unexpectedly
+        VERSION=$(printf '%s' "$response" | tr ',' '\n' | sed -n 's/^[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)"$/\1/p' | head -n 1)
+    fi
+
+    if [ -z "$VERSION" ]; then
+        error "Failed to parse latest version from GitHub API response"
     fi
 
     info "Latest version: ${VERSION}"

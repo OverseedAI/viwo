@@ -8,6 +8,8 @@ export const configurations = sqliteTable('configurations', {
     worktreesStorageLocation: text('worktrees_storage_location'),
     preferredModel: text('preferred_model'),
     githubToken: text('github_token'),
+    gitlabToken: text('gitlab_token'),
+    gitlabInstanceUrl: text('gitlab_instance_url'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });

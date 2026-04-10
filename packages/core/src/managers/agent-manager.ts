@@ -13,7 +13,7 @@ import {
     pullImage,
     generateContainerName,
 } from './docker-manager';
-import { getApiKey, getAuthMethod, getGitHubToken } from './config-manager';
+import { getApiKey, getAuthMethod, getGitHubToken, getGitLabInstanceUrl, getGitLabToken } from './config-manager';
 import { extractOAuthCredentials, extractOAuthAccountInfo, isOAuthTokenExpired } from './credential-manager';
 import { getWorktreeGitInfo } from './git-manager';
 import { ensureContainerStatePath } from '../utils/paths';
@@ -69,6 +69,11 @@ const getGitUserConfig = (): { name: string; email: string } | null => {
     return null;
 };
 
+const getGitLabHost = (instanceUrl: string): string => {
+    const withProtocol = /^https?:\/\//i.test(instanceUrl) ? instanceUrl : `https://${instanceUrl}`;
+    return new URL(withProtocol).host;
+};
+
 const buildClaudeEnv = (
     config: AgentConfig,
     preAgentCommands?: string[]
@@ -90,6 +95,15 @@ const buildClaudeEnv = (
     if (githubToken) {
         env.GITHUB_TOKEN = githubToken;
     }
+
+    const gitlabToken = getGitLabToken();
+    if (gitlabToken) {
+        env.GITLAB_TOKEN = gitlabToken;
+    }
+
+    const gitlabInstanceUrl = getGitLabInstanceUrl() ?? 'https://gitlab.com';
+    env.VIWO_GITLAB_INSTANCE_URL = gitlabInstanceUrl;
+    env.VIWO_GITLAB_HOST = getGitLabHost(gitlabInstanceUrl);
 
     const gitUser = getGitUserConfig();
     if (gitUser) {

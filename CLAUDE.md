@@ -63,6 +63,8 @@ To release a new version:
 3. **GitHub Actions workflow** (`.github/workflows/release.yml`):
     - Triggered on tag push matching `v*`
     - Builds binaries for all platforms (Linux, macOS, Windows)
+    - Uses native GitHub runners for platform-specific binaries (macOS binaries are built on macOS runners, Windows on Windows, Linux on Linux)
+    - Pins Bun to a known-good version for release builds
     - Creates checksums
     - Creates GitHub release with binaries attached
 
@@ -89,10 +91,11 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
 - `agent-manager.ts` - AI agent initialization with automatic container lifecycle management (only Claude Code implemented)
 - `repository-manager.ts` - Repository CRUD and default branch management
 - `port-manager.ts` - Port allocation via get-port
-- `config-manager.ts` - Configuration management (API keys, GitHub token, auth method, IDE preferences, model preference, worktrees storage location)
+- `config-manager.ts` - Configuration management (API keys, GitHub/GitLab tokens, GitLab instance URL, auth method, IDE preferences, model preference, worktrees storage location)
 - `credential-manager.ts` - OAuth credential extraction from host system (macOS Keychain, Linux credential files)
 - `ide-manager.ts` - IDE detection and launching
 - `github-manager.ts` - GitHub issue URL detection, fetching via REST API, prompt expansion; token resolution from gh CLI/env
+- `gitlab-manager.ts` - GitLab issue/MR URL detection, fetching via REST API, prompt expansion; token resolution from glab CLI/env; self-hosted instance support
 - `project-config-manager.ts` - Project configuration file detection and parsing (viwo.yml/viwo.yaml)
 
 **Schema-first validation** - All inputs validated with Zod schemas in `packages/core/src/schemas.ts`
@@ -111,6 +114,8 @@ VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker 
     - Preferred IDE
     - Preferred Claude model (`'sonnet'`, `'opus'`, or `'haiku'` — defaults to Sonnet)
     - GitHub token (encrypted) for issue fetching and container forwarding
+    - GitLab token (encrypted) for issue/MR fetching and container forwarding
+    - GitLab instance URL for self-hosted GitLab support
     - Worktrees storage location (supports absolute or relative paths)
 - **Session storage**: The `sessions` table stores worktree session details including:
     - Container output (`containerOutput` field) - Full stdout/stderr captured when session completes or errors
@@ -202,28 +207,35 @@ VIWO supports two authentication methods, configured via `viwo auth`:
 
 The `credential-manager.ts` handles host credential extraction, and `config-manager.ts` stores the auth method preference.
 
-### GitHub Integration
+### GitHub & GitLab Integration
 
-When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owner}/{repo}/issues/{number}`), VIWO automatically:
+When a `viwo start` prompt contains GitHub issue URLs (`https://github.com/{owner}/{repo}/issues/{number}`) or GitLab issue/MR URLs (`https://gitlab.com/{group}/{project}/-/issues/{number}`, `https://gitlab.com/{group}/{project}/-/merge_requests/{number}`), VIWO automatically:
 
-1. **Detects** issue URLs in the prompt via regex in `github-manager.ts`
-2. **Fetches** issue content (title, body, labels, comments) using the GitHub REST API
-3. **Expands** the prompt by replacing each URL with formatted issue content (markdown)
-4. **Forwards** the stored GitHub token as `GITHUB_TOKEN` env var to the container
+1. **Detects** supported URLs in the prompt
+2. **Fetches** issue/MR content (title, body/description, labels, comments) using the provider REST API
+3. **Expands** the prompt by replacing each URL with formatted markdown context
+4. **Forwards** stored provider tokens into the container for API access and git auth
 
-**Token management** (configured via `viwo config github`):
+**GitHub token management** (`viwo config github`):
 
 - Stored encrypted in the `configurations` table (`githubToken` field)
 - Auto-detection: tries `gh auth token` CLI first, then `GITHUB_TOKEN`/`GH_TOKEN` env vars
 - Manual entry also supported
-- Token is required when issue URLs are detected in a prompt; errors if missing
+
+**GitLab token management** (`viwo config gitlab`):
+
+- Stored encrypted in the `configurations` table (`gitlabToken` field)
+- Auto-detection: tries `glab auth token` CLI first, then `GITLAB_TOKEN` env var
+- Supports a configurable self-hosted instance URL via `gitlabInstanceUrl`
+- Manual entry also supported
 
 **Implementation**:
 
-- `github-manager.ts` handles URL parsing, API fetching, and prompt expansion
-- `config-manager.ts` handles encrypted token CRUD
-- `viwo.ts` calls `expandPromptWithIssues()` before starting the container
-- `agent-manager.ts` injects `GITHUB_TOKEN` into the container env via `buildClaudeEnv()`
+- `github-manager.ts` handles GitHub URL parsing, API fetching, and prompt expansion
+- `gitlab-manager.ts` handles GitLab issue/MR parsing, API fetching, self-hosted instance support, and prompt expansion
+- `config-manager.ts` handles encrypted token CRUD and GitLab instance URL storage
+- `viwo.ts` expands GitHub and GitLab URLs before starting the container
+- `agent-manager.ts` injects `GITHUB_TOKEN` and `GITLAB_TOKEN` into the container env via `buildClaudeEnv()`
 
 ### Container Lifecycle Management
 
@@ -243,7 +255,7 @@ Containers need working git for commits, pushes, and PR creation. VIWO achieves 
 
 1. **Mounting the repo's `.git/` directory** at `/repo-git` inside the container (only git internals, not the repo's working tree)
 2. **Rewriting the worktree's `.git` file** in `claude-bootstrap.sh` to point to `/repo-git/worktrees/<branch>` so git commands resolve correctly
-3. **Configuring `GITHUB_TOKEN` as a git credential helper** so pushes authenticate via the stored token
+3. **Configuring git credential helpers** so GitHub (`GITHUB_TOKEN`) and GitLab (`GITLAB_TOKEN`) pushes authenticate via the stored tokens
 
 The parent repo's working tree is never mounted — the container only sees the worktree at `/workspace` and the git metadata at `/repo-git`. The `getWorktreeGitInfo()` function in `git-manager.ts` parses the worktree's `.git` file to extract the gitdir path and derive mount paths.
 
@@ -297,6 +309,11 @@ Commands in `packages/cli/src/commands/`:
 - `config github` - Configure GitHub integration
     - Auto-detect token from `gh` CLI or `GITHUB_TOKEN` env var
     - Manual token entry
+    - View status and remove stored token
+- `config gitlab` - Configure GitLab integration
+    - Auto-detect token from `glab` CLI or `GITLAB_TOKEN` env var
+    - Manual token entry
+    - Configure/reset self-hosted GitLab instance URL
     - View status and remove stored token
 - `attach` - Attach to a running Claude Code session via tmux
     - With no args, shows interactive list of running sessions to choose from
@@ -385,6 +402,14 @@ viwo config github --auto
 viwo config github --set <token>
 viwo config github --remove
 viwo config github --status
+
+# Configure GitLab token / instance
+viwo config gitlab --auto
+viwo config gitlab --set <token>
+viwo config gitlab --instance https://gitlab.company.com
+viwo config gitlab --reset-instance
+viwo config gitlab --remove
+viwo config gitlab --status
 
 # List repos as JSON
 viwo repo list --json

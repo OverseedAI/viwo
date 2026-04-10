@@ -56,13 +56,18 @@ if [ -n "${VIWO_WORKTREE_NAME:-}" ] && [ -d "/repo-git" ]; then
     git config --global user.email "$GIT_AUTHOR_EMAIL"
   fi
 
-  # Use GITHUB_TOKEN for push auth and gh CLI if available
-  if [ -n "${GITHUB_TOKEN:-}" ]; then
-    git config --global credential.helper '!f() { echo "password=$GITHUB_TOKEN"; }; f'
-    git config --global credential.username 'x-access-token'
+  if [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GITLAB_TOKEN:-}" ]; then
+    git config --global credential.helper '!f() { host=""; while IFS= read -r line; do case "$line" in host=*) host="${line#host=}" ;; esac; done; if [ "$host" = "github.com" ] && [ -n "${GITHUB_TOKEN:-}" ]; then echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; elif [ "$host" = "${VIWO_GITLAB_HOST:-gitlab.com}" ] && [ -n "${GITLAB_TOKEN:-}" ]; then echo "username=oauth2"; echo "password=$GITLAB_TOKEN"; fi; }; f'
+  fi
 
-    # Auth gh CLI so `gh pr create` works
+  # Auth gh CLI so `gh pr create` works
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
     echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
+  fi
+
+  # Auth glab CLI if available so GitLab commands work inside the container
+  if [ -n "${GITLAB_TOKEN:-}" ]; then
+    glab auth login --hostname "${VIWO_GITLAB_HOST:-gitlab.com}" --token "$GITLAB_TOKEN" 2>/dev/null || true
   fi
 fi
 
