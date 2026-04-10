@@ -22,6 +22,7 @@ export interface InitializeAgentOptions {
     sessionId: number;
     worktreePath: string;
     config: AgentConfig;
+    preAgentCommands?: string[];
 }
 
 export interface InitializeAgentResult {
@@ -73,7 +74,10 @@ const getGitLabHost = (instanceUrl: string): string => {
     return new URL(withProtocol).host;
 };
 
-const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
+const buildClaudeEnv = (
+    config: AgentConfig,
+    preAgentCommands?: string[]
+): Record<string, string> => {
     const env: Record<string, string> = {
         VIWO_PROMPT: config.initialPrompt,
         CLAUDE_CODE_SANDBOXED: '1',
@@ -81,6 +85,10 @@ const buildClaudeEnv = (config: AgentConfig): Record<string, string> => {
 
     if (config.model) {
         env.VIWO_MODEL = config.model;
+    }
+
+    if (preAgentCommands && preAgentCommands.length > 0) {
+        env.VIWO_PRE_AGENT_COMMANDS = JSON.stringify(preAgentCommands);
     }
 
     const githubToken = getGitHubToken();
@@ -113,8 +121,9 @@ const startClaudeContainer = async (options: {
     worktreePath: string;
     config: AgentConfig;
     env: Record<string, string>;
+    preAgentCommands?: string[];
 }): Promise<InitializeAgentResult> => {
-    const { sessionId, worktreePath, config, env } = options;
+    const { sessionId, worktreePath, config, env, preAgentCommands } = options;
 
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
     if (!imageExists) {
@@ -122,7 +131,7 @@ const startClaudeContainer = async (options: {
     }
 
     const containerName = generateContainerName(sessionId);
-    const claudeEnv = buildClaudeEnv(config);
+    const claudeEnv = buildClaudeEnv(config, preAgentCommands);
 
     const statePath = await ensureContainerStatePath(sessionId);
 
@@ -220,6 +229,7 @@ const initializeClaudeCodeWithApiKey = async (
         worktreePath: options.worktreePath,
         config: options.config,
         env: { ANTHROPIC_API_KEY: apiKey },
+        preAgentCommands: options.preAgentCommands,
     });
 };
 
@@ -262,6 +272,7 @@ const initializeClaudeCodeWithOAuth = async (
             VIWO_OAUTH_CREDENTIALS: credentialsFile,
             VIWO_OAUTH_CONFIG: claudeConfig,
         },
+        preAgentCommands: options.preAgentCommands,
     });
 };
 

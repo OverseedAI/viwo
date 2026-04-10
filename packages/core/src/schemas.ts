@@ -102,6 +102,7 @@ export const StartContainerOptionsSchema = z.object({
     prompt: z.string().min(1),
     agent: AgentTypeSchema.default('claude-code'),
     model: z.string().optional(),
+    preAgentCommands: z.array(z.string()).optional(),
 });
 export type StartContainerOptions = z.infer<typeof StartContainerOptionsSchema>;
 
@@ -165,6 +166,7 @@ export type ViwoConfig = z.infer<typeof ViwoConfigSchema>;
  */
 export const ProjectConfigSchema = z.object({
     postInstall: z.array(z.string()).optional(),
+    preAgent: z.array(z.string()).optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 
