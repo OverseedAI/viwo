@@ -63,6 +63,8 @@ To release a new version:
 3. **GitHub Actions workflow** (`.github/workflows/release.yml`):
     - Triggered on tag push matching `v*`
     - Builds binaries for all platforms (Linux, macOS, Windows)
+    - Uses native GitHub runners for platform-specific binaries (macOS binaries are built on macOS runners, Windows on Windows, Linux on Linux)
+    - Pins Bun to a known-good version for release builds
     - Creates checksums
     - Creates GitHub release with binaries attached
 
