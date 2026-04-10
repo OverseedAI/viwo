@@ -218,11 +218,6 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
                         removeContainers: true,
                     });
                     console.log(chalk.green('✓ Session deleted successfully'));
-                    console.log();
-                    console.log(chalk.gray('Press Enter to continue...'));
-                    await new Promise((resolve) => {
-                        process.stdin.once('data', resolve);
-                    });
                 } catch (error) {
                     console.error(
                         chalk.red('Failed to delete session:'),
