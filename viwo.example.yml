@@ -1,9 +1,10 @@
 # Example VIWO project configuration file
 # Place this file at the root of your repository as viwo.yml or viwo.yaml
 
-# Post-install hooks run after git worktree creation and before agent initialization
-# Commands execute in the worktree directory
-# If any command fails, session initialization will fail
+# Post-install hooks run on the host after git worktree creation
+# and before the containerized agent runtime starts.
+# Commands execute in the worktree directory.
+# If any command fails, session initialization will fail.
 postInstall:
   # Install dependencies
   - npm install
@@ -18,7 +19,14 @@ postInstall:
   # - docker-compose up -d
   # - npx prisma generate
 
-# Custom bind mounts exposed inside the Claude Code container.
+# Pre-agent commands run inside the container before the agent starts.
+# Useful for installing dependencies or building the project.
+#
+# preAgent:
+#   - bun install
+#   - bun run build
+
+# Custom bind mounts exposed inside the agent container.
 # Host paths may be absolute, use `~` for your home directory, or be
 # relative to the repository root. Container paths must be absolute.
 # Append `:ro` (or set `readonly: true`) for read-only mounts.

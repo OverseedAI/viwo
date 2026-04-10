@@ -2,7 +2,7 @@
   "name": "@viwo/cli",
   "version": "0.10.0",
   "type": "module",
-  "description": "CLI for VIWO - AI-powered development environment orchestrator",
+  "description": "CLI for VIWO - git worktree + containerization + agent harness",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [

@@ -1,6 +1,6 @@
 # Installing VIWO
 
-VIWO (Virtualized Isolated Worktree Orchestrator) can be installed in multiple ways depending on your preference.
+VIWO is a git worktree + containerization + agent harness for isolated coding sessions.
 
 ## Manual Installation
 
@@ -57,8 +57,24 @@ shasum -a 256 -c viwo-macos-arm64.sha256
 
 ## System Requirements
 
-- **Docker**: Required for container orchestration
-- **Git**: Required for worktree management
+- **Docker**: Required for containerized agent runtimes
+- **Git**: Required for git worktree management
 - **Disk Space**: ~100MB for the binary
 
 ## Getting Started
+
+After installing:
+
+```bash
+# Configure authentication
+viwo auth
+
+# Add a repository
+cd /path/to/your/repo
+viwo repo add .
+
+# Start a session
+viwo start
+```
+
+`viwo register` is still available as an alias for `viwo repo add`.

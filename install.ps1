@@ -168,7 +168,7 @@ function Main {
     Write-Host "╚╗╔╝║║║║║ ║" -ForegroundColor Cyan
     Write-Host " ╚╝ ╩╚╩╝╚═╝" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "AI-powered development environment orchestrator" -ForegroundColor Gray
+    Write-Host "git worktree + containerization + agent harness" -ForegroundColor Gray
     Write-Host ""
 
     $platform = Get-Platform
@@ -188,11 +188,11 @@ function Main {
         Write-Host ""
         Write-Host "     Get your API key from: https://console.anthropic.com/settings/keys" -ForegroundColor Gray
         Write-Host ""
-        Write-Host "  2. Register a repository:" -ForegroundColor White
+        Write-Host "  2. Add a repository:" -ForegroundColor White
         Write-Host "     cd C:\path\to\your\repo" -ForegroundColor Cyan
-        Write-Host "     viwo register" -ForegroundColor Cyan
+        Write-Host "     viwo repo add ." -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  3. Start a new session:" -ForegroundColor White
+        Write-Host "  3. Start an isolated workspace + agent session:" -ForegroundColor White
         Write-Host "     viwo start" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "  For more information, run: viwo --help" -ForegroundColor Gray

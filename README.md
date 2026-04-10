@@ -1,75 +1,67 @@
-<div style="text-align: center;">
+<div align="center">
 
-# viwo-cli
+# VIWO
 
-<i>⚡️Fastest way one-shot prompts with Claude Code ⚡</i>
+**git worktree + containerization + agent harness**
 
-<div>
+Run coding agents in isolated git worktrees backed by disposable containers.
 
 [![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
 </div>
 
-</div>
-
 ---
 
-Ever wanted to test out an idea or fix a bug, but you didn't want
-to pollute your working branch? Or do you ever get super annoyed by all the questions and permissions Claude
-asks you?
+VIWO creates clean, isolated development sessions so you can let an agent work without cluttering your current branch or granting it access to your everyday shell.
 
-Well, **VIWO** (**Vi**rtual **Wo**rkspaces) might just be your solution:
+Each session combines:
 
-- **Docker-sandboxed environments**: In order to use Claude Code with `--dangerously-skip-permissions`, we are
-  using Docker to sandbox the runtime environment.
-- **Git worktrees**: Maintain a clean separation between your working branch and Claude's branch—so you can work while Claude works!
-- **Ease-of-use**: Quickly jump in to a worktree session by opening it in your favourite IDE.
-- **Multiple agents**: With VIWO, it's extremely easy to spin up multiple agents to go do your task for you.
-- **Recap of changes made**: View a recap of the work completed by AI directly inside VIWO CLI.
-- **Improved multiline support**: Paste in large amounts of text and play around with your prompt before submitting.
-- [COMING SOON] **GitHub/GitLab integration**: Once you're done, let AI handle submitting "your" work for you!
+- **Git worktrees** for branch isolation
+- **Containers** for runtime isolation
+- **An agent harness** for launching and managing coding agents
+
+Today, the primary runtime is **Claude Code** inside Docker, with VIWO handling worktree creation, container lifecycle, auth forwarding, prompt expansion, and session cleanup.
 
 ![Demo](./viwo-demo.gif)
 
+## Why VIWO
+
+- **Isolated workspaces**: Every session gets its own git worktree and containerized runtime.
+- **Fast agent launches**: Start a workspace and hand it to Claude Code in one command.
+- **Safe parallel work**: Run multiple agent sessions against the same repository without polluting your current branch.
+- **Project-aware setup**: Configure host-side setup, in-container setup, and custom bind mounts with `viwo.yml`.
+- **Better auth support**: Use either an Anthropic API key or Claude subscription OAuth credentials.
+- **Issue-driven workflows**: Expand GitHub issues and GitLab issues/MRs directly into the prompt.
+- **Attach anytime**: Reconnect to a running session through `tmux` in the container.
+- **Session visibility**: Sync Docker state, inspect running/completed sessions, and capture container output.
+
 ## Table of Contents
 
-<!-- TOC -->
-
-- [viwo-cli](#viwo-cli)
-    - [Table of Contents](#table-of-contents)
-    - [Installation](#installation)
-    - [Quick Start](#quick-start)
-    - [Post Install Hooks](#post-install-hooks)
-    - [Custom Bind Mounts](#custom-bind-mounts)
-    - [How it works](#how-it-works)
-    - [Security](#security)
-    - [🚀 Development Guidelines](#-development-guidelines)
-        - [Prerequisites](#prerequisites)
-        - [Installation](#installation-1)
-    - [📦 Project Structure](#-project-structure)
-    - [🛠️ Development](#-development)
-        - [Running the CLI](#running-the-cli)
-        - [Making Changes](#making-changes)
-        - [Type Checking](#type-checking)
-        - [Testing](#testing)
-        - [Code Quality](#code-quality)
-    - [📝 CLI Usage](#-cli-usage)
-        - [Initialize a new session](#initialize-a-new-session)
-        - [List all sessions](#list-all-sessions)
-    - [🏗️ Building for Production](#-building-for-production)
-    - [🧹 Cleaning](#-cleaning)
-    - [📚 Architecture](#-architecture)
-        - [Core Package (`@viwo/core`)](#core-package-viwocore)
-        - [CLI Package (`@viwo/cli`)](#cli-package-viwocli)
-    - [Uninstall](#uninstall)
-        - [Linux & macOS](#linux--macos)
-        - [Windows](#windows)
-
-<!-- /TOC -->
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Project Configuration](#project-configuration)
+  - [Post-install hooks](#post-install-hooks)
+  - [Pre-agent commands](#pre-agent-commands)
+  - [Custom bind mounts](#custom-bind-mounts)
+- [How it works](#how-it-works)
+- [Authentication](#authentication)
+- [GitHub and GitLab integration](#github-and-gitlab-integration)
+- [Security](#security)
+- [Development](#development)
+  - [Prerequisites](#prerequisites)
+  - [Install dependencies](#install-dependencies)
+  - [Running the CLI](#running-the-cli)
+  - [Type checking](#type-checking)
+  - [Testing](#testing)
+  - [Code quality](#code-quality)
+  - [Build](#build)
+- [CLI Usage](#cli-usage)
+- [Architecture](#architecture)
+- [Uninstall](#uninstall)
 
 ## Installation
 
-**MacOS & Linux**
+**macOS & Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | bash
@@ -81,260 +73,308 @@ curl -fsSL https://raw.githubusercontent.com/OverseedAI/viwo/main/install.sh | b
 irm https://raw.githubusercontent.com/OverseedAI/viwo/main/install.ps1 | iex
 ```
 
-**Note:**
-
-- You may need to restart your terminal after installation for the PATH changes to take effect.
+You may need to restart your terminal after installation so `viwo` is available on your `PATH`.
 
 ## Quick Start
 
-After installation, initialize your first session:
-
 ```bash
-# Register your Anthropic API key
+# 1) Configure authentication
 viwo auth
 
-# Register a repository
+# 2) Add a repository
 cd /path/to/your/repo
-viwo register # viwo register /path/to/your/repo also works
+viwo repo add .
 
-# Start a session
+# 3) Start an isolated workspace + agent
 viwo start
 
-# List sessions
+# 4) List sessions
 viwo list
+
+# 5) Attach to a running session
+viwo attach
 ```
 
-## Post Install Hooks
+Notes:
 
-You can add post install hooks via a YAML config file.
+- `viwo register` still works as an alias for `viwo repo add`.
+- If you want to create the worktree first and launch the agent later, use `viwo create`.
 
-Add the `postInstall` property and add in any scripts you want
-to run after your git worktree is initialized.
+## Project Configuration
 
-This is meant for easily initializing your git worktree for development and testing.
+VIWO loads project-specific configuration from `viwo.yml` or `viwo.yaml` at the repository root.
+
+Example:
 
 ```yaml
 postInstall:
-    # Install dependencies
-    - npm install
+  - cp .env.example .env
 
-    # Build the project
-    - npm run build
+preAgent:
+  - bun install
+  - bun run build
 
-    # Copy environment file
-    - cp .env.example .env
+binds:
+  - ~/.cache/huggingface:/root/.cache/huggingface
+  - ./shared-data:/shared:ro
+  - source: ~/models
+    target: /models
+    readonly: true
 ```
 
-## Custom Bind Mounts
+### Post-install hooks
 
-You can expose extra host directories inside the Claude Code container by adding
-a `binds` entry to `viwo.yml`. This is useful for sharing caches, model weights,
-datasets, or any other data you'd rather not re-create inside the container.
+Use `postInstall` for commands that should run **on the host** after the git worktree is created and before any container starts.
 
-Host paths may be absolute, use `~` for your home directory, or be relative to
-the repository root. Container paths must be absolute. Append `:ro` (or set
-`readonly: true`) for read-only mounts.
+Typical uses:
+
+- copying env files
+- generating local config
+- host-side setup steps
+
+```yaml
+postInstall:
+  - npm install
+  - npm run build
+  - cp .env.example .env
+```
+
+### Pre-agent commands
+
+Use `preAgent` for commands that should run **inside the container** before Claude Code starts.
+
+Typical uses:
+
+- installing dependencies
+- building the project
+- preparing tools the agent will need during the session
+
+```yaml
+preAgent:
+  - bun install
+  - bun run build
+```
+
+### Custom bind mounts
+
+Use `binds` to expose additional host directories inside the container.
+
+This is useful for:
+
+- caches
+- datasets
+- model files
+- shared tooling or credentials that should be mounted read-only
+
+Host paths may be absolute, use `~`, or be relative to the repository root. Container paths must be absolute.
 
 ```yaml
 binds:
-    # String form (Docker-style)
-    - ~/.cache/huggingface:/root/.cache/huggingface
-    - ./shared-data:/shared:ro
-
-    # Object form
-    - source: ~/models
-      target: /models
-      readonly: true
+  - ~/.cache/huggingface:/root/.cache/huggingface
+  - ./shared-data:/shared:ro
+  - source: ~/models
+    target: /models
+    readonly: true
 ```
 
 ## How it works
 
-The end result is a Claude Code instance in a Docker container. To get there, VIWO takes a git repository,
-creates a git worktree in a separate directory, then creates a Docker container with a volume mount to that
-new git worktree. The Docker container then runs a fresh installation of Claude Code in "print" mode with
-`--dangerously-skip-permissions` enabled to help you one-shot your prompts.
+VIWO orchestrates a session in two main phases:
 
-- `viwo auth` stores your API key in a sqlite database in your app data directory. This API key is then provided to the Docker containers that run Claude Code.
-- `viwo register` stores the repository path and name into the sqlite database for subsequent retrieval.
-- `viwo start` creates a new git worktree and a Docker container. This container then runs `claude -p "YOUR PROMPT"`.
+1. **Create a worktree**
+   - validate the repository
+   - create a new git branch + worktree
+   - copy env files if requested
+   - run project `postInstall` hooks on the host
+
+2. **Start the agent container**
+   - resolve auth and model settings
+   - expand GitHub/GitLab URLs in the prompt
+   - apply configured bind mounts
+   - run project `preAgent` commands inside the container
+   - launch Claude Code in the isolated runtime
+
+A few implementation details matter:
+
+- The container sees the worktree at `/workspace`.
+- Git metadata is mounted separately so git operations inside the container work correctly.
+- Docker state is synced back to VIWO so session status and container output stay accurate.
+- Completed or errored sessions can be cleaned up with `viwo clean`.
+
+## Authentication
+
+VIWO supports two auth modes:
+
+### Anthropic API key
+
+Store an API key in VIWO and pass it into the container as needed.
+
+```bash
+viwo auth
+```
+
+### Claude subscription OAuth
+
+If you use Claude Code with a Claude subscription, VIWO can extract OAuth credentials from your host machine at session start and forward them into the container.
+
+This avoids manually storing short-lived OAuth credentials in VIWO's database.
+
+## GitHub and GitLab integration
+
+VIWO can detect supported GitHub issue URLs and GitLab issue / merge request URLs in your prompt, fetch their content, and expand the prompt automatically before launching the agent.
+
+You can configure provider tokens with:
+
+```bash
+viwo config github
+viwo config gitlab
+```
+
+This is useful when you want the agent to work directly from:
+
+- GitHub issues
+- GitLab issues
+- GitLab merge requests
 
 ## Security
 
-Running Claude with `--dangerously-skip-permissions` (DSP) comes with its own risks. The safest way to run Claude with
-DSP would be isolated virtual machines. VIWO relies on the security of Docker containers to limit the attack surface of AI hackers,
-but that does not mean Docker containers are inherently impenetrable. You can learn more about how Docker manages the
-security of their containers [here](https://docs.docker.com/engine/security/).
+Running agents with reduced interactive friction still carries risk. VIWO uses containers to reduce the blast radius, but containers are not the same thing as a hardened VM boundary.
 
-## 🚀 Development Guidelines
+In practice, VIWO's model is:
+
+- **git worktree isolation** for source changes
+- **container isolation** for runtime behavior
+- **explicit bind mounts** for any extra host access
+
+If you need stronger isolation guarantees, a VM-based workflow is safer than containers alone.
+
+For more on Docker's security model, see the Docker docs: https://docs.docker.com/engine/security/
+
+## Development
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) v1.0 or higher
+- [Bun](https://bun.sh)
 - Git
-- Docker (Daemon must be running)
+- Docker
 
-### Installation
+### Install dependencies
 
-1. **Clone and install dependencies**
-
-    ```bash
-    git clone <repository-url>
-    cd viwo
-    bun install
-    ```
-
-2. **Link the CLI globally**
-
-    ```bash
-    cd packages/cli
-    bun link
-    ```
-
-3. **Verify installation**
-    ```bash
-    viwo --help
-    ```
-
-That's it! No build step required during development. 🎉
-
-## 📦 Project Structure
-
+```bash
+git clone <repository-url>
+cd viwo
+bun install
 ```
-viwo/
-├── packages/
-│   ├── core/          # Core SDK (@viwo/core)
-│   └── cli/           # CLI tool (@viwo/cli)
-└── apps/              # Future applications
-```
-
-## 🛠️ Development
 
 ### Running the CLI
 
-Since this is a Bun monorepo with **direct source imports**, you can run the CLI immediately without building:
+No build step is required during development.
 
 ```bash
-# Option 1: Run directly from source
+# Run directly from source
 bun packages/cli/src/cli.ts --help
 
-# Option 2: Use the globally linked command (recommended)
-viwo --help
+# Or from the CLI package
+cd packages/cli
+bun run viwo --help
 ```
 
-### Making Changes
-
-1. Edit source files in `packages/core/src/` or `packages/cli/src/`
-2. Changes are immediately available - no build step needed!
-3. Run the CLI to test your changes:
-    ```bash
-    viwo start
-    ```
-
-The core package uses **direct TypeScript source imports** - Bun's native TypeScript support makes this possible without compilation during development.
-
-### Type Checking
+### Type checking
 
 ```bash
-# Check all packages
 bun run typecheck
-
-# Check specific package
 cd packages/core && bun run typecheck
 ```
 
 ### Testing
 
 ```bash
-# Run tests in core package
 cd packages/core && bun test
 ```
 
-### Code Quality
+### Code quality
 
 ```bash
-# Format code
 bun run format
-
-# Check formatting
 bun run format:check
-
-# Lint code
 bun run lint
 ```
 
-## 📝 CLI Usage
-
-### Initialize a new session
+### Build
 
 ```bash
-viwo start
-```
-
-### List all sessions
-
-```bash
-viwo list
-```
-
-## 🏗️ Building for Production
-
-While development doesn't require a build step, you can build for production/publishing:
-
-```bash
-# Build all packages
 bun run build
-
-# Build specific package
-cd packages/core && bun run build
 ```
 
-This creates the `dist/` directories with compiled JavaScript and type definitions.
+## CLI Usage
 
-## 🧹 Cleaning
-
-Remove all build artifacts, caches, and dependencies:
+Common commands:
 
 ```bash
-bun run clean
+# Repository management
+viwo repo add .
+viwo repo list --json
+viwo repo delete <id>
+
+# Auth and config
+viwo auth
+viwo config model --set opus
+viwo config ide --set vscode
+viwo config worktrees --set /path/to/worktrees
+viwo config github --auto
+viwo config gitlab --auto
+
+# Workspace lifecycle
+viwo create --repo <id> --branch feature/test
+viwo start --repo <id> --prompt "Fix the failing tests"
+viwo start --repo <id> --prompt-file ./prompt.txt
+viwo list
+viwo attach <workspace-id>
+viwo clean
 ```
 
-## 📚 Architecture
+## Architecture
 
-### Core Package (`@viwo/core`)
+VIWO is a monorepo with two main packages:
 
-The core package provides:
+### `@viwo/core`
 
-- Git worktree management
+The core SDK manages the session lifecycle:
+
+- git worktree creation and cleanup
 - Docker container orchestration
-- AI agent initialization (Claude Code, Cline, Cursor)
-- Session state management with Bun's native SQLite
-- Port allocation
+- agent initialization
+- repository and session persistence
+- configuration and credential handling
+- GitHub / GitLab prompt expansion
+- project config parsing for `viwo.yml`
 
-**Key Feature**: Uses **direct source imports** - exports TypeScript files directly without a build step during development.
+Key architectural traits:
 
-### CLI Package (`@viwo/cli`)
+- **functional manager pattern** for core subsystems
+- **schema-first validation** with Zod
+- **SQLite + Drizzle ORM** for persisted state
+- **direct TypeScript source exports** during development
 
-A command-line interface built on top of `@viwo/core`:
+### `@viwo/cli`
 
-- Interactive session management
-- Pretty-printed output with colors and tables
-- Progress indicators
-- Comprehensive error handling
+The CLI sits on top of `@viwo/core` and provides:
+
+- interactive and non-interactive command flows
+- session inspection and attach flows
+- config and auth management
+- preflight checks for database, git, Docker, and version status
 
 ## Uninstall
 
 ### Linux & macOS
 
 ```bash
-rm /usr/local/bin/viwo  # or wherever you installed it
+rm /usr/local/bin/viwo
 ```
 
 ### Windows
 
 ```powershell
-# Remove the binary
 Remove-Item "$env:LOCALAPPDATA\Programs\viwo\viwo.exe"
-
-# Remove from PATH (optional)
-# Open "Edit environment variables for your account" and remove the viwo directory from PATH
 ```

@@ -20,7 +20,7 @@ const program = new Command();
 
 program
     .name('viwo')
-    .description('AI-powered development environment orchestrator')
+    .description('git worktree + containerization + agent harness')
     .version(packageJson.version);
 
 // Register commands

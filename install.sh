@@ -175,7 +175,7 @@ main() {
     echo "╚╗╔╝║║║║║ ║"
     echo " ╚╝ ╩╚╩╝╚═╝"
     echo ""
-    echo "AI-powered development environment orchestrator"
+    echo "git worktree + containerization + agent harness"
     echo ""
 
     detect_platform
@@ -191,11 +191,11 @@ main() {
     echo ""
     echo "     Get your API key from: https://console.anthropic.com/settings/keys"
     echo ""
-    echo "  2. Register a repository:"
+    echo "  2. Add a repository:"
     echo "     cd /path/to/your/repo"
-    echo "     ${BINARY_NAME} register"
+    echo "     ${BINARY_NAME} repo add ."
     echo ""
-    echo "  3. Start a new session:"
+    echo "  3. Start an isolated workspace + agent session:"
     echo "     ${BINARY_NAME} start"
     echo ""
     echo "  For more information, run: ${BINARY_NAME} --help"
