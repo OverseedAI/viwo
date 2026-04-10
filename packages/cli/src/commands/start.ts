@@ -5,6 +5,7 @@ import { viwo, GitManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { preparePromptForLaunch } from '../utils/agent-launch';
+import { branchNameInput } from '../utils/branch-input';
 
 export const startCommand = new Command('start')
     .description('Create a workspace and start an AI agent')
@@ -77,7 +78,7 @@ export const startCommand = new Command('start')
                     process.exit(1);
                 }
             } else {
-                const branchInput = await clack.text({
+                const branchInput = await branchNameInput({
                     message: 'Branch name',
                     placeholder: 'Leave empty for auto-generated',
                     validate: (value) => {
