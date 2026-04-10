@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import * as clack from '@clack/prompts';
 import { readFileSync } from 'fs';
-import { viwo, ConfigManager, GitHubManager, GitManager } from '@viwo/core';
+import { viwo, ConfigManager, GitHubManager, GitLabManager, GitManager } from '@viwo/core';
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { multilineInput } from '../utils/multiline-input';
@@ -177,6 +177,55 @@ export const startCommand = new Command('start')
                     if (tokenInput && tokenInput.trim()) {
                         ConfigManager.setGitHubToken(tokenInput.trim());
                         clack.log.success('GitHub token saved.');
+                    }
+                }
+            }
+
+            const gitlabUrls = GitLabManager.parseGitLabResourceUrls(prompt);
+            if (gitlabUrls.length > 0 && !ConfigManager.hasGitLabToken()) {
+                clack.log.info(
+                    `Detected ${gitlabUrls.length} GitLab issue/MR URL(s). A GitLab token is needed to fetch context.`
+                );
+
+                const setupChoice = await clack.select({
+                    message: 'Set up GitLab token now?',
+                    options: [
+                        { label: 'Auto-detect (glab CLI / env var)', value: 'auto' },
+                        { label: 'Enter token manually', value: 'manual' },
+                        { label: 'Skip — continue without GitLab context', value: 'skip' },
+                    ],
+                });
+
+                if (clack.isCancel(setupChoice)) {
+                    clack.cancel('Operation cancelled.');
+                    process.exit(0);
+                }
+
+                if (setupChoice === 'auto') {
+                    let resolved = await GitLabManager.resolveGitLabTokenFromGlabCli();
+                    if (!resolved) resolved = GitLabManager.resolveGitLabTokenFromEnv();
+
+                    if (resolved) {
+                        ConfigManager.setGitLabToken(resolved);
+                        clack.log.success('GitLab token saved.');
+                    } else {
+                        clack.log.warn(
+                            'No token found. Install glab CLI (glab auth login) or set GITLAB_TOKEN env var.'
+                        );
+                    }
+                } else if (setupChoice === 'manual') {
+                    const tokenInput = await clack.password({
+                        message: 'Enter your GitLab personal access token:',
+                    });
+
+                    if (clack.isCancel(tokenInput)) {
+                        clack.cancel('Operation cancelled.');
+                        process.exit(0);
+                    }
+
+                    if (tokenInput && tokenInput.trim()) {
+                        ConfigManager.setGitLabToken(tokenInput.trim());
+                        clack.log.success('GitLab token saved.');
                     }
                 }
             }

@@ -290,6 +290,98 @@ export const deleteGitHubToken = (): void => {
         .run();
 };
 
+// ─── GitLab Configuration ───────────────────────────────────────────────────
+
+const normalizeGitLabInstanceUrl = (instanceUrl: string): string => {
+    const trimmed = instanceUrl.trim();
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    return withProtocol.replace(/\/+$/, '');
+};
+
+export const setGitLabToken = (token: string): void => {
+    const encryptedToken = encrypt(token);
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({ gitlabToken: encryptedToken, updatedAt: now })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({ gitlabToken: encryptedToken, createdAt: now, updatedAt: now })
+            .run();
+    }
+};
+
+export const getGitLabToken = (): string | null => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) return null;
+
+    const encryptedToken = config[0]!.gitlabToken;
+    if (!encryptedToken) return null;
+
+    try {
+        return decrypt(encryptedToken);
+    } catch (e) {
+        console.log('Error decrypting GitLab token:', e);
+        return null;
+    }
+};
+
+export const hasGitLabToken = (): boolean => {
+    return getGitLabToken() !== null;
+};
+
+export const deleteGitLabToken = (): void => {
+    const config = db.select().from(configurations).limit(1).get();
+    if (!config) return;
+
+    db.update(configurations)
+        .set({ gitlabToken: null, updatedAt: new Date().toISOString() })
+        .where(eq(configurations.id, config.id))
+        .run();
+};
+
+export const setGitLabInstanceUrl = (instanceUrl: string): void => {
+    const normalizedUrl = normalizeGitLabInstanceUrl(instanceUrl);
+    const now = new Date().toISOString();
+    const existing = db.select().from(configurations).limit(1).all();
+
+    if (existing.length > 0) {
+        db.update(configurations)
+            .set({ gitlabInstanceUrl: normalizedUrl, updatedAt: now })
+            .where(eq(configurations.id, existing[0]!.id))
+            .run();
+    } else {
+        db.insert(configurations)
+            .values({ gitlabInstanceUrl: normalizedUrl, createdAt: now, updatedAt: now })
+            .run();
+    }
+};
+
+export const getGitLabInstanceUrl = (): string | null => {
+    const config = db.select().from(configurations).limit(1).all();
+
+    if (config.length === 0) {
+        return null;
+    }
+
+    return config[0]!.gitlabInstanceUrl || null;
+};
+
+export const deleteGitLabInstanceUrl = (): void => {
+    const config = db.select().from(configurations).limit(1).get();
+    if (!config) return;
+
+    db.update(configurations)
+        .set({ gitlabInstanceUrl: null, updatedAt: new Date().toISOString() })
+        .where(eq(configurations.id, config.id))
+        .run();
+};
+
 export const deleteWorktreesStorageLocation = (): void => {
     const config = db.select().from(configurations).limit(1).get();
 
@@ -420,4 +512,11 @@ export const config = {
     getGitHubToken,
     hasGitHubToken,
     deleteGitHubToken,
+    setGitLabToken,
+    getGitLabToken,
+    hasGitLabToken,
+    deleteGitLabToken,
+    setGitLabInstanceUrl,
+    getGitLabInstanceUrl,
+    deleteGitLabInstanceUrl,
 };

@@ -23,6 +23,7 @@ export * as ConfigManager from './managers/config-manager';
 export * as CredentialManager from './managers/credential-manager';
 export * as IDEManager from './managers/ide-manager';
 export * as GitHubManager from './managers/github-manager';
+export * as GitLabManager from './managers/gitlab-manager';
 export * as ProjectConfigManager from './managers/project-config-manager';
 
 // Export repository management
