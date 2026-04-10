@@ -374,15 +374,15 @@ export const runInteractiveList = async (options: { status?: SessionStatus; limi
                 break;
             }
 
-            // Fetch the full session details
+            // Fetch the full workspace details
             const session = await viwo.get(selectedId);
 
             if (!session) {
-                console.log(chalk.red('Session not found'));
+                console.log(chalk.red('Workspace not found'));
                 continue;
             }
 
-            // Display session details
+            // Display workspace details
             await displaySessionDetails(session);
 
             // Show action options
