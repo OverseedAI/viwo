@@ -23,6 +23,7 @@ export interface InitializeAgentOptions {
     worktreePath: string;
     config: AgentConfig;
     preAgentCommands?: string[];
+    customBinds?: string[];
 }
 
 export interface InitializeAgentResult {
@@ -122,8 +123,9 @@ const startClaudeContainer = async (options: {
     config: AgentConfig;
     env: Record<string, string>;
     preAgentCommands?: string[];
+    customBinds?: string[];
 }): Promise<InitializeAgentResult> => {
-    const { sessionId, worktreePath, config, env, preAgentCommands } = options;
+    const { sessionId, worktreePath, config, env, preAgentCommands, customBinds } = options;
 
     const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
     if (!imageExists) {
@@ -146,7 +148,11 @@ const startClaudeContainer = async (options: {
         env: { ...env, ...claudeEnv },
         tty: true,
         openStdin: true,
-        additionalBinds: [`${statePath}:/tmp/viwo-state`, `${gitInfo.repoGitDir}:/repo-git`],
+        additionalBinds: [
+            `${statePath}:/tmp/viwo-state`,
+            `${gitInfo.repoGitDir}:/repo-git`,
+            ...(customBinds ?? []),
+        ],
     });
 
     const initialChat: NewChat = {
@@ -230,6 +236,7 @@ const initializeClaudeCodeWithApiKey = async (
         config: options.config,
         env: { ANTHROPIC_API_KEY: apiKey },
         preAgentCommands: options.preAgentCommands,
+        customBinds: options.customBinds,
     });
 };
 
@@ -273,6 +280,7 @@ const initializeClaudeCodeWithOAuth = async (
             VIWO_OAUTH_CONFIG: claudeConfig,
         },
         preAgentCommands: options.preAgentCommands,
+        customBinds: options.customBinds,
     });
 };
 

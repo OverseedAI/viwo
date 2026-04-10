@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import { loadProjectConfig, hasProjectConfig } from '../project-config-manager';
-import { tmpdir } from 'os';
+import { loadProjectConfig, hasProjectConfig, resolveCustomBinds } from '../project-config-manager';
+import { homedir, tmpdir } from 'os';
 
 describe('project-config-manager', () => {
     let testDir: string;
@@ -81,6 +81,83 @@ describe('project-config-manager', () => {
         test('throws error for invalid schema', () => {
             writeFileSync(join(testDir, 'viwo.yml'), 'postInstall: "not an array"');
             expect(() => loadProjectConfig({ repoPath: testDir })).toThrow();
+        });
+
+        test('parses binds in string and object form', () => {
+            writeFileSync(
+                join(testDir, 'viwo.yml'),
+                [
+                    'binds:',
+                    '  - /host/data:/data',
+                    '  - /host/cache:/cache:ro',
+                    '  - source: ~/models',
+                    '    target: /models',
+                    '    readonly: true',
+                ].join('\n')
+            );
+            const result = loadProjectConfig({ repoPath: testDir });
+            expect(result?.binds).toHaveLength(3);
+            expect(result?.binds?.[0]).toBe('/host/data:/data');
+            expect(result?.binds?.[2]).toEqual({
+                source: '~/models',
+                target: '/models',
+                readonly: true,
+            });
+        });
+    });
+
+    describe('resolveCustomBinds', () => {
+        test('resolves string form with and without mode', () => {
+            const result = resolveCustomBinds({
+                binds: ['/host/data:/data', '/host/cache:/cache:ro'],
+                repoPath: testDir,
+            });
+            expect(result).toEqual(['/host/data:/data', '/host/cache:/cache:ro']);
+        });
+
+        test('resolves object form with readonly', () => {
+            const result = resolveCustomBinds({
+                binds: [
+                    { source: '/host/data', target: '/data' },
+                    { source: '/host/models', target: '/models', readonly: true },
+                ],
+                repoPath: testDir,
+            });
+            expect(result).toEqual(['/host/data:/data', '/host/models:/models:ro']);
+        });
+
+        test('expands tilde in host paths', () => {
+            const result = resolveCustomBinds({
+                binds: ['~/data:/data'],
+                repoPath: testDir,
+            });
+            expect(result[0]).toBe(`${homedir()}/data:/data`);
+        });
+
+        test('resolves relative host paths against repo root', () => {
+            const result = resolveCustomBinds({
+                binds: ['./data:/data'],
+                repoPath: testDir,
+            });
+            expect(result[0]).toBe(`${testDir}/data:/data`);
+        });
+
+        test('throws when target is not absolute', () => {
+            expect(() =>
+                resolveCustomBinds({
+                    binds: [{ source: '/host/data', target: 'data' }],
+                    repoPath: testDir,
+                })
+            ).toThrow(/absolute/);
+        });
+
+        test('throws on malformed string bind', () => {
+            expect(() =>
+                resolveCustomBinds({
+                    binds: ['just-one-part'],
+                    repoPath: testDir,
+                })
+            ).toThrow(/Invalid bind/);
         });
     });
 });

@@ -144,6 +144,12 @@ VIWO automatically detects and loads project-specific configuration from the rep
         - Commands run before the container starts
         - If any command fails, session initialization fails and error is reported
         - Example use cases: host-side setup, env file generation, pre-build steps
+    - `binds`: Array of custom bind mounts to expose host directories inside the container
+        - Each entry is either a Docker-style string (`"host:container"` or `"host:container:ro"`) or an object (`{ source, target, readonly? }`)
+        - Host paths may be absolute, use `~` for the user's home directory, or be relative to the repository root
+        - Container paths must be absolute
+        - Mounts are applied on top of the built-in `/workspace`, `/repo-git`, and `/tmp/viwo-state` binds
+        - Resolved via `resolveCustomBinds()` in `project-config-manager.ts` and threaded through `viwo.start()` → `initializeAgent()` → `createContainer()` as `additionalBinds`
     - `preAgent`: Array of shell commands to run inside the container before Claude Code starts
         - Commands execute in `/workspace` inside the Docker container
         - Commands run after credentials and git are configured but before Claude launches
@@ -159,6 +165,13 @@ postInstall:
 preAgent:
     - bun install
     - bun run build
+
+binds:
+    - ~/.cache/huggingface:/root/.cache/huggingface
+    - ./shared-data:/shared:ro
+    - source: ~/models
+      target: /models
+      readonly: true
 ```
 
 **Implementation**:
