@@ -6,6 +6,7 @@ import { viwo, ConfigManager, GitHubManager, GitLabManager, GitManager } from '@
 import { getStatusBadge } from '../utils/formatters';
 import { preflightChecksOrExit } from '../utils/prerequisites';
 import { multilineInput } from '../utils/multiline-input';
+import { branchNameInput } from '../utils/branch-input';
 
 export const startCommand = new Command('start')
     .description('Initialize a new worktree session with an AI agent')
@@ -89,7 +90,7 @@ export const startCommand = new Command('start')
                     process.exit(1);
                 }
             } else {
-                const branchInput = await clack.text({
+                const branchInput = await branchNameInput({
                     message: 'Branch name',
                     placeholder: 'Leave empty for auto-generated',
                     validate: (value) => {
