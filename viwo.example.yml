@@ -17,3 +17,18 @@ postInstall:
   # Any other setup commands your project needs
   # - docker-compose up -d
   # - npx prisma generate
+
+# Custom bind mounts exposed inside the Claude Code container.
+# Host paths may be absolute, use `~` for your home directory, or be
+# relative to the repository root. Container paths must be absolute.
+# Append `:ro` (or set `readonly: true`) for read-only mounts.
+#
+# binds:
+#   # String form (Docker-style)
+#   - ~/.cache/huggingface:/root/.cache/huggingface
+#   - ./shared-data:/shared:ro
+#
+#   # Object form
+#   - source: ~/models
+#     target: /models
+#     readonly: true

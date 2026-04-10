@@ -37,7 +37,7 @@ import { Database } from 'bun:sqlite';
 import { mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
-import { loadProjectConfig } from './managers/project-config-manager';
+import { loadProjectConfig, resolveCustomBinds } from './managers/project-config-manager';
 import { getPreferredModel } from './managers/config-manager';
 import { expandPromptWithIssues } from './managers/github-manager';
 import { expandPromptWithGitLabResources } from './managers/gitlab-manager';
@@ -181,6 +181,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                 model: validated.model,
             },
             preAgentCommands: validated.preAgentCommands,
+            customBinds: validated.customBinds,
         });
 
         return {
@@ -235,8 +236,16 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     promptWithGitHubIssues
                 );
 
-                // Load pre-agent commands from project config
+                // Load pre-agent commands and custom binds from project config
                 const projectConfig = loadProjectConfig({ repoPath: worktreeResult.repoPath });
+
+                const customBinds =
+                    projectConfig?.binds && projectConfig.binds.length > 0
+                        ? resolveCustomBinds({
+                              binds: projectConfig.binds,
+                              repoPath: worktreeResult.repoPath,
+                          })
+                        : undefined;
 
                 // Phase 2: Start container
                 const containerResult = await startContainerPhase({
@@ -246,6 +255,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     agent: validatedOptions.agent,
                     model: getPreferredModel() ?? 'sonnet',
                     preAgentCommands: projectConfig?.preAgent,
+                    customBinds,
                 });
 
                 worktreeSession.containerName = containerResult.containerName;

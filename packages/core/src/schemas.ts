@@ -103,6 +103,7 @@ export const StartContainerOptionsSchema = z.object({
     agent: AgentTypeSchema.default('claude-code'),
     model: z.string().optional(),
     preAgentCommands: z.array(z.string()).optional(),
+    customBinds: z.array(z.string()).optional(),
 });
 export type StartContainerOptions = z.infer<typeof StartContainerOptionsSchema>;
 
@@ -164,9 +165,22 @@ export type ViwoConfig = z.infer<typeof ViwoConfigSchema>;
 /**
  * Project configuration schemas (from viwo.yml/viwo.yaml)
  */
+export const CustomBindObjectSchema = z.object({
+    source: z.string().min(1),
+    target: z.string().min(1),
+    readonly: z.boolean().optional(),
+});
+export type CustomBindObject = z.infer<typeof CustomBindObjectSchema>;
+
+// A bind can be either a Docker-style string ("src:dst" or "src:dst:ro")
+// or an object form for clarity.
+export const CustomBindSchema = z.union([z.string().min(1), CustomBindObjectSchema]);
+export type CustomBind = z.infer<typeof CustomBindSchema>;
+
 export const ProjectConfigSchema = z.object({
     postInstall: z.array(z.string()).optional(),
     preAgent: z.array(z.string()).optional(),
+    binds: z.array(CustomBindSchema).optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 

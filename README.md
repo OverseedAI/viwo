@@ -40,6 +40,7 @@ Well, **VIWO** (**Vi**rtual **Wo**rkspaces) might just be your solution:
     - [Installation](#installation)
     - [Quick Start](#quick-start)
     - [Post Install Hooks](#post-install-hooks)
+    - [Custom Bind Mounts](#custom-bind-mounts)
     - [How it works](#how-it-works)
     - [Security](#security)
     - [🚀 Development Guidelines](#-development-guidelines)
@@ -122,6 +123,28 @@ postInstall:
 
     # Copy environment file
     - cp .env.example .env
+```
+
+## Custom Bind Mounts
+
+You can expose extra host directories inside the Claude Code container by adding
+a `binds` entry to `viwo.yml`. This is useful for sharing caches, model weights,
+datasets, or any other data you'd rather not re-create inside the container.
+
+Host paths may be absolute, use `~` for your home directory, or be relative to
+the repository root. Container paths must be absolute. Append `:ro` (or set
+`readonly: true`) for read-only mounts.
+
+```yaml
+binds:
+    # String form (Docker-style)
+    - ~/.cache/huggingface:/root/.cache/huggingface
+    - ./shared-data:/shared:ro
+
+    # Object form
+    - source: ~/models
+      target: /models
+      readonly: true
 ```
 
 ## How it works
