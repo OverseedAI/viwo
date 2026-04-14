@@ -135,7 +135,7 @@ export const startCommand = new Command('start')
             console.log(chalk.dim('Container is running in the background.'));
             console.log();
             console.log(`  Attach:  ${chalk.cyan(`viwo attach ${workspace.id}`)}`);
-            console.log(`  Detach:  ${chalk.dim('Ctrl+B, D (inside tmux)')}`);
+            console.log(`  Detach:  ${chalk.dim('Ctrl+\\ (inside dtach)')}`);
             console.log();
             clack.outro('Workspace ready!');
             process.exit(0);

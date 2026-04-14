@@ -1,6 +1,6 @@
 {
   "name": "@viwo/core",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Core SDK for VIWO - git worktree + containerization + agent harness",
   "type": "module",
   "main": "./src/index.ts",

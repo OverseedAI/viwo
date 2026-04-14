@@ -329,11 +329,11 @@ Commands in `packages/cli/src/commands/`:
     - Manual token entry
     - Configure/reset self-hosted GitLab instance URL
     - View status and remove stored token
-- `attach` - Attach to a running Claude Code session via tmux
+- `attach` - Attach to a running Claude Code session via dtach
     - With no args, shows interactive list of running sessions to choose from
     - With `<session-id>`, attaches directly to the specified session
-    - Runs `docker exec -it viwo-{identifier} tmux attach -t viwo`
-    - Prints detach hint (Ctrl+B, D) before attaching
+    - Runs `docker exec -it viwo-{identifier} dtach -a /tmp/viwo.sock -r winch`
+    - Prints detach hint (Ctrl+\\) before attaching
     - Errors if container doesn't exist or isn't running
 
 ### Preflight Checks & Version Checking
@@ -472,7 +472,7 @@ After making changes to the codebase, verify the full session lifecycle using th
 5. **Verify the Claude Code session received the prompt** inside the container:
 
     ```bash
-    docker exec <container-name> tmux capture-pane -t viwo -p
+    docker logs <container-name>
     ```
 
     Confirm the prompt text appears and Claude Code has responded.
@@ -489,7 +489,7 @@ After making changes to the codebase, verify the full session lifecycle using th
 ### Key Points
 
 - Always use `bun packages/cli/src/cli.ts` (not the globally installed `viwo`) to test development changes.
-- Verify each layer independently: CLI output, Docker state (`docker ps`), and in-container state (`tmux capture-pane`). Don't assume one layer is correct because another looks fine.
+- Verify each layer independently: CLI output, Docker state (`docker ps`), and container output/state (`docker logs`, `/tmp/viwo-state/viwo-state.json`). Don't assume one layer is correct because another looks fine.
 - The `--repo`, `--branch`, and `--prompt` flags are all required for fully non-interactive `start`.
 
 ## Known Limitations

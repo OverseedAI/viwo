@@ -216,9 +216,9 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
 
             console.log();
             console.log(chalk.dim(`Attaching to workspace ${session.id} (${containerName})...`));
-            console.log(chalk.yellow('Detach with: Ctrl+B, D'));
+            console.log(chalk.yellow('Detach with: Ctrl+\\'));
             console.log();
-            execSync(`docker exec -it ${containerName} tmux attach -t viwo`, {
+            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo.sock -r winch`, {
                 stdio: 'inherit',
             });
             return 'back';
