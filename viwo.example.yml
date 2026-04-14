@@ -26,6 +26,20 @@ postInstall:
 #   - bun install
 #   - bun run build
 
+# Project Dockerfile that extends the viwo base image. The file's first
+# non-comment line must be `FROM overseedai/viwo-claude-code:<version>`
+# matching the viwo CLI's pinned base. Built once per content hash and
+# tagged `viwo-derived:<hash>`; cached for subsequent sessions.
+#
+# Use this when you need system packages or language runtimes the base
+# image doesn't ship — installing them in `preAgent` is slow and runs as
+# the non-root `claude` user, so it can't `apt-get install`.
+#
+# A working `viwo.Dockerfile` for this repo is checked in alongside this
+# example — copy this file to `viwo.yml` to opt in.
+#
+# dockerfile: ./viwo.Dockerfile
+
 # Custom bind mounts exposed inside the agent container.
 # Host paths may be absolute, use `~` for your home directory, or be
 # relative to the repository root. Container paths must be absolute.
