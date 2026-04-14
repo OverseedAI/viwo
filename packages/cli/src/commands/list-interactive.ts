@@ -218,7 +218,7 @@ const handleSessionAction = async (session: WorktreeSession): Promise<'back' | '
             console.log(chalk.dim(`Attaching to workspace ${session.id} (${containerName})...`));
             console.log(chalk.yellow('Detach with: Ctrl+\\'));
             console.log();
-            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo-state/viwo.sock -r winch`, {
+            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo.sock -r winch`, {
                 stdio: 'inherit',
             });
             return 'back';

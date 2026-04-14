@@ -332,7 +332,7 @@ Commands in `packages/cli/src/commands/`:
 - `attach` - Attach to a running Claude Code session via dtach
     - With no args, shows interactive list of running sessions to choose from
     - With `<session-id>`, attaches directly to the specified session
-    - Runs `docker exec -it viwo-{identifier} dtach -a /tmp/viwo-state/viwo.sock -r winch`
+    - Runs `docker exec -it viwo-{identifier} dtach -a /tmp/viwo.sock -r winch`
     - Prints detach hint (Ctrl+\\) before attaching
     - Errors if container doesn't exist or isn't running
 

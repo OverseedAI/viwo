@@ -138,7 +138,10 @@ fi
 # --- Launch Claude Code under dtach ---
 
 EXIT_CODE_FILE="/tmp/viwo-state/claude-exit-code"
-VIWO_SOCKET="/tmp/viwo-state/viwo.sock"
+# Socket lives outside the host bind mount: macOS Docker bind mounts (virtiofs)
+# don't support unix sockets, and keeping it container-only avoids leaking the
+# socket file onto the host where another host process could attach to it.
+VIWO_SOCKET="/tmp/viwo.sock"
 
 # dtach -N creates a new session, runs the child in a PTY, and stays in the
 # foreground as PID 1. When the inner bash exits, dtach exits and the

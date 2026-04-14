@@ -99,7 +99,7 @@ export const attachCommand = new Command('attach')
             console.log(chalk.yellow('Detach with: Ctrl+\\'));
             console.log();
 
-            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo-state/viwo.sock -r winch`, {
+            execSync(`docker exec -it ${containerName} dtach -a /tmp/viwo.sock -r winch`, {
                 stdio: 'inherit',
             });
         } catch (error) {
