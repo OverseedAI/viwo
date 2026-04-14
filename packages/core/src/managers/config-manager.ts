@@ -1,25 +1,17 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
-import { hostname, userInfo } from 'os';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
 import type { AuthMethod, IDEType, ModelType } from '../types.js';
 import { expandTilde } from '../utils/paths.js';
+import { getEncryptionKey, getLegacyEncryptionKey } from './key-store';
 
 const ALGORITHM = 'aes-256-gcm';
-const KEY_LENGTH = 32;
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
-const SALT = 'viwo-config-salt';
-
-// Derive encryption key from machine-specific data
-const deriveKey = (): Buffer => {
-    const machineId = `${hostname()}-${userInfo().username}`;
-    return scryptSync(machineId, SALT, KEY_LENGTH);
-};
 
 const encrypt = (plaintext: string): string => {
-    const key = deriveKey();
+    const key = getEncryptionKey();
     const iv = randomBytes(IV_LENGTH);
     const cipher = createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
 
@@ -32,8 +24,7 @@ const encrypt = (plaintext: string): string => {
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
 };
 
-const decrypt = (encryptedData: string): string => {
-    const key = deriveKey();
+const decryptWithKey = (encryptedData: string, key: Buffer): string => {
     const parts = encryptedData.split(':');
 
     if (parts.length !== 3) {
@@ -52,6 +43,44 @@ const decrypt = (encryptedData: string): string => {
     decrypted += decipher.final('utf8');
 
     return decrypted;
+};
+
+/**
+ * Decrypt a stored ciphertext, transparently migrating from the legacy
+ * hostname-derived key (issue #154) to the OS-keychain key when needed.
+ *
+ * If the new key fails but the legacy key succeeds, the value is re-encrypted
+ * under the new key via `persistMigrated` so subsequent reads avoid the
+ * fallback path. If both keys fail (e.g. user moved machines and lost the
+ * old hostname), returns null and prints a one-line hint.
+ */
+const decryptWithMigration = (
+    encryptedData: string,
+    label: string,
+    persistMigrated: (newCipher: string) => void
+): string | null => {
+    try {
+        return decryptWithKey(encryptedData, getEncryptionKey());
+    } catch {
+        // fall through to legacy attempt
+    }
+
+    try {
+        const plain = decryptWithKey(encryptedData, getLegacyEncryptionKey());
+        try {
+            persistMigrated(encrypt(plain));
+        } catch {
+            // re-encryption persistence is best-effort; the plaintext is still
+            // returned so the caller can use it for this session.
+        }
+        return plain;
+    } catch {
+        console.warn(
+            `viwo: stored ${label} could not be decrypted. ` +
+                `Re-add it via 'viwo config' to restore access.`
+        );
+        return null;
+    }
 };
 
 export type ApiKeyProvider = 'anthropic';
@@ -114,12 +143,12 @@ export const getApiKey = (options: GetApiKeyOptions): string | null => {
         return null;
     }
 
-    try {
-        return decrypt(encryptedKey);
-    } catch (e) {
-        console.log('Error decrypting API key:', e);
-        return null;
-    }
+    const rowId = config[0]!.id;
+    return decryptWithMigration(encryptedKey, `${provider} API key`, (newCipher) => {
+        const updates: Record<string, string> = { updatedAt: new Date().toISOString() };
+        if (provider === 'anthropic') updates.anthropicApiKey = newCipher;
+        db.update(configurations).set(updates).where(eq(configurations.id, rowId)).run();
+    });
 };
 
 export interface HasApiKeyOptions {
@@ -268,12 +297,13 @@ export const getGitHubToken = (): string | null => {
     const encryptedToken = config[0]!.githubToken;
     if (!encryptedToken) return null;
 
-    try {
-        return decrypt(encryptedToken);
-    } catch (e) {
-        console.log('Error decrypting GitHub token:', e);
-        return null;
-    }
+    const rowId = config[0]!.id;
+    return decryptWithMigration(encryptedToken, 'GitHub token', (newCipher) => {
+        db.update(configurations)
+            .set({ githubToken: newCipher, updatedAt: new Date().toISOString() })
+            .where(eq(configurations.id, rowId))
+            .run();
+    });
 };
 
 export const hasGitHubToken = (): boolean => {
@@ -323,12 +353,13 @@ export const getGitLabToken = (): string | null => {
     const encryptedToken = config[0]!.gitlabToken;
     if (!encryptedToken) return null;
 
-    try {
-        return decrypt(encryptedToken);
-    } catch (e) {
-        console.log('Error decrypting GitLab token:', e);
-        return null;
-    }
+    const rowId = config[0]!.id;
+    return decryptWithMigration(encryptedToken, 'GitLab token', (newCipher) => {
+        db.update(configurations)
+            .set({ gitlabToken: newCipher, updatedAt: new Date().toISOString() })
+            .where(eq(configurations.id, rowId))
+            .run();
+    });
 };
 
 export const hasGitLabToken = (): boolean => {
