@@ -38,6 +38,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sessionToWorktreeSession } from './utils/types';
 import { loadProjectConfig, resolveCustomBinds } from './managers/project-config-manager';
+import { buildDerivedImage } from './managers/image-builder';
 import { getPreferredModel } from './managers/config-manager';
 import { expandPromptWithIssues } from './managers/github-manager';
 import { expandPromptWithGitLabResources } from './managers/gitlab-manager';
@@ -182,6 +183,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
             },
             preAgentCommands: validated.preAgentCommands,
             customBinds: validated.customBinds,
+            image: validated.image,
         });
 
         return {
@@ -247,6 +249,15 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                           })
                         : undefined;
 
+                let derivedImage: string | undefined;
+                if (projectConfig?.dockerfile) {
+                    const built = await buildDerivedImage({
+                        dockerfilePath: projectConfig.dockerfile,
+                        repoPath: worktreeResult.repoPath,
+                    });
+                    derivedImage = built.imageName;
+                }
+
                 // Phase 2: Start container
                 const containerResult = await startContainerPhase({
                     sessionId: worktreeResult.sessionId,
@@ -256,6 +267,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                     model: getPreferredModel() ?? 'sonnet',
                     preAgentCommands: projectConfig?.preAgent,
                     customBinds,
+                    image: derivedImage,
                 });
 
                 worktreeSession.containerName = containerResult.containerName;

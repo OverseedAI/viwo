@@ -156,6 +156,10 @@ VIWO automatically detects and loads project-specific configuration from the rep
         - Commands run after credentials and git are configured but before Claude launches
         - If any command fails, the container exits before Claude starts
         - Example use cases: installing dependencies (`npm install`, `bun install`), building (`npm run build`), or any other setup Claude needs available during its work
+    - `dockerfile`: Path (relative to repo root, or absolute) to a project Dockerfile that extends the viwo base image
+        - Must start with `FROM overseedai/viwo-claude-code:<version>` matching the viwo CLI's pinned base image — guarantees the bootstrap script, dtach, the `claude` user, and env contracts are preserved
+        - Built once per content hash and tagged `viwo-derived:<hash>`; subsequent sessions reuse the cached image
+        - Use this to add language runtimes, system packages, or any tooling viwo's base image doesn't ship — see `image-builder.ts`
 
 **Example configuration**:
 
@@ -173,6 +177,18 @@ binds:
     - source: ~/models
       target: /models
       readonly: true
+
+dockerfile: ./viwo.Dockerfile
+```
+
+**Example `viwo.Dockerfile`**:
+
+```dockerfile
+FROM overseedai/viwo-claude-code:0.10.1
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends unzip jq
+USER claude
+RUN curl -fsSL https://bun.sh/install | bash
 ```
 
 **Implementation**:
@@ -181,6 +197,7 @@ binds:
 - `loadProjectConfig()` reads and validates configuration file
 - `hasProjectConfig()` checks if configuration file exists
 - Post-install hooks execute in `viwo.start()` flow after worktree creation
+- `image-builder.ts` validates the user's Dockerfile FROM line, hashes its contents, and builds (or reuses) `viwo-derived:<hash>` before container creation
 
 ### Worktrees Storage Configuration
 
