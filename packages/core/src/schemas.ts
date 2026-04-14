@@ -104,6 +104,7 @@ export const StartContainerOptionsSchema = z.object({
     model: z.string().optional(),
     preAgentCommands: z.array(z.string()).optional(),
     customBinds: z.array(z.string()).optional(),
+    image: z.string().optional(),
 });
 export type StartContainerOptions = z.infer<typeof StartContainerOptionsSchema>;
 
@@ -181,6 +182,7 @@ export const ProjectConfigSchema = z.object({
     postInstall: z.array(z.string()).optional(),
     preAgent: z.array(z.string()).optional(),
     binds: z.array(CustomBindSchema).optional(),
+    dockerfile: z.string().min(1).optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 

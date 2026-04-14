@@ -83,14 +83,18 @@ export interface BuildImageOptions {
 
 export const buildImage = async (options: BuildImageOptions): Promise<void> => {
     const contextPath = options.context || path.dirname(options.dockerfilePath);
+    const dockerfileRelative = path.relative(contextPath, options.dockerfilePath);
 
     return new Promise((resolve, reject) => {
         dockerSdk.buildImage(
             {
                 context: contextPath,
-                src: [path.basename(options.dockerfilePath)],
+                // Include just the Dockerfile in the tar context. Dockerode
+                // sends only what's listed in `src`; for full project context
+                // (COPY of repo files), callers can extend this later.
+                src: [dockerfileRelative],
             },
-            { t: options.imageName },
+            { t: options.imageName, dockerfile: dockerfileRelative },
             (err, stream) => {
                 if (err) {
                     reject(err);

@@ -24,6 +24,7 @@ export interface InitializeAgentOptions {
     config: AgentConfig;
     preAgentCommands?: string[];
     customBinds?: string[];
+    image?: string;
 }
 
 export interface InitializeAgentResult {
@@ -124,12 +125,17 @@ const startClaudeContainer = async (options: {
     env: Record<string, string>;
     preAgentCommands?: string[];
     customBinds?: string[];
+    image?: string;
 }): Promise<InitializeAgentResult> => {
     const { sessionId, worktreePath, config, env, preAgentCommands, customBinds } = options;
+    const image = options.image ?? CLAUDE_CODE_IMAGE;
 
-    const imageExists = await checkImageExists({ image: CLAUDE_CODE_IMAGE });
-    if (!imageExists) {
-        await pullImage({ image: CLAUDE_CODE_IMAGE });
+    // Custom (derived) images are built locally and never pulled.
+    if (image === CLAUDE_CODE_IMAGE) {
+        const imageExists = await checkImageExists({ image });
+        if (!imageExists) {
+            await pullImage({ image });
+        }
     }
 
     const containerName = generateContainerName(sessionId);
@@ -143,7 +149,7 @@ const startClaudeContainer = async (options: {
 
     const containerInfo = await createContainer({
         name: containerName,
-        image: CLAUDE_CODE_IMAGE,
+        image,
         worktreePath,
         env: { ...env, ...claudeEnv },
         tty: true,
@@ -170,7 +176,7 @@ const startClaudeContainer = async (options: {
         updates: {
             containerId: containerInfo.id,
             containerName: containerInfo.name,
-            containerImage: CLAUDE_CODE_IMAGE,
+            containerImage: image,
             claudeCodeVersion: CLAUDE_CODE_VERSION,
             status: SessionStatus.RUNNING,
             lastActivity: new Date().toISOString(),
@@ -237,6 +243,7 @@ const initializeClaudeCodeWithApiKey = async (
         env: { ANTHROPIC_API_KEY: apiKey },
         preAgentCommands: options.preAgentCommands,
         customBinds: options.customBinds,
+        image: options.image,
     });
 };
 
@@ -281,6 +288,7 @@ const initializeClaudeCodeWithOAuth = async (
         },
         preAgentCommands: options.preAgentCommands,
         customBinds: options.customBinds,
+        image: options.image,
     });
 };
 
