@@ -18,7 +18,6 @@ postInstall:
   # Any other setup commands your project needs
   # - docker-compose up -d
   # - npx prisma generate
-
 # Pre-agent commands run inside the container before the agent starts.
 # Useful for installing dependencies or building the project.
 #

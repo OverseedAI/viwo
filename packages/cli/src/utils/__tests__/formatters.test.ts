@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'bun:test';
-import { getAgentStatusBadge, getCompositeStatusBadge, getStatusBadge, formatDate } from '../formatters';
+import {
+    getAgentStatusBadge,
+    getCompositeStatusBadge,
+    getStatusBadge,
+    formatDate,
+} from '../formatters';
 
 describe('status formatters', () => {
     it('should render runtime status badges', () => {
@@ -22,7 +27,6 @@ describe('status formatters', () => {
         expect(badge).toContain('working');
     });
 });
-
 
 describe('formatDate', () => {
     it('should format dates with seconds', () => {

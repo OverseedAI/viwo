@@ -249,19 +249,20 @@ export const extractGitLabTokenFromGlabOutput = (output: string): string | null 
 
 export const resolveGitLabTokenFromGlabCli = async (): Promise<string | null> => {
     const configuredHost = new URL(getGitLabInstanceBaseUrl()).host;
-    const commands = configuredHost === 'gitlab.com'
-        ? [
-              ['glab', 'auth', 'token'],
-              ['glab', 'auth', 'token', '--hostname', configuredHost],
-              ['glab', 'auth', 'status', '--show-token'],
-              ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
-          ]
-        : [
-              ['glab', 'auth', 'token', '--hostname', configuredHost],
-              ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
-              ['glab', 'auth', 'token'],
-              ['glab', 'auth', 'status', '--show-token'],
-          ];
+    const commands =
+        configuredHost === 'gitlab.com'
+            ? [
+                  ['glab', 'auth', 'token'],
+                  ['glab', 'auth', 'token', '--hostname', configuredHost],
+                  ['glab', 'auth', 'status', '--show-token'],
+                  ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
+              ]
+            : [
+                  ['glab', 'auth', 'token', '--hostname', configuredHost],
+                  ['glab', 'auth', 'status', '--hostname', configuredHost, '--show-token'],
+                  ['glab', 'auth', 'token'],
+                  ['glab', 'auth', 'status', '--show-token'],
+              ];
 
     for (const command of commands) {
         try {

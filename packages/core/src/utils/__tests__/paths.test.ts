@@ -45,10 +45,7 @@ describe('getLegacyDataPath', () => {
             );
             expect(legacyPath).toBe(expected);
         } else if (process.platform === 'win32') {
-            const expected = join(
-                process.env.APPDATA || join(home, 'AppData', 'Roaming'),
-                'viwo'
-            );
+            const expected = join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'viwo');
             expect(legacyPath).toBe(expected);
         }
     });
