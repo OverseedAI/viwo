@@ -44,20 +44,15 @@ export interface BranchNameInputOptions {
     validate?: (value: string) => string | undefined;
 }
 
-export const branchNameInput = async (
-    opts: BranchNameInputOptions
-): Promise<string | symbol> => {
+export const branchNameInput = async (opts: BranchNameInputOptions): Promise<string | symbol> => {
     const prompt = new TextPrompt({
         placeholder: opts.placeholder,
-        validate: opts.validate
-            ? (value: string) => opts.validate!(value)
-            : undefined,
+        validate: opts.validate ? (value: string) => opts.validate!(value) : undefined,
         render() {
             const header = `${chalk.gray(S_BAR)}\n${stateSymbol(this.state)}  ${opts.message}\n`;
 
             const placeholder = opts.placeholder
-                ? chalk.inverse(opts.placeholder[0]) +
-                  chalk.dim(opts.placeholder.slice(1))
+                ? chalk.inverse(opts.placeholder[0]) + chalk.dim(opts.placeholder.slice(1))
                 : chalk.inverse(chalk.hidden('_'));
 
             const value = this.value ? this.valueWithCursor : placeholder;

@@ -40,21 +40,21 @@ Today, the primary runtime is **Claude Code** inside Docker, with VIWO handling 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Project Configuration](#project-configuration)
-  - [Post-install hooks](#post-install-hooks)
-  - [Pre-agent commands](#pre-agent-commands)
-  - [Custom bind mounts](#custom-bind-mounts)
+    - [Post-install hooks](#post-install-hooks)
+    - [Pre-agent commands](#pre-agent-commands)
+    - [Custom bind mounts](#custom-bind-mounts)
 - [How it works](#how-it-works)
 - [Authentication](#authentication)
 - [GitHub and GitLab integration](#github-and-gitlab-integration)
 - [Security](#security)
 - [Development](#development)
-  - [Prerequisites](#prerequisites)
-  - [Install dependencies](#install-dependencies)
-  - [Running the CLI](#running-the-cli)
-  - [Type checking](#type-checking)
-  - [Testing](#testing)
-  - [Code quality](#code-quality)
-  - [Build](#build)
+    - [Prerequisites](#prerequisites)
+    - [Install dependencies](#install-dependencies)
+    - [Running the CLI](#running-the-cli)
+    - [Type checking](#type-checking)
+    - [Testing](#testing)
+    - [Code quality](#code-quality)
+    - [Build](#build)
 - [CLI Usage](#cli-usage)
 - [Architecture](#architecture)
 - [Uninstall](#uninstall)
@@ -108,18 +108,18 @@ Example:
 
 ```yaml
 postInstall:
-  - cp .env.example .env
+    - cp .env.example .env
 
 preAgent:
-  - bun install
-  - bun run build
+    - bun install
+    - bun run build
 
 binds:
-  - ~/.cache/huggingface:/root/.cache/huggingface
-  - ./shared-data:/shared:ro
-  - source: ~/models
-    target: /models
-    readonly: true
+    - ~/.cache/huggingface:/root/.cache/huggingface
+    - ./shared-data:/shared:ro
+    - source: ~/models
+      target: /models
+      readonly: true
 ```
 
 ### Post-install hooks
@@ -134,9 +134,9 @@ Typical uses:
 
 ```yaml
 postInstall:
-  - npm install
-  - npm run build
-  - cp .env.example .env
+    - npm install
+    - npm run build
+    - cp .env.example .env
 ```
 
 ### Pre-agent commands
@@ -151,8 +151,8 @@ Typical uses:
 
 ```yaml
 preAgent:
-  - bun install
-  - bun run build
+    - bun install
+    - bun run build
 ```
 
 ### Custom bind mounts
@@ -170,11 +170,11 @@ Host paths may be absolute, use `~`, or be relative to the repository root. Cont
 
 ```yaml
 binds:
-  - ~/.cache/huggingface:/root/.cache/huggingface
-  - ./shared-data:/shared:ro
-  - source: ~/models
-    target: /models
-    readonly: true
+    - ~/.cache/huggingface:/root/.cache/huggingface
+    - ./shared-data:/shared:ro
+    - source: ~/models
+      target: /models
+      readonly: true
 ```
 
 ## How it works
@@ -182,17 +182,17 @@ binds:
 VIWO orchestrates a session in two main phases:
 
 1. **Create a worktree**
-   - validate the repository
-   - create a new git branch + worktree
-   - copy env files if requested
-   - run project `postInstall` hooks on the host
+    - validate the repository
+    - create a new git branch + worktree
+    - copy env files if requested
+    - run project `postInstall` hooks on the host
 
 2. **Start the agent container**
-   - resolve auth and model settings
-   - expand GitHub/GitLab URLs in the prompt
-   - apply configured bind mounts
-   - run project `preAgent` commands inside the container
-   - launch Claude Code in the isolated runtime
+    - resolve auth and model settings
+    - expand GitHub/GitLab URLs in the prompt
+    - apply configured bind mounts
+    - run project `preAgent` commands inside the container
+    - launch Claude Code in the isolated runtime
 
 A few implementation details matter:
 

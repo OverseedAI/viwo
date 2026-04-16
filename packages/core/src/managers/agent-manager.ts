@@ -13,8 +13,18 @@ import {
     pullImage,
     generateContainerName,
 } from './docker-manager';
-import { getApiKey, getAuthMethod, getGitHubToken, getGitLabInstanceUrl, getGitLabToken } from './config-manager';
-import { extractOAuthCredentials, extractOAuthAccountInfo, isOAuthTokenExpired } from './credential-manager';
+import {
+    getApiKey,
+    getAuthMethod,
+    getGitHubToken,
+    getGitLabInstanceUrl,
+    getGitLabToken,
+} from './config-manager';
+import {
+    extractOAuthCredentials,
+    extractOAuthAccountInfo,
+    isOAuthTokenExpired,
+} from './credential-manager';
 import { getWorktreeGitInfo } from './git-manager';
 import { ensureContainerStatePath } from '../utils/paths';
 

@@ -69,7 +69,9 @@ const configureOAuth = async (): Promise<void> => {
 
     ConfigManager.setAuthMethod('oauth');
     clack.log.success('Authentication method set to Claude subscription.');
-    clack.log.info('Credentials will be read from your Claude Code login each time an agent is started.');
+    clack.log.info(
+        'Credentials will be read from your Claude Code login each time an agent is started.'
+    );
 };
 
 const configureApiKey = async (): Promise<void> => {

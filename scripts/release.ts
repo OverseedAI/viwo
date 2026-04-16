@@ -8,7 +8,13 @@ const DOCKER_MANAGER_PATH = 'packages/core/src/managers/docker-manager.ts';
 
 const validateVersion = (version: string): boolean => /^\d+\.\d+\.\d+$/.test(version);
 
-const updatePackageVersion = async ({ packagePath, version }: { packagePath: string; version: string }): Promise<void> => {
+const updatePackageVersion = async ({
+    packagePath,
+    version,
+}: {
+    packagePath: string;
+    version: string;
+}): Promise<void> => {
     const pkgJsonPath = join(process.cwd(), packagePath, 'package.json');
     const content = await readFile(pkgJsonPath, 'utf-8');
     const pkg = JSON.parse(content);
@@ -58,9 +64,12 @@ const main = async () => {
     await updateClaudeCodeImageTag({ version });
 
     console.log('\nGit operations:');
-    execSync(`git add ${PACKAGES.map((packagePath) => `${packagePath}/package.json`).join(' ')} ${DOCKER_MANAGER_PATH}`, {
-        stdio: 'inherit',
-    });
+    execSync(
+        `git add ${PACKAGES.map((packagePath) => `${packagePath}/package.json`).join(' ')} ${DOCKER_MANAGER_PATH}`,
+        {
+            stdio: 'inherit',
+        }
+    );
     execSync(`git commit -m "chore: bump version to ${version}"`, {
         stdio: 'inherit',
     });
