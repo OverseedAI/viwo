@@ -691,7 +691,9 @@ const runGitLabConfig = async (): Promise<void> => {
         }
 
         console.log(chalk.yellow('No GitLab token found automatically.'));
-        console.log(chalk.gray('Install the glab CLI (glab auth login) or set GITLAB_TOKEN env var.'));
+        console.log(
+            chalk.gray('Install the glab CLI (glab auth login) or set GITLAB_TOKEN env var.')
+        );
         console.log(chalk.gray('You can also enter a token manually.'));
         console.log();
         await waitForEnter('Press Enter to go back to GitLab settings...');
@@ -806,7 +808,11 @@ const runAuthConfig = async (): Promise<void> => {
 
         ConfigManager.setAuthMethod('oauth');
         console.log(chalk.green('✓ Authentication method set to Claude subscription'));
-        console.log(chalk.gray('  Credentials will be read from your Claude Code login each time an agent is started.'));
+        console.log(
+            chalk.gray(
+                '  Credentials will be read from your Claude Code login each time an agent is started.'
+            )
+        );
         console.log();
     } else {
         const apiKey = await password({

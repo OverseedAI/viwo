@@ -56,9 +56,7 @@ const runPostCreateActions = async (workspace: WorktreeSession): Promise<void> =
                 }
                 return;
             } catch (error) {
-                spinner.stop(
-                    error instanceof Error ? error.message : 'Failed to start agent.'
-                );
+                spinner.stop(error instanceof Error ? error.message : 'Failed to start agent.');
             }
             continue;
         }

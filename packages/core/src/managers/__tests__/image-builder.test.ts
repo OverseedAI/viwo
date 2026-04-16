@@ -41,15 +41,13 @@ describe('image-builder validation', () => {
 
     test('skips comments and blank lines when locating the FROM directive', () => {
         const contents = `# leading comment\n\n# another\nFROM ${CLAUDE_CODE_IMAGE}\nRUN echo hi\n`;
-        expect(() =>
-            assertExtendsBaseImage({ contents, dockerfilePath: 'fake' })
-        ).not.toThrow();
+        expect(() => assertExtendsBaseImage({ contents, dockerfilePath: 'fake' })).not.toThrow();
     });
 
     test('rejects multi-stage builds whose first FROM is not the viwo base', () => {
         const contents = `FROM node:22 AS builder\nFROM ${CLAUDE_CODE_IMAGE}\n`;
-        expect(() =>
-            assertExtendsBaseImage({ contents, dockerfilePath: 'fake' })
-        ).toThrow(/must extend the viwo base image/);
+        expect(() => assertExtendsBaseImage({ contents, dockerfilePath: 'fake' })).toThrow(
+            /must extend the viwo base image/
+        );
     });
 });

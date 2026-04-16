@@ -233,10 +233,11 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
 
             try {
                 // Expand issue/MR URLs in prompt
-                const promptWithGitHubIssues = await expandPromptWithIssues(validatedOptions.prompt);
-                const expandedPrompt = await expandPromptWithGitLabResources(
-                    promptWithGitHubIssues
+                const promptWithGitHubIssues = await expandPromptWithIssues(
+                    validatedOptions.prompt
                 );
+                const expandedPrompt =
+                    await expandPromptWithGitLabResources(promptWithGitHubIssues);
 
                 // Load pre-agent commands and custom binds from project config
                 const projectConfig = loadProjectConfig({ repoPath: worktreeResult.repoPath });
@@ -446,10 +447,7 @@ export function createViwo(config?: Partial<ViwoConfig>): Viwo {
                                 force: true, // Use force to delete unmerged branches
                             });
                         } catch (error) {
-                            console.warn(
-                                `Failed to delete branch ${dbSession.branchName}:`,
-                                error
-                            );
+                            console.warn(`Failed to delete branch ${dbSession.branchName}:`, error);
                         }
                     }
                 }
