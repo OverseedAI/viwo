@@ -158,35 +158,41 @@ export interface CreateContainerOptions {
     additionalBinds?: string[];
 }
 
+export const buildContainerHostConfig = (options: CreateContainerOptions) => {
+    const portBindings: Record<string, { HostPort: string }[]> = {};
+    const ports = options.ports || [];
+    for (const port of ports) {
+        const containerPort = `${port.container}/${port.protocol}`;
+        portBindings[containerPort] = [{ HostPort: port.host.toString() }];
+    }
+
+    return {
+        PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
+        Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
+        AutoRemove: false,
+        CapDrop: ['ALL'],
+        SecurityOpt: ['no-new-privileges:true'],
+    };
+};
+
 export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
-    // Check if image exists locally, if not pull it
     const imageExists = await checkImageExists({ image: options.image });
     if (!imageExists) {
         await pullImage({ image: options.image });
     }
 
-    // Create port bindings
-    const portBindings: Record<string, { HostPort: string }[]> = {};
-    const exposedPorts: Record<string, object> = {};
-
     const ports = options.ports || [];
+    const exposedPorts: Record<string, object> = {};
     for (const port of ports) {
-        const containerPort = `${port.container}/${port.protocol}`;
-        exposedPorts[containerPort] = {};
-        portBindings[containerPort] = [{ HostPort: port.host.toString() }];
+        exposedPorts[`${port.container}/${port.protocol}`] = {};
     }
 
-    // Create container
     const container = await dockerSdk.createContainer({
         name: options.name,
         Image: options.image,
         Cmd: options.command,
         ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
-        HostConfig: {
-            PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
-            Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
-            AutoRemove: false,
-        },
+        HostConfig: buildContainerHostConfig(options),
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
         WorkingDir: '/workspace',
         Tty: options.tty ?? false,
