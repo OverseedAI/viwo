@@ -6,10 +6,7 @@ import {
     parseGitLabResourceUrls,
     resolveGitLabTokenFromEnv,
 } from '../gitlab-manager';
-import {
-    deleteGitLabInstanceUrl,
-    setGitLabInstanceUrl,
-} from '../config-manager';
+import { deleteGitLabInstanceUrl, setGitLabInstanceUrl } from '../config-manager';
 
 describe('gitlab-manager', () => {
     afterEach(() => {
@@ -46,9 +43,7 @@ describe('gitlab-manager', () => {
     test('parses configured self-hosted GitLab URLs', () => {
         setGitLabInstanceUrl('https://gitlab.company.com');
 
-        const urls = parseGitLabResourceUrls(
-            'https://gitlab.company.com/platform/api/-/issues/42'
-        );
+        const urls = parseGitLabResourceUrls('https://gitlab.company.com/platform/api/-/issues/42');
 
         expect(urls).toEqual([
             {
@@ -88,11 +83,9 @@ describe('gitlab-manager', () => {
     });
 
     test('extracts token from glab auth status output', () => {
-        const output = [
-            'gitlab.com',
-            '  ✓ Logged in as hal',
-            '  Token: glpat-test-token',
-        ].join('\n');
+        const output = ['gitlab.com', '  ✓ Logged in as hal', '  Token: glpat-test-token'].join(
+            '\n'
+        );
 
         expect(extractGitLabTokenFromGlabOutput(output)).toBe('glpat-test-token');
     });

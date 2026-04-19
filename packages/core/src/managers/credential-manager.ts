@@ -7,13 +7,10 @@ import type { OAuthCredentials, OAuthAccountInfo } from '../types';
 const KEYCHAIN_SERVICE = 'Claude Code-credentials';
 
 const extractFromMacKeychain = async (): Promise<OAuthCredentials | null> => {
-    const proc = Bun.spawn(
-        ['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'],
-        {
-            stdout: 'pipe',
-            stderr: 'pipe',
-        }
-    );
+    const proc = Bun.spawn(['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+    });
 
     const output = await new Response(proc.stdout).text();
     const exitCode = await proc.exited;

@@ -95,7 +95,9 @@ export const attachCommand = new Command('attach')
 
             // Print attach hint and run docker exec
             console.log();
-            console.log(chalk.dim(`Attaching to workspace ${targetSessionId} (${containerName})...`));
+            console.log(
+                chalk.dim(`Attaching to workspace ${targetSessionId} (${containerName})...`)
+            );
             console.log(chalk.yellow('Detach with: Ctrl+\\'));
             console.log();
 

@@ -45,7 +45,7 @@ export const migrations: Migration[] = [
             	\`createdAt\` text,
             	\`lastActivity\` text
             );
-        `
+        `,
     },
     {
         version: 2,
@@ -53,7 +53,7 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`sessions\` RENAME COLUMN "agentId" TO "agent";
             ALTER TABLE \`sessions\` ADD \`branchName\` text NOT NULL;
-        `
+        `,
     },
     {
         version: 3,
@@ -81,7 +81,7 @@ export const migrations: Migration[] = [
             DROP TABLE \`sessions\`;
             ALTER TABLE \`__new_sessions\` RENAME TO \`sessions\`;
             PRAGMA foreign_keys=ON;
-        `
+        `,
     },
     {
         version: 4,
@@ -99,35 +99,35 @@ export const migrations: Migration[] = [
             DROP TABLE \`configurations\`;
             ALTER TABLE \`__new_configurations\` RENAME TO \`configurations\`;
             PRAGMA foreign_keys=ON;
-        `
+        `,
     },
     {
         version: 5,
         name: 'puzzling_anita_blake',
         up: `
             ALTER TABLE \`configurations\` ADD \`preferred_ide\` text;
-        `
+        `,
     },
     {
         version: 6,
         name: 'confused_the_renegades',
         up: `
             ALTER TABLE \`configurations\` ADD \`worktrees_storage_location\` text;
-        `
+        `,
     },
     {
         version: 7,
         name: 'swift_silverclaw',
         up: `
             ALTER TABLE \`sessions\` ADD \`containerOutput\` text;
-        `
+        `,
     },
     {
         version: 8,
         name: 'last_mentor',
         up: `
             ALTER TABLE \`configurations\` ADD \`auth_method\` text;
-        `
+        `,
     },
     {
         version: 9,
@@ -135,21 +135,21 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`repositories\` ADD \`default_branch\` text;
             ALTER TABLE \`configurations\` ADD \`preferred_model\` text;
-        `
+        `,
     },
     {
         version: 10,
         name: 'careful_rumiko_fujikawa',
         up: `
             ALTER TABLE \`sessions\` ADD \`claudeCodeVersion\` text;
-        `
+        `,
     },
     {
         version: 11,
         name: 'wonderful_roughhouse',
         up: `
             ALTER TABLE \`configurations\` ADD \`github_token\` text;
-        `
+        `,
     },
     {
         version: 12,
@@ -157,6 +157,6 @@ export const migrations: Migration[] = [
         up: `
             ALTER TABLE \`configurations\` ADD \`gitlab_token\` text;
             ALTER TABLE \`configurations\` ADD \`gitlab_instance_url\` text;
-        `
-    }
+        `,
+    },
 ];
