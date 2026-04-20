@@ -158,14 +158,7 @@ export interface CreateContainerOptions {
     additionalBinds?: string[];
 }
 
-export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
-    // Check if image exists locally, if not pull it
-    const imageExists = await checkImageExists({ image: options.image });
-    if (!imageExists) {
-        await pullImage({ image: options.image });
-    }
-
-    // Create port bindings
+export const buildContainerConfig = (options: CreateContainerOptions) => {
     const portBindings: Record<string, { HostPort: string }[]> = {};
     const exposedPorts: Record<string, object> = {};
 
@@ -176,8 +169,7 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         portBindings[containerPort] = [{ HostPort: port.host.toString() }];
     }
 
-    // Create container
-    const container = await dockerSdk.createContainer({
+    return {
         name: options.name,
         Image: options.image,
         Cmd: options.command,
@@ -186,12 +178,23 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
             PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
             Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
             AutoRemove: false,
+            CapDrop: ['ALL'],
+            SecurityOpt: ['no-new-privileges:true'],
         },
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
         WorkingDir: '/workspace',
         Tty: options.tty ?? false,
         OpenStdin: options.openStdin ?? false,
-    });
+    };
+};
+
+export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
+    const imageExists = await checkImageExists({ image: options.image });
+    if (!imageExists) {
+        await pullImage({ image: options.image });
+    }
+
+    const container = await dockerSdk.createContainer(buildContainerConfig(options));
 
     const info = await container.inspect();
 
@@ -200,7 +203,7 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         name: info.Name.replace(/^\//, ''),
         image: options.image,
         status: mapContainerStatus(info.State.Status),
-        ports,
+        ports: options.ports || [],
         createdAt: new Date(info.Created),
     };
 };
@@ -667,6 +670,7 @@ export const docker = {
     checkDockerRunningOrThrow,
     checkImageExists,
     buildImage,
+    buildContainerConfig,
     createContainersFromCompose,
     createContainer,
     startContainer,
