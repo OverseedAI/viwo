@@ -186,6 +186,8 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
             PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
             Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
             AutoRemove: false,
+            CapDrop: ['ALL'],
+            SecurityOpt: ['no-new-privileges:true'],
         },
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
         WorkingDir: '/workspace',
