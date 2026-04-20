@@ -158,14 +158,7 @@ export interface CreateContainerOptions {
     additionalBinds?: string[];
 }
 
-export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
-    // Check if image exists locally, if not pull it
-    const imageExists = await checkImageExists({ image: options.image });
-    if (!imageExists) {
-        await pullImage({ image: options.image });
-    }
-
-    // Create port bindings
+export const buildContainerHostConfig = (options: CreateContainerOptions) => {
     const portBindings: Record<string, { HostPort: string }[]> = {};
     const exposedPorts: Record<string, object> = {};
 
@@ -176,17 +169,32 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         portBindings[containerPort] = [{ HostPort: port.host.toString() }];
     }
 
-    // Create container
+    return {
+        exposedPorts,
+        hostConfig: {
+            PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
+            Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
+            AutoRemove: false,
+            CapDrop: ['ALL'],
+            SecurityOpt: ['no-new-privileges:true'],
+        },
+    };
+};
+
+export const createContainer = async (options: CreateContainerOptions): Promise<ContainerInfo> => {
+    const imageExists = await checkImageExists({ image: options.image });
+    if (!imageExists) {
+        await pullImage({ image: options.image });
+    }
+
+    const { exposedPorts, hostConfig } = buildContainerHostConfig(options);
+
     const container = await dockerSdk.createContainer({
         name: options.name,
         Image: options.image,
         Cmd: options.command,
         ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
-        HostConfig: {
-            PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
-            Binds: [`${options.worktreePath}:/workspace`, ...(options.additionalBinds || [])],
-            AutoRemove: false,
-        },
+        HostConfig: hostConfig,
         Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
         WorkingDir: '/workspace',
         Tty: options.tty ?? false,
@@ -200,7 +208,7 @@ export const createContainer = async (options: CreateContainerOptions): Promise<
         name: info.Name.replace(/^\//, ''),
         image: options.image,
         status: mapContainerStatus(info.State.Status),
-        ports,
+        ports: options.ports || [],
         createdAt: new Date(info.Created),
     };
 };
@@ -668,6 +676,7 @@ export const docker = {
     checkImageExists,
     buildImage,
     createContainersFromCompose,
+    buildContainerHostConfig,
     createContainer,
     startContainer,
     stopContainer,
