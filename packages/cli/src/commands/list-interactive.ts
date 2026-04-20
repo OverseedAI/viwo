@@ -86,7 +86,10 @@ const displaySessionDetails = async (session: WorktreeSession) => {
 
     if (!attachableContainer && session.status !== SessionStatus.CLEANED) {
         console.log(chalk.bold('Launch Agent'));
-        console.log(chalk.gray('  Action:          '), chalk.cyan('Start agent from this workspace'));
+        console.log(
+            chalk.gray('  Action:          '),
+            chalk.cyan('Start agent from this workspace')
+        );
         console.log();
     }
 

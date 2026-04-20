@@ -57,17 +57,33 @@ describe('git-manager', () => {
         });
 
         test('rejects names with invalid characters', () => {
-            expect(validateBranchName('branch~1')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch^2')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch:name')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch?')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch*')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch[0]')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
-            expect(validateBranchName('branch\\name')).toBe('Branch name cannot contain ~ ^ : ? * [ or \\');
+            expect(validateBranchName('branch~1')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch^2')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch:name')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch?')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch*')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch[0]')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
+            expect(validateBranchName('branch\\name')).toBe(
+                'Branch name cannot contain ~ ^ : ? * [ or \\'
+            );
         });
 
         test('rejects names with consecutive dots', () => {
-            expect(validateBranchName('branch..name')).toBe('Branch name cannot contain consecutive dots (..)');
+            expect(validateBranchName('branch..name')).toBe(
+                'Branch name cannot contain consecutive dots (..)'
+            );
         });
 
         test('rejects names ending with a dot', () => {
@@ -87,9 +103,15 @@ describe('git-manager', () => {
         });
 
         test('rejects names with slash issues', () => {
-            expect(validateBranchName('/branch')).toBe('Branch name cannot start/end with / or contain //');
-            expect(validateBranchName('branch/')).toBe('Branch name cannot start/end with / or contain //');
-            expect(validateBranchName('branch//name')).toBe('Branch name cannot start/end with / or contain //');
+            expect(validateBranchName('/branch')).toBe(
+                'Branch name cannot start/end with / or contain //'
+            );
+            expect(validateBranchName('branch/')).toBe(
+                'Branch name cannot start/end with / or contain //'
+            );
+            expect(validateBranchName('branch//name')).toBe(
+                'Branch name cannot start/end with / or contain //'
+            );
         });
     });
 });

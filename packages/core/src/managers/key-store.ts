@@ -94,11 +94,10 @@ const loadFromOsStore = (): Buffer | null => {
 
     if (process.platform === 'linux') {
         try {
-            const out = execFileSync(
-                'secret-tool',
-                ['lookup', 'service', KEYCHAIN_SERVICE],
-                { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
-            ).trim();
+            const out = execFileSync('secret-tool', ['lookup', 'service', KEYCHAIN_SERVICE], {
+                encoding: 'utf-8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim();
             const buf = Buffer.from(out, 'hex');
             return buf.length === KEY_LENGTH ? buf : null;
         } catch {

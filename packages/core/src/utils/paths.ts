@@ -44,7 +44,11 @@ export const getLegacyDataPath = (): string | null => {
  */
 const resolveDataDir = (): string => {
     const legacyPath = getLegacyDataPath();
-    if (legacyPath && legacyPath !== DEFAULT_DATA_DIR && existsSync(join(legacyPath, 'sqlite.db'))) {
+    if (
+        legacyPath &&
+        legacyPath !== DEFAULT_DATA_DIR &&
+        existsSync(join(legacyPath, 'sqlite.db'))
+    ) {
         return legacyPath;
     }
     return DEFAULT_DATA_DIR;
