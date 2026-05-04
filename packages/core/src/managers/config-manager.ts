@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { db } from '../db';
 import { configurations } from '../db-schemas';
 import { eq } from 'drizzle-orm';
+import { AuthMethodSchema } from '../schemas';
 import type { AuthMethod, IDEType, ModelType } from '../types.js';
 import { expandTilde } from '../utils/paths.js';
 import { getEncryptionKey, getLegacyEncryptionKey } from './key-store';
@@ -508,7 +509,8 @@ export const getAuthMethod = (): AuthMethod => {
         return 'api-key';
     }
 
-    return (config[0]!.authMethod as AuthMethod) || 'api-key';
+    const parsedAuthMethod = AuthMethodSchema.safeParse(config[0]!.authMethod);
+    return parsedAuthMethod.success ? parsedAuthMethod.data : 'api-key';
 };
 
 export const isAuthConfigured = (): boolean => {
