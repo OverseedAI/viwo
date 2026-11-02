@@ -67,6 +67,8 @@ To release a new version:
 
 **Important**: Always keep package.json versions and `CLAUDE_CODE_IMAGE` in `packages/core/src/managers/docker-manager.ts` in sync with the release tag so VIWO pulls the matching image. The `bun run release <version>` script now updates all three automatically before creating the commit and tag.
 
+The separate `.github/workflows/macos-build.yml` runs on pull requests and pushes to `main`. It compiles both macOS targets with the release workflow's Bun version on `macos-15`, checks their architectures, and smoke-tests the native ARM64 binary using an in-memory database. It does not publish releases or Docker images; Intel execution is not tested on the ARM64 runner.
+
 ## Architecture Overview
 
 VIWO (Virtualized Isolated Worktree Orchestrator) manages git worktrees, Docker containers, and AI agents for isolated development sessions.
