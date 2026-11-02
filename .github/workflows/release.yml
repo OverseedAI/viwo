@@ -37,7 +37,7 @@ jobs:
             packages/cli/binaries/viwo-linux-arm64
 
   build-macos-x64:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout code
@@ -64,7 +64,7 @@ jobs:
           path: packages/cli/binaries/viwo-macos-x64
 
   build-macos-arm64:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout code
